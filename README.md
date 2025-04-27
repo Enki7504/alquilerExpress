@@ -32,3 +32,34 @@ python manage.py migrate
 
 # Levantar el servidor de desarrollo
 python manage.py runserver
+```
+
+## Paginas HTML
+Por ejemplo (index.html)
+```bash
+alquilerExpress
+└──web
+    └──templates
+      └──index.html
+```
+Para agregar más paginas ir a web/views.py y agregar la view
+```python
+def otra_pagina(request):
+    return render(request, 'otra_pagina.html')
+```
+
+Luego crear el HTML en web/templates/
+
+y agregar la nueva URL en web/urls.py
+
+```python
+urlpatterns = [
+    path('', views.home, name='home'),
+    path('otra/', views.otra_pagina, name='otra_pagina'),
+]
+```
+
+y ya se puede referenciar en HTML
+```HTML
+<a href="/otra/">Ir a otra página</a>
+```
