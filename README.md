@@ -35,22 +35,22 @@ python manage.py runserver
 ```
 
 ## Paginas HTML
-Por ejemplo (index.html)
+Ubicacion, por ejemplo (index.html)
 ```bash
 alquilerExpress
 └──web
     └──templates
       └──index.html
 ```
-Para agregar más paginas ir a web/views.py y agregar la view
+Para agregar más paginas ir a **web/views.py** y agregar la view
 ```python
 def otra_pagina(request):
     return render(request, 'otra_pagina.html')
 ```
 
-Luego crear el HTML en web/templates/
+Luego crear el HTML en **web/templates/**
 
-y agregar la nueva URL en web/urls.py
+y agregar la nueva URL en **web/urls.py**
 
 ```python
 urlpatterns = [
@@ -62,4 +62,52 @@ urlpatterns = [
 y ya se puede referenciar en HTML
 ```HTML
 <a href="/otra/">Ir a otra página</a>
+```
+
+## Crear tablas
+
+En **web/models.py** agregar la clase (que es la tabla) por ejemplo, agregar tabla Clientes y Propiedades haciendo FK desde Propiedades a Clientes
+```python
+class Cliente(models.Model):
+    nombre = models.CharField(max_length=100)
+    email = models.EmailField(unique=True)
+    telefono = models.CharField(max_length=20)
+
+    def __str__(self):
+        return self.nombre
+
+class Propiedad(models.Model):
+    nombre = models.CharField(max_length=100)
+    direccion = models.CharField(max_length=200)
+    precio = models.DecimalField(max_digits=10, decimal_places=2)
+    descripcion = models.TextField()
+    fecha_publicacion = models.DateTimeField(auto_now_add=True)
+    cliente = models.ForeignKey(Cliente, on_delete=PROTECT)
+
+    def __str__(self):
+        return self.nombre
+```
+
+Para hacer que Django cree las tablas en la base de datos, ejecutar en terminal
+```bash
+python manage.py makemigrations
+python manage.py migrate
+```
+
+
+Registrar los modelos en **web/admin.py**
+```python
+from .models import Cliente, Propiedad
+
+admin.site.register(Cliente)
+admin.site.register(Propiedad)
+```
+
+Agregar los modelos para que se vean desde el panel de admin en **web/admin.py** (opcional, pero recomendable asi vemos todo desde admin)
+
+```python
+from .models import Cliente, Propiedad
+
+admin.site.register(Cliente)
+admin.site.register(Propiedad)
 ```
