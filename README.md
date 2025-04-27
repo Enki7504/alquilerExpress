@@ -111,3 +111,11 @@ from .models import Cliente, Propiedad
 admin.site.register(Cliente)
 admin.site.register(Propiedad)
 ```
+
+## Agregar usuario admin
+
+Crear superusuario para acceder al panel de admin
+
+```bash
+python manage.py createsuperuser
+```
