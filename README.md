@@ -83,7 +83,7 @@ class Propiedad(models.Model):
     precio = models.DecimalField(max_digits=10, decimal_places=2)
     descripcion = models.TextField()
     fecha_publicacion = models.DateTimeField(auto_now_add=True)
-    cliente = models.ForeignKey(Cliente, on_delete=PROTECT)
+    cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT)
 
     def __str__(self):
         return self.nombre
@@ -93,14 +93,6 @@ Para hacer que Django cree las tablas en la base de datos, ejecutar en terminal 
 ```bash
 python manage.py makemigrations
 python manage.py migrate
-```
-
-Registrar los modelos en **web/admin.py**
-```python
-from .models import Cliente, Propiedad
-
-admin.site.register(Cliente)
-admin.site.register(Propiedad)
 ```
 
 Agregar los modelos para que se vean desde el panel de admin en **web/admin.py** (opcional, pero recomendable asi vemos todo desde admin)
