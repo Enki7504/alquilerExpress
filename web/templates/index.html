@@ -1,12 +1,146 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>Inicio - Alquiler Express</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Alquiler Express - Cocheras e Inmuebles</title>
+  
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  
+  <style>
+    body {
+      padding-top: 56px; /* Para que no quede tapado por el navbar */
+      background-color: #f8f9fa;
+    }
+    .hero {
+      background: url('https://images.unsplash.com/photo-1560184897-292b8d0a21d6?auto=format&fit=crop&w=1350&q=80') no-repeat center center/cover;
+      height: 60vh;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-shadow: 2px 2px 8px rgba(0,0,0,0.7);
+    }
+    .hero h1 {
+      font-weight: 700;
+      font-size: 3rem;
+    }
+    .card-img-top {
+      height: 180px;
+      object-fit: cover;
+    }
+    footer {
+      background-color: #343a40;
+      color: #bbb;
+      padding: 1rem 0;
+      text-align: center;
+    }
+  </style>
 </head>
 <body>
-    <h1>Bienvenido a Alquiler Express</h1>
-    <p>Estamos creando nuestra página 🚀</p>
-    <p>Pronto podrás alquilar tu propiedad de forma rápida y sencilla.</p>
+
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+    <div class="container">
+      <a class="navbar-brand" href="#">Alquiler Express</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
+              aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item"><a class="nav-link active" href="#">Inicio</a></li>
+          <li class="nav-item"><a class="nav-link" href="#">Cocheras</a></li>
+          <li class="nav-item"><a class="nav-link" href="#">Inmuebles</a></li>
+          <li class="nav-item"><a class="nav-link" href="#">Contacto</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero text-center">
+    <div>
+      <h1>Alquiler rápido y seguro</h1>
+      <p class="lead">Encuentra cocheras e inmuebles disponibles en tu zona</p>
+      <a href="#services" class="btn btn-primary btn-lg mt-3">Ver opciones</a>
+    </div>
+  </section>
+
+  <!-- Servicios -->
+  <section id="services" class="container my-5">
+    <h2 class="text-center mb-4">Nuestros servicios</h2>
+    <div class="row g-4">
+      <div class="col-md-6">
+        <div class="card shadow-sm">
+          <img src="https://images.unsplash.com/photo-1590080877777-9b9b28d24d7d?auto=format&fit=crop&w=600&q=80" class="card-img-top" alt="Cocheras">
+          <div class="card-body">
+            <h5 class="card-title">Alquiler de Cocheras</h5>
+            <p class="card-text">Estaciona seguro y cómodo en cocheras ubicadas en diferentes zonas estratégicas de la ciudad.</p>
+            <a href="#" class="btn btn-outline-primary">Ver cocheras</a>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-md-6">
+        <div class="card shadow-sm">
+          <img src="https://images.unsplash.com/photo-1600585154197-3c2f1d93d9e0?auto=format&fit=crop&w=600&q=80" class="card-img-top" alt="Inmuebles">
+          <div class="card-body">
+            <h5 class="card-title">Alquiler de Inmuebles</h5>
+            <p class="card-text">Casas, departamentos y locales comerciales para alquiler, con la mejor relación calidad-precio.</p>
+            <a href="#" class="btn btn-outline-primary">Ver inmuebles</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Testimonios / Carrusel -->
+  <section class="container my-5">
+    <h2 class="text-center mb-4">Testimonios de clientes</h2>
+    <div id="testimonialCarousel" class="carousel slide" data-bs-ride="carousel">
+      <div class="carousel-inner text-center">
+        <div class="carousel-item active">
+          <blockquote class="blockquote">
+            <p class="mb-4">"Encontré la cochera perfecta cerca de mi trabajo, todo muy fácil y rápido."</p>
+            <footer class="blockquote-footer">María López</footer>
+          </blockquote>
+        </div>
+        <div class="carousel-item">
+          <blockquote class="blockquote">
+            <p class="mb-4">"El departamento que alquilé superó mis expectativas. Muy recomendable."</p>
+            <footer class="blockquote-footer">Juan Pérez</footer>
+          </blockquote>
+        </div>
+        <div class="carousel-item">
+          <blockquote class="blockquote">
+            <p class="mb-4">"Atención personalizada y excelente servicio. Volveré a usar Alquiler Express."</p>
+            <footer class="blockquote-footer">Laura Fernández</footer>
+          </blockquote>
+        </div>
+      </div>
+      <button class="carousel-control-prev" type="button" data-bs-target="#testimonialCarousel" data-bs-slide="prev">
+        <span class="carousel-control-prev-icon"></span>
+        <span class="visually-hidden">Anterior</span>
+      </button>
+      <button class="carousel-control-next" type="button" data-bs-target="#testimonialCarousel" data-bs-slide="next">
+        <span class="carousel-control-next-icon"></span>
+        <span class="visually-hidden">Siguiente</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <p>© 2025 Alquiler Express - Todos los derechos reservados</p>
+      <p>Contacto: info@alquilerexpress.com | Tel: +54 9 11 1234 5678</p>
+    </div>
+  </footer>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
