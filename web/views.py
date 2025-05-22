@@ -4,6 +4,8 @@ from django.contrib import messages
 from django.shortcuts import redirect, render
 from django.contrib.auth.forms import UserCreationForm
 from .models import Inmueble
+from .forms import RegistroUsuarioForm
+from django.contrib.auth.decorators import login_required
 
 # Create your views here.
 
@@ -23,12 +25,12 @@ def logout_view(request):
 
 def register(request):
     if request.method == 'POST':
-        form = UserCreationForm(request.POST)
+        form = RegistroUsuarioForm(request.POST)
         if form.is_valid():
             form.save()
             return redirect('login')
     else:
-        form = UserCreationForm()
+        form = RegistroUsuarioForm()
     return render(request, 'register.html', {'form': form})
 
 def lista_inmuebles(request):
