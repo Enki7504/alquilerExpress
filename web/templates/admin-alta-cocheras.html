@@ -1,0 +1,69 @@
+<div class="container">
+  <h1>Dar de Alta una Cochera</h1>
+  <form id="formularioCochera" class="row g-3">
+
+    <div class="col-md-4">
+      <label for="nombre" class="form-label">Nombre</label>
+      <input type="text" class="form-control" id="nombre" required>
+    </div>
+
+    <div class="col-md-4">
+      <label for="ubicacion" class="form-label">Ubicación</label>
+      <input type="text" class="form-control" id="ubicacion" required>
+    </div>
+    
+    <div class="col-4">
+      <label for="foto" class="form-label">Foto de la cochera</label>
+      <input class="form-control" type="file" id="foto" accept="image/*">
+      <img id="preview" class="img-fluid mt-3">
+    </div>
+
+    <div class="col-12">
+      <label for="descripcion" class="form-label">Descripción</label>
+      <textarea class="form-control" id="descripcion" rows="2" required></textarea>
+    </div>
+
+    <div class="col-md-4">
+      <label for="alto" class="form-label">Alto (en metros)</label>
+      <input type="number" step="0.01" class="form-control" id="alto" required>
+    </div>
+
+    <div class="col-md-4">
+      <label for="ancho" class="form-label">Ancho (en metros)</label>
+      <input type="number" step="0.01" class="form-control" id="ancho" required>
+    </div>
+
+    <div class="col-md-4">
+      <label for="largo" class="form-label">Largo (en metros)</label>
+      <input type="number" step="0.01" class="form-control" id="largo" required>
+    </div>
+
+    <div class="col-md-6">
+      <label for="cantidadVehiculos" class="form-label">Cantidad de Vehículos</label>
+      <input type="number" class="form-control" id="cantidadVehiculos" required>
+    </div>
+
+    <div class="col-md-6">
+      <label for="precioPorDia" class="form-label">Precio por día</label>
+      <input type="number" class="form-control" id="precioPorDia" required>
+    </div>
+
+    <div class="col-12">
+      <label for="politicaCancelacion" class="form-label">Política de cancelación</label>
+      <textarea class="form-control" id="politicaCancelacion" rows="2" required></textarea>
+    </div>
+
+    <div class="col-md-12">
+      <label for="tieneTecho" class="form-label">¿Tiene techo?</label>
+      <select class="form-select" id="tieneTecho" required>
+        <option value="">Seleccionar...</option>
+        <option value="Sí">Sí</option>
+        <option value="No">No</option>
+      </select>
+    </div>
+
+    <div class="col-12">
+      <button type="submit" class="btn btn-primary btn-azul">Cargar cochera</button>
+    </div>
+  </form>
+</div>
