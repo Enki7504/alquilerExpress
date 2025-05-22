@@ -55,7 +55,7 @@ ROOT_URLCONF = 'alquilerExpress.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [ BASE_DIR / 'templates' ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -66,6 +66,12 @@ TEMPLATES = [
         },
     },
 ]
+
+
+# URL adonde redirigir tras un login/logout
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'index'
+LOGOUT_REDIRECT_URL = 'login'
 
 WSGI_APPLICATION = 'alquilerExpress.wsgi.application'
 

@@ -51,10 +51,24 @@
       
       <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav ms-auto">
-          <li class="nav-item"><a class="nav-link active" href="#">Inicio</a></li>
+          <li class="nav-item"><a class="nav-link active" href="{% url 'index' %}">Inicio</a></li>
           <li class="nav-item"><a class="nav-link" href="#">Cocheras</a></li>
-          <li class="nav-item"><a class="nav-link" href="#">Inmuebles</a></li>
+          <li class="nav-item"><a class="nav-link" href="{% url 'lista_inmuebles' %}">Inmuebles</a></li>
           <li class="nav-item"><a class="nav-link" href="#">Contacto</a></li>
+          {% if user.is_authenticated %}
+          <li class="nav-item">
+            <span class="nav-link">Hola, {{ user.username }}</span>
+          </li>
+          <li class="nav-item">
+            <form action="{% url 'logout' %}" method="post" style="display:inline;">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-link nav-link" style="display:inline; padding:0;">Cerrar sesión</button>
+            </form>
+          </li>
+        {% else %}
+          <li class="nav-item"><a class="nav-link" href="{% url 'login' %}">Iniciar sesión</a></li>
+          <li class="nav-item"><a class="nav-link" href="{% url 'register' %}">Registrarse</a></li>
+        {% endif %}
         </ul>
       </div>
     </div>
@@ -131,7 +145,6 @@
       </button>
     </div>
   </section>
-
   <!-- Footer -->
   <footer>
     <div class="container">
