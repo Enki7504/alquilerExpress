@@ -1,0 +1,28 @@
+{# templates/login.html #}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Iniciar sesión</title>
+</head>
+<body>
+  <h1>Iniciar sesión</h1>
+
+  {% if form.errors %}
+    <p style="color:red;">Usuario o contraseña inválidos.</p>
+  {% endif %}
+
+  <form method="post" action="{% url 'login' %}">
+    {% csrf_token %}
+    <label for="id_username">Usuario:</label>
+    {{ form.username }}
+    <br>
+    <label for="id_password">Contraseña:</label>
+    {{ form.password }}
+    <br><br>
+    <button type="submit">Entrar</button>
+  </form>
+
+  <p><a href="{% url 'index' %}">Volver al inicio</a></p>
+</body>
+</html>

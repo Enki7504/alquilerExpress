@@ -58,6 +58,17 @@
         </ul>
       </div>
     </div>
+    <a href="{% url 'index' %}">Inicio</a>
+
+    {% if user.is_authenticated %}
+      <span>Hola, {{ user.username }}</span>
+      <form action="{% url 'logout' %}" method="post" style="display:inline;">
+        {% csrf_token %}
+        <button type="submit">Cerrar sesión</button>
+      </form>
+    {% else %}
+      <a href="{% url 'login' %}">Iniciar sesión</a>
+    {% endif %}
   </nav>
 
   <!-- Hero -->
@@ -131,7 +142,6 @@
       </button>
     </div>
   </section>
-
   <!-- Footer -->
   <footer>
     <div class="container">
