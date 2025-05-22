@@ -1,0 +1,120 @@
+<!-- templates/busqueda.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Búsqueda de Inmuebles{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/busqueda.css' %}">
+{% endblock %}
+
+{% block content %}
+<main class="container-fluid">
+  <div class="container-wrapper row">
+    <!-- Filtros -->
+    <aside class="filtros col-md-2 sidebar bg-light p-3 sticky-top">
+        <form>
+          <div class="mb-3">
+            <label class="form-label">Precio por dia</label>
+            <input type="number" class="form-control filtros__campo" placeholder="$" min="0">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Ubicación</label>
+            <input type="text" class="form-control filtros__campo">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Cantidad de Huespedes</label>
+            <input type="number" class="form-control filtros__campo" min="0">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Cantidad de Ambientes</label>
+            <select class="form-select filtros__campo">
+              <option>Cualquiera</option>
+              <option>1</option>
+              <option>2+</option>
+              <option>3+</option>
+              <option>4+</option>
+              <option>5+</option>
+              <option>6+</option>
+              <option>7+</option>
+              <option>8+</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Cantidad de Camas</label>
+            <select class="form-select filtros__campo">
+              <option>Cualquiera</option>
+              <option>1</option>
+              <option>2+</option>
+              <option>3+</option>
+              <option>4+</option>
+              <option>5+</option>
+              <option>6+</option>
+              <option>7+</option>
+              <option>8+</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Cantidad de Baños</label>
+            <select class="form-select filtros__campo">
+              <option>Cualquiera</option>
+              <option>1</option>
+              <option>2+</option>
+              <option>3+</option>
+              <option>4+</option>
+              <option>5+</option>
+              <option>6+</option>
+              <option>7+</option>
+              <option>8+</option>
+            </select>
+          </div>
+          <button class="btn btn-primary w-100 btn-azul">Aplicar</button>
+        </form>
+    </aside>
+
+    <!-- Lista de Inmuebles -->
+    <section class="inmuebles col-md-6 p-3">
+      <div id="lista-inmuebles" class="row">
+        {% for inmueble in inmuebles %}
+        <div class="col-12 col-md-6 col-lg-3 mb-4">
+          <div class="inmueble card property-card border-0 shadow-sm hover-shadow transition-all">
+            <!-- Imagen-->
+            {% if inmueble.imagen %}
+                <img src="{{ inmueble.imagen.url }}" class="inmueble__image card-img-top rounded-top" alt="{{ inmueble.nombre }}">
+            {% else %}
+                <img src="{% static 'img/default-property.jpg' %}" class="inmueble__image card-img-top rounded-top" alt="Imagen por defecto">
+            {% endif %}
+            <!-- Información -->
+            <div class="inmueble__body card-body d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h5 class="inmueble__nombre card-title mb-0 text-truncate">{{ inmueble.nombre }}</h5>
+                </div>
+                <div class="inmueble__info">
+                    <p class="inmueble__precio card-text mb-1">
+                        <i class="bi bi-cash-coin"></i> ${{ inmueble.precio_por_dia|floatformat:"0" }}/día
+                    </p>
+                    <p class="inmueble__ubicacion card-text">
+                        <i class="bi bi-geo-alt-fill"></i> {{ inmueble.ubicacion }}
+                    </p>
+                </div>   
+            </div>
+        </div>
+
+        </div>
+        {% empty %}
+        <div class="col-12">
+          <div class="alert alert-info inmueble__empty" role="alert">
+            <i class="bi bi-info-circle"></i> No se encontraron inmuebles disponibles.
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <!-- Mapa -->
+    <aside class="mapa col-md-4 sticky-top">
+      <div class="mapa__content" id="map" role="region" aria-label="Mapa de Inmuebles disponibles"></div>
+    </aside>
+  </div>
+</main>
+{% endblock %}
