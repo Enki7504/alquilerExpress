@@ -3,8 +3,9 @@ from django.contrib.auth import logout
 from django.contrib import messages
 from django.shortcuts import redirect, render
 from django.contrib.auth.forms import UserCreationForm
-from .models import Inmueble
+from .models import Inmueble, Resenia
 from .forms import RegistroUsuarioForm
+from django.shortcuts import get_object_or_404
 from django.contrib.auth.decorators import login_required
 
 # Create your views here.
