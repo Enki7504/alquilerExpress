@@ -3,7 +3,8 @@ from django.contrib.auth import logout
 from django.contrib import messages
 from django.shortcuts import redirect, render
 from django.contrib.auth.forms import UserCreationForm
-from .models import Inmueble
+from django.shortcuts import render, get_object_or_404
+from .models import Inmueble, Resenia
 
 # Create your views here.
 
@@ -38,3 +39,19 @@ def lista_inmuebles(request):
 def buscar_inmuebles(request):
     inmuebles = Inmueble.objects.all()
     return render(request, 'buscar_inmuebles.html', {'inmuebles': inmuebles})
+
+def detalle_inmueble(request, id_inmueble):
+
+    inmueble = get_object_or_404(
+        Inmueble.objects.select_related('estado'),
+        id_inmueble=id_inmueble
+    )
+
+    resenias = Resenia.objects.filter(
+        inmueble=inmueble
+    )
+
+    return render(request, 'inmueble.html', {
+        'inmueble': inmueble,
+        'resenias': resenias
+    })
