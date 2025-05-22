@@ -3,6 +3,7 @@ from django.contrib.auth import logout
 from django.contrib import messages
 from django.shortcuts import redirect, render
 from django.contrib.auth.forms import UserCreationForm
+from .models import Propiedad
 
 # Create your views here.
 
@@ -29,3 +30,7 @@ def register(request):
     else:
         form = UserCreationForm()
     return render(request, 'register.html', {'form': form})
+
+def lista_inmuebles(request):
+    inmuebles = Propiedad.objects.all()
+    return render(request, 'lista_inmuebles.html', {'inmuebles': inmuebles})
