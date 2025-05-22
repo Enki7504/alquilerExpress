@@ -8,9 +8,5 @@ env/
 __pycache__/
 *.py[cod]
 
-# Archivos de sistema
-.DS_Store
-Thumbs.db
-
 # vscode
 .vscode

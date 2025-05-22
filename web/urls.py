@@ -3,6 +3,8 @@ from . import views
 from django.views.generic import TemplateView
 from django.contrib.auth.views import LogoutView
 from django.contrib.auth.views import LoginView
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
     path('', views.index, name='index'),
@@ -15,5 +17,5 @@ urlpatterns = [
     path('inmuebles/', views.lista_inmuebles, name='lista_inmuebles'),
     path('buscar-inmuebles/', views.buscar_inmuebles, name='buscar_inmuebles'),
     path('buscar-inmuebles/<int:id_inmueble>/', views.detalle_inmueble, name='detalle_inmueble'),
-]
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
