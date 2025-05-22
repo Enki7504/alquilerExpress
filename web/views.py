@@ -37,4 +37,4 @@ def lista_inmuebles(request):
 
 def buscar_inmuebles(request):
     inmuebles = Inmueble.objects.all()
-    return render(request, 'busqueda.html', {'inmuebles': inmuebles})
+    return render(request, 'buscar_inmuebles.html', {'inmuebles': inmuebles})

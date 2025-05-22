@@ -13,6 +13,6 @@ urlpatterns = [
     path('logout/',  views.logout_view, name='logout'),
     path('register/', views.register, name='register'),
     path('inmuebles/', views.lista_inmuebles, name='lista_inmuebles'),
-    path('buscar/', views.buscar_inmuebles, name='buscar_inmuebles'),
+    path('buscar-inmuebles/', views.buscar_inmuebles, name='buscar_inmuebles'),
 ]
 
