@@ -11,5 +11,6 @@ urlpatterns = [
         redirect_authenticated_user=True
         ),                            name='login'),
     path('logout/',  views.logout_view, name='logout'),
+    path('register/', views.register, name='register'),
 ]
 
