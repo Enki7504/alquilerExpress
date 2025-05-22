@@ -23,9 +23,9 @@
     <form method="post" action="{% url 'register' %}">
       {% csrf_token %}
       <div class="mb-3">
-        <label for="id_username" class="form-label">Nombre de usuario</label>
-        {{ form.username|add_class:"form-control" }}
-        <div class="form-text">Solo letras, números y @/./+/-/_ (máx. 150 caracteres).</div>
+        <label for="id_email" class="form-label">Correo electrónico</label>
+        {{ form.email|add_class:"form-control" }}
+        <div class="form-text">Debe ser un correo válido (ejemplo: usuario@email.com).</div>
       </div>
       <div class="mb-3">
         <label for="id_first_name" class="form-label">Nombre</label>
@@ -38,11 +38,6 @@
         <div class="form-text">Tu apellido real.</div>
       </div>
       <div class="mb-3">
-        <label for="id_email" class="form-label">Correo electrónico</label>
-        {{ form.email|add_class:"form-control" }}
-        <div class="form-text">Debe ser un correo válido (ejemplo: usuario@email.com).</div>
-      </div>
-      <div class="mb-3">
         <label for="id_dni" class="form-label">DNI</label>
         {{ form.dni|add_class:"form-control" }}
         <div class="form-text">Solo números, sin puntos ni espacios.</div>
@@ -51,7 +46,7 @@
         <label for="id_password1" class="form-label">Contraseña</label>
         {{ form.password1|add_class:"form-control" }}
         <div class="form-text">
-          Debe tener al menos 8 caracteres, no puede ser solo números, ni similar al nombre de usuario.<br>
+          Debe tener al menos 8 caracteres, no puede ser solo números, ni similar al email.<br>
           Debe contener letras y números.
         </div>
       </div>
