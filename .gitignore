@@ -2,7 +2,7 @@
 env/
 
 # Archivos de base de datos
-*.sqlite3
+# *.sqlite3
 
 # Archivos de Python que se generan solos
 __pycache__/
