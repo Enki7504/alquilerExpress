@@ -1,0 +1,91 @@
+/* =========== global =========== */
+
+:root {
+  --color-azul-alquiler: #005A87;
+  --color-naranja-alquiler: #F26A1B;
+
+  --color-azul-hover: #004466;     /* Más oscuro que el azul original */
+  --color-naranja-hover: #d85b17;  /* Más oscuro que el naranja original */
+}
+
+.btn-azul {
+  background-color: var(--color-azul-alquiler);
+  color: white;
+  border-color: lightgrey;
+  transition: background-color 0.3s ease;
+}
+
+.btn-azul:hover {
+  background-color: var(--color-azul-hover);
+  border-color: lightgrey;
+}
+
+.btn-naranja {
+  background-color: var(--color-naranja-alquiler);
+  color: white;
+  border-color: lightgrey;
+  transition: color 0.3s ease;
+}
+
+.btn-naranja:hover {
+  background-color: var(--color-naranja-hover);
+  border-color: lightgrey;
+}
+
+
+/* =========== navegación =========== */
+
+.navbar {
+  height: 70px;
+}
+
+.navbar__container {
+  height: 70px;
+}
+
+.navbar__icon {
+  height: 40px;
+}
+
+.navbar__search {
+  max-width: 600px;
+}
+
+/* .navbar__buttons {
+
+} */
+
+/* =========== navegación - barra de busqueda =========== */
+
+/* .search__input {
+
+} */
+
+.search__select {
+  max-width: 150px
+}
+
+.search__button {
+  border-color: grey;
+  color: grey;
+}
+
+.search__button:hover {
+  background-color: var(--color-azul-alquiler);
+  border-color: grey;
+  color: white;
+}
+
+/* =========== navegación - botones =========== */
+
+.buttons_notification:hover {
+  background-color: var(--color-azul-alquiler);
+  border-color: grey;
+  color: white;
+}
+
+.buttons_user:hover {
+  background-color: var(--color-naranja-alquiler);
+  border-color: grey;
+  color: white;
+}
