@@ -1,19 +1,13 @@
-from django.shortcuts import render
-from django.contrib.auth import logout
 from django.contrib import messages
-from django.shortcuts import redirect, render
-from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth import logout
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.shortcuts import get_object_or_404, render, redirect
 from .models import Inmueble, Resenia
 from .forms import RegistroUsuarioForm
-from django.shortcuts import get_object_or_404
-from django.contrib.auth.decorators import login_required
-
 # Create your views here.
 
 def index(request):
     return render(request, 'index.html')
-
-
 
 def logout_view(request):
     """Sólo procesa POST para cerrar sesión y redirige a login"""
@@ -57,3 +51,48 @@ def detalle_inmueble(request, id_inmueble):
         'inmueble': inmueble,
         'resenias': resenias
     })
+
+
+# Funcionalidades del Admin
+def is_admin(user):
+    return user.is_authenticated and user.is_staff
+
+@login_required
+@user_passes_test(is_admin)
+def admin_panel(request):
+    return render(request, 'admin/admin_base.html')
+
+@login_required
+@user_passes_test(is_admin)
+def admin_alta_inmuebles(request):
+    return render(request, 'admin/admin_alta_inmuebles.html')
+
+@login_required
+@user_passes_test(is_admin)
+def admin_alta_cocheras(request):
+    return render(request, 'admin/admin_alta_cocheras.html')
+
+@login_required
+@user_passes_test(is_admin)
+def admin_alta_empleados(request):
+    return render(request, 'admin/admin_alta_empleados.html')
+
+@login_required
+@user_passes_test(is_admin)
+def admin_estadisticas_usuarios(request):
+    return render(request, 'admin/admin_estadisticas_usuarios.html')
+
+@login_required
+@user_passes_test(is_admin)
+def admin_estadisticas_empleados(request):
+    return render(request, 'admin/admin_estadisticas_empleados.html')
+
+@login_required
+@user_passes_test(is_admin)
+def admin_estadisticas_cocheras(request):
+    return render(request, 'admin/admin_estadisticas_cocheras.html')
+
+@login_required
+@user_passes_test(is_admin)
+def admin_estadisticas_inmuebles(request):
+    return render(request, 'admin/admin_estadisticas_inmuebles.html')

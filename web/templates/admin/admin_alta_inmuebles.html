@@ -1,0 +1,104 @@
+{% extends 'admin/admin_base.html' %}
+{% load static %}
+
+{% block title %}Alta de Inmuebles | Panel Admin{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">Dar de Alta de Inmueble</h1>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label for="nombre" class="form-label">Nombre</label>
+          <input type="text" class="form-control" id="nombre" name="nombre" required>
+        </div>
+
+        <div class="col-md-4">
+          <label for="ubicacion" class="form-label">Ubicación</label>
+          <input type="text" class="form-control" id="ubicacion" name="ubicacion" required>
+        </div>
+
+        <div class="col-4">
+          <label for="foto" class="form-label">Foto del inmueble</label>
+          <input class="form-control" type="file" id="foto" name="imagen" accept="image/*">
+          <img id="preview" class="img-fluid mt-3" style="max-height: 100px;">
+        </div>
+
+        <!-- Resto de los campos del formulario -->
+        <div class="col-12">
+          <label for="descripcion" class="form-label">Descripción</label>
+          <textarea class="form-control" id="descripcion" name="descripcion" rows="3" required></textarea>
+        </div>
+
+        <div class="col-md-3">
+          <label for="ambientes" class="form-label">Ambientes</label>
+          <input type="number" class="form-control" id="ambientes" name="cantidad_ambientes" min="1" required>
+        </div>
+
+        <div class="col-md-3">
+          <label for="banios" class="form-label">Baños</label>
+          <input type="number" class="form-control" id="banios" name="cantidad_banios" min="1" required>
+        </div>
+
+        <div class="col-md-3">
+          <label for="camas" class="form-label">Camas</label>
+          <input type="number" class="form-control" id="camas" name="cantidad_camas" min="1" required>
+        </div>
+
+        <div class="col-md-3">
+          <label for="huespedes" class="form-label">Huéspedes</label>
+          <input type="number" class="form-control" id="huespedes" name="cantidad_huespedes" min="1" required>
+        </div>
+
+        <div class="col-md-6">
+          <label for="precio" class="form-label">Precio por día</label>
+          <input type="number" class="form-control" id="precio" name="precio_por_dia" min="1" required>
+        </div>
+
+        <div class="col-md-6">
+          <label for="minimoDias" class="form-label">Mínimo de días</label>
+          <input type="number" class="form-control" id="minimoDias" name="minimo_dias" min="1" required>
+        </div>
+
+        <div class="col-12">
+          <label for="politica" class="form-label">Política de cancelación</label>
+          <textarea class="form-control" id="politica" name="politica_cancelacion" rows="2" required></textarea>
+        </div>
+
+        <div class="col-12">
+          <label for="cochera" class="form-label">¿Tiene cochera?</label>
+          <select class="form-select" id="cochera" name="cochera" required>
+            <option value="true">Sí</option>
+            <option value="false">No</option>
+          </select>
+        </div>
+
+        <div class="col-12">
+          <button type="submit" class="btn btn-primary btn-azul">Cargar Inmueble</button>
+        </div>
+      </div>
+    </form>
+
+    <div id="mensaje" class="mt-4 alert" style="display: none;"></div>
+  </div>
+</div>
+
+{% block extra_js %}
+<script>
+// Script para vista previa de imagen
+document.getElementById('foto').addEventListener('change', function(e) {
+  const preview = document.getElementById('preview');
+  const file = e.target.files[0];
+  if (file) {
+    preview.src = URL.createObjectURL(file);
+    preview.style.display = 'block';
+  }
+});
+</script>
+{% endblock %}
+{% endblock %}
