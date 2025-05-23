@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block content %}
+  <h2>Login Administrador</h2>
+  {% for msg in messages %}<p style="color:red">{{ msg }}</p>{% endfor %}
+  <form method="post">
+    {% csrf_token %}
+    <label>Email</label>
+    <input type="email" name="email" required>
+    <br>
+    <label>Contraseña</label>
+    <input type="password" name="password" required>
+    <br><br>
+    <button type="submit">Iniciar sesión</button>
+  </form>
+{% endblock %}

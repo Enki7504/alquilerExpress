@@ -21,3 +21,8 @@ class RegistroUsuarioForm(UserCreationForm):
             dni = self.cleaned_data["dni"]
             Perfil.objects.create(usuario=user, dni=dni)
         return user
+
+
+class AdminLoginForm(forms.Form):
+    email = forms.EmailField(label='Email')
+    password = forms.CharField(widget=forms.PasswordInput, label='Contraseña')
