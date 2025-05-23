@@ -115,6 +115,10 @@ class Comentario(models.Model):
     inmueble = models.ForeignKey(Inmueble, null=True, blank=True, on_delete=models.SET_NULL)
     cochera = models.ForeignKey(Cochera, null=True, blank=True, on_delete=models.SET_NULL)
     descripcion = models.TextField()
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.usuario.get_full_name() or self.usuario.email}: {self.texto[:30]}"
 
 
 # Para guardar imagenes de inmuebles y cocheras
