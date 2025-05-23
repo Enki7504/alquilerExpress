@@ -1,8 +1,8 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
-from .models import Perfil
-from .models import Comentario
+from .models import Perfil, Comentario
+
 class ComentarioForm(forms.ModelForm):
     class Meta:
         model = Comentario
@@ -17,6 +17,7 @@ class ComentarioForm(forms.ModelForm):
         labels = {
             'descripcion': 'Comentario',
         }
+
 class RegistroUsuarioForm(UserCreationForm):
     dni = forms.CharField(max_length=20, required=True, label="DNI")
     email = forms.EmailField(required=True, label="Correo electrónico")
@@ -36,7 +37,6 @@ class RegistroUsuarioForm(UserCreationForm):
             Perfil.objects.create(usuario=user, dni=dni)
         return user
 
-
-class AdminLoginForm(forms.Form):
-    email = forms.EmailField(label='Email')
+class LoginForm(forms.Form):
+    email = forms.EmailField(label='Correo electrónico')
     password = forms.CharField(widget=forms.PasswordInput, label='Contraseña')

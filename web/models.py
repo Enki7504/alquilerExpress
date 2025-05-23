@@ -120,7 +120,7 @@ class Comentario(models.Model):
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.usuario.get_full_name() or self.usuario.email}: {self.texto[:30]}"
+        return f"{self.usuario.usuario.get_full_name() or self.usuario.usuario.email}: {self.descripcion[:30]}"
 
 
 # Para guardar imagenes de inmuebles y cocheras

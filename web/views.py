@@ -15,7 +15,6 @@ from django.utils.encoding import force_bytes, force_str
 from django.urls import reverse
 from django.conf import settings
 from .utils import email_link_token
-from .forms import AdminLoginForm
 from .models import LoginOTP
 import random
 from django.utils import timezone
@@ -26,7 +25,7 @@ from django.utils import timezone
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.shortcuts import get_object_or_404, render, redirect
 from .models import Inmueble, Resenia, Comentario
-from .forms import RegistroUsuarioForm, ComentarioForm
+from .forms import RegistroUsuarioForm, ComentarioForm, LoginForm
 # Create your views here.
 
 def index(request):
@@ -71,7 +70,7 @@ def detalle_inmueble(request, id_inmueble):
         comentario_form = ComentarioForm(request.POST)
         if comentario_form.is_valid():
             comentario = comentario_form.save(commit=False)
-            comentario.usuario = request.user.perfil  # <-- CORREGIDO
+            comentario.usuario = request.user.perfil
             comentario.inmueble = inmueble
             comentario.save()
             return redirect('detalle_inmueble', id_inmueble=id_inmueble)
@@ -80,45 +79,48 @@ def detalle_inmueble(request, id_inmueble):
 
     return render(request, 'inmueble.html', {
         'inmueble': inmueble,
-        'resenias': resenias
+        'resenias': resenias,
+        'comentarios': comentarios,
+        'comentario_form': comentario_form,
     })
 
 
-def login_admin_view(request):
+def login_view(request):
+    form = LoginForm(request.POST or None)
     if request.method == 'POST':
-        email = request.POST.get('email')
-        password = request.POST.get('password')
+        if form.is_valid():
+            email = form.cleaned_data['email']
+            password = form.cleaned_data['password']
+            try:
+                user = User.objects.get(email=email)
+            except User.DoesNotExist:
+                messages.error(request, 'Usuario o contraseña inválidos.')
+                return render(request, 'login.html', {'form': form})
 
-        # validamos que exista y sea staff
-        try:
-            user = User.objects.get(email=email)
-            if not user.is_staff:
-                messages.error(request, 'No tienes permisos de administrador.')
-                return redirect('login_admin')
-        except User.DoesNotExist:
-            messages.error(request, 'Usuario no registrado.')
-            return redirect('login_admin')
-
-        user_auth = authenticate(request, username=user.username, password=password)
-        if user_auth is not None:
-            # generamos UID y token
-            uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
-            token = email_link_token.make_token(user)
-            # construimos la URL de verificación
-            verify_url = request.build_absolute_uri(
-                reverse('verify_admin_link', kwargs={'uidb64': uidb64, 'token': token})
-            )
-            # enviamos el correo
-            send_mail(
-                subject='Verifica tu inicio de sesión',
-                message=f'Haz clic en este enlace para completar tu login:\n\n{verify_url}',
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[user.email],
-            )
-            return render(request, 'login_link_sent.html', {'email': user.email})
-        else:
-            messages.error(request, 'Credenciales incorrectas.')
-    return render(request, 'login_admin.html')
+            user_auth = authenticate(request, username=user.username, password=password)
+            if user_auth is not None:
+                if user_auth.is_staff:
+                    # Si es admin, inicia 2FA
+                    codigo = f"{random.randint(0, 999999):06d}"
+                    LoginOTP.objects.update_or_create(
+                        user=user_auth,
+                        defaults={"codigo": codigo, "creado_en": timezone.now()},
+                    )
+                    send_mail(
+                        "Código de verificación",
+                        f"Tu código para ingresar al panel administrativo es: {codigo}",
+                        "admin@tusitio.com",
+                        [user_auth.email],
+                        fail_silently=False,
+                    )
+                    request.session["username_otp"] = user_auth.username
+                    return redirect("loginAdmin_2fa")
+                else:
+                    login(request, user_auth)
+                    return redirect('index')
+            else:
+                messages.error(request, 'Usuario o contraseña inválidos.')
+    return render(request, 'login.html', {'form': form})
 
 
 def verify_admin_link(request, uidb64, token):
@@ -136,37 +138,6 @@ def verify_admin_link(request, uidb64, token):
         return redirect('index')   # o la vista principal de admin
     else:
         return render(request, 'link_invalid.html')
-
-#Para el login con doble factor por mail
-
-def loginAdmin(request):
-    if request.method == "POST":
-        username = request.POST.get("username")
-        password = request.POST.get("password")
-
-        user = authenticate(request, username=username, password=password)
-        if user and user.is_staff:
-            codigo = f"{random.randint(0, 999999):06d}"
-
-            LoginOTP.objects.update_or_create(
-                user=user,
-                defaults={"codigo": codigo, "creado_en": timezone.now()},
-            )
-
-            send_mail(
-                "Código de verificación",
-                f"Tu código para ingresar al panel administrativo es: {codigo}",
-                "admin@tusitio.com",
-                [user.email],
-                fail_silently=False,
-            )
-
-            request.session["username_otp"] = username
-            return redirect("loginAdmin_2fa")
-
-        return render(request, "loginAdmin.html", {"error": "Credenciales inválidas o no es administrador"})
-
-    return render(request, "loginAdmin.html")
 
 
 def loginAdmin_2fa(request):
@@ -192,12 +163,11 @@ def loginAdmin_2fa(request):
             return render(request, "loginAdmin_2fa.html", {"error": "Código inválido o expirado"})
 
     return render(request, "loginAdmin_2fa.html")
-
-
-        'resenias': resenias,
-        'comentarios': comentarios,
-        'comentario_form': comentario_form,
-    })
+    ({
+            'resenias': resenias,
+            'comentarios': comentarios,
+            'comentario_form': comentario_form,
+        })
 
 
 # Funcionalidades del Admin
