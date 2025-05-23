@@ -2,8 +2,8 @@ from django.contrib import messages
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.shortcuts import get_object_or_404, render, redirect
-from .models import Inmueble, Resenia
-from .forms import RegistroUsuarioForm
+from .models import Inmueble, Resenia, Comentario
+from .forms import RegistroUsuarioForm, ComentarioForm
 # Create your views here.
 
 def index(request):
@@ -57,7 +57,9 @@ def detalle_inmueble(request, id_inmueble):
 
     return render(request, 'inmueble.html', {
         'inmueble': inmueble,
-        'resenias': resenias
+        'resenias': resenias,
+        'comentarios': comentarios,
+        'comentario_form': comentario_form,
     })
 
 
