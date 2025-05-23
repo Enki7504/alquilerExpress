@@ -16,8 +16,9 @@ from django.urls import reverse
 from django.conf import settings
 from .utils import email_link_token
 from .forms import AdminLoginForm
-
-
+from .models import LoginOTP
+import random
+from django.utils import timezone
 
 
 
@@ -125,3 +126,60 @@ def verify_admin_link(request, uidb64, token):
         return redirect('index')   # o la vista principal de admin
     else:
         return render(request, 'link_invalid.html')
+
+#Para el login con doble factor por mail
+
+def loginAdmin(request):
+    if request.method == "POST":
+        username = request.POST.get("username")
+        password = request.POST.get("password")
+
+        user = authenticate(request, username=username, password=password)
+        if user and user.is_staff:
+            codigo = f"{random.randint(0, 999999):06d}"
+
+            LoginOTP.objects.update_or_create(
+                user=user,
+                defaults={"codigo": codigo, "creado_en": timezone.now()},
+            )
+
+            send_mail(
+                "Código de verificación",
+                f"Tu código para ingresar al panel administrativo es: {codigo}",
+                "admin@tusitio.com",
+                [user.email],
+                fail_silently=False,
+            )
+
+            request.session["username_otp"] = username
+            return redirect("loginAdmin_2fa")
+
+        return render(request, "loginAdmin.html", {"error": "Credenciales inválidas o no es administrador"})
+
+    return render(request, "loginAdmin.html")
+
+
+def loginAdmin_2fa(request):
+    if request.method == "POST":
+        codigo_ingresado = request.POST.get("codigo")
+        username = request.session.get("username_otp")
+
+        if not username:
+            return redirect("loginAdmin")
+
+        try:
+            user = User.objects.get(username=username)
+            otp_obj = LoginOTP.objects.get(user=user)
+        except (User.DoesNotExist, LoginOTP.DoesNotExist):
+            return redirect("loginAdmin")
+
+        if otp_obj.is_valido() and otp_obj.codigo == codigo_ingresado:
+            login(request, user)
+            del request.session["username_otp"]
+            otp_obj.delete()
+            return redirect("/admin/")
+        else:
+            return render(request, "loginAdmin_2fa.html", {"error": "Código inválido o expirado"})
+
+    return render(request, "loginAdmin_2fa.html")
+

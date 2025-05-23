@@ -18,5 +18,7 @@ urlpatterns = [
     path('admin-verify/<uidb64>/<token>/', views.verify_admin_link, name='verify_admin_link'),
     path('buscar-inmuebles/', views.buscar_inmuebles, name='buscar_inmuebles'),
     path('buscar-inmuebles/<int:id_inmueble>/', views.detalle_inmueble, name='detalle_inmueble'),
+    path("loginAdmin/", views.loginAdmin, name="loginAdmin"),
+    path("loginAdmin/2fa/", views.loginAdmin_2fa, name="loginAdmin_2fa"),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
