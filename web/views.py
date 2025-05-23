@@ -3,8 +3,8 @@ from django.contrib.auth import logout
 from django.contrib import messages
 from django.shortcuts import redirect, render
 from django.contrib.auth.forms import UserCreationForm
-from .models import Inmueble, Resenia
-from .forms import RegistroUsuarioForm
+from .models import Inmueble, Resenia, Comentario
+from .forms import RegistroUsuarioForm, ComentarioForm
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.decorators import login_required
 
@@ -43,17 +43,27 @@ def buscar_inmuebles(request):
     return render(request, 'buscar_inmuebles.html', {'inmuebles': inmuebles})
 
 def detalle_inmueble(request, id_inmueble):
-
     inmueble = get_object_or_404(
         Inmueble.objects.select_related('estado'),
         id_inmueble=id_inmueble
     )
 
-    resenias = Resenia.objects.filter(
-        inmueble=inmueble
-    )
+    resenias = Resenia.objects.filter(inmueble=inmueble)
+    comentarios = Comentario.objects.filter(inmueble=inmueble).order_by('-fecha_creacion')
+    if request.method == 'POST' and request.user.is_authenticated:
+        comentario_form = ComentarioForm(request.POST)
+        if comentario_form.is_valid():
+            comentario = comentario_form.save(commit=False)
+            comentario.usuario = request.user.perfil  # <-- CORREGIDO
+            comentario.inmueble = inmueble
+            comentario.save()
+            return redirect('detalle_inmueble', id_inmueble=id_inmueble)
+    else:
+        comentario_form = ComentarioForm()
 
     return render(request, 'inmueble.html', {
         'inmueble': inmueble,
-        'resenias': resenias
+        'resenias': resenias,
+        'comentarios': comentarios,
+        'comentario_form': comentario_form,
     })
