@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends 'base_search.html' %}
 {% load static %}
 
 {% block title %}Detalle del Inmueble - {{ inmueble.nombre }}{% endblock %}
@@ -125,42 +125,6 @@
       </div>
     </div>
   </main>
-
-<!-- Apartado: Publicar Comentario -->
-<div class="card shadow-sm mb-4">
-  <div class="card-body">
-    <h3 class="h4 mb-4 border-bottom pb-3">Publicar Comentario</h3>
-    {% if user.is_authenticated %}
-      <form method="post" action="">
-        {% csrf_token %}
-        {{ comentario_form.descripcion }}
-        <div class="d-flex justify-content-end mt-3">
-          <button type="submit" class="btn btn-primary btn-azul px-4">Publicar comentario</button>
-        </div>
-      </form>
-    {% else %}
-      <div class="alert alert-info mb-0">
-        <a href="{% url 'login' %}">Inicia sesión</a> para dejar un comentario.
-      </div>
-    {% endif %}
-  </div>
-</div>
-
-<!-- Listado de Comentarios -->
-<div class="mb-5">
-  <h4 class="mb-3">Comentarios</h4>
-  {% for comentario in comentarios %}
-    <div class="card mb-3">
-      <div class="card-body">
-        <strong>{{ comentario.usuario.usuario.get_full_name|default:comentario.usuario.usuario.email }}</strong>
-        <span class="text-muted small ms-2">{{ comentario.fecha_creacion|date:"d/m/Y H:i" }}</span>
-        <p class="mb-0 mt-2">{{ comentario.descripcion }}</p>
-      </div>
-    </div>
-  {% empty %}
-    <div class="alert alert-secondary">No hay comentarios aún.</div>
-  {% endfor %}
-</div>
 
   <!-- Formulario para reseñas -->
   {% if user.is_authenticated %}
