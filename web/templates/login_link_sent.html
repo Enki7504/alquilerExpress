@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block content %}
+<div style="margin-top: 100px;" class="container mt-5">
+  <h2>Verificación de acceso para administrador</h2>
+  <p>Haz clic en el siguiente enlace para completar tu inicio de sesión como administrador:</p>
+  <div class="alert alert-success text-break">
+    <a href="{{ link }}" target="_blank">{{ link }}</a>
+  </div>
+  <p class="mt-3">Este enlace es de un solo uso y expira en pocos minutos.</p>
+</div>
+{% endblock %}

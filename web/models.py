@@ -115,3 +115,36 @@ class Comentario(models.Model):
     inmueble = models.ForeignKey(Inmueble, null=True, blank=True, on_delete=models.SET_NULL)
     cochera = models.ForeignKey(Cochera, null=True, blank=True, on_delete=models.SET_NULL)
     descripcion = models.TextField()
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.usuario.usuario.get_full_name() or self.usuario.usuario.email}: {self.descripcion[:30]}"
+
+
+# Para guardar imagenes de inmuebles y cocheras
+class InmuebleImagen(models.Model):
+    id_imagen = models.AutoField(primary_key=True)
+    inmueble = models.ForeignKey(Inmueble, related_name='imagenes', on_delete=models.CASCADE)
+    imagen = models.ImageField(upload_to='inmuebles/')
+    descripcion = models.CharField(max_length=255, blank=True)
+
+    def __str__(self):
+        return f"Imagen de {self.inmueble.nombre}"
+
+class CocheraImagen(models.Model):
+    id_imagen = models.AutoField(primary_key=True)
+    cochera = models.ForeignKey(Cochera, related_name='imagenes', on_delete=models.CASCADE)
+    imagen = models.ImageField(upload_to='cocheras/')
+    descripcion = models.CharField(max_length=255, blank=True)
+
+    def __str__(self):
+        return f"Imagen de {self.cochera.nombre}"
+
+"""class LoginOTP(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    codigo = models.CharField(max_length=6)
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    def is_valido(self):
+        # Verifica si el código es válido (dentro de 10 minutos)        
+        return timezone.now() < self.creado_en + timedelta(minutes=10)"""
