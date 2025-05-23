@@ -53,7 +53,7 @@
         <ul class="navbar-nav ms-auto">
           <li class="nav-item"><a class="nav-link active" href="{% url 'index' %}">Inicio</a></li>
           <li class="nav-item"><a class="nav-link" href="#">Cocheras</a></li>
-          <li class="nav-item"><a class="nav-link" href="{% url 'lista_inmuebles' %}">Inmuebles</a></li>
+          <li class="nav-item"><a class="nav-link" href="{% url 'buscar_inmuebles' %}">Inmuebles</a></li>
           <li class="nav-item"><a class="nav-link" href="#">Contacto</a></li>
           {% if user.is_authenticated %}
           <li class="nav-item">
@@ -104,7 +104,7 @@
           <div class="card-body">
             <h5 class="card-title">Alquiler de Inmuebles</h5>
             <p class="card-text">Casas, departamentos y locales comerciales para alquiler, con la mejor relación calidad-precio.</p>
-            <a href="#" class="btn btn-outline-primary">Ver inmuebles</a>
+            <a href="{% url 'buscar_inmuebles' %}" class="btn btn-outline-primary">Ver inmuebles</a>
           </div>
         </div>
       </div>

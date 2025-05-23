@@ -115,3 +115,24 @@ class Comentario(models.Model):
     inmueble = models.ForeignKey(Inmueble, null=True, blank=True, on_delete=models.SET_NULL)
     cochera = models.ForeignKey(Cochera, null=True, blank=True, on_delete=models.SET_NULL)
     descripcion = models.TextField()
+
+
+# Para guardar imagenes de inmuebles y cocheras
+class InmuebleImagen(models.Model):
+    id_imagen = models.AutoField(primary_key=True)
+    inmueble = models.ForeignKey(Inmueble, related_name='imagenes', on_delete=models.CASCADE)
+    imagen = models.ImageField(upload_to='inmuebles/')
+    descripcion = models.CharField(max_length=255, blank=True)
+
+    def __str__(self):
+        return f"Imagen de {self.inmueble.nombre}"
+
+class CocheraImagen(models.Model):
+    id_imagen = models.AutoField(primary_key=True)
+    cochera = models.ForeignKey(Cochera, related_name='imagenes', on_delete=models.CASCADE)
+    imagen = models.ImageField(upload_to='cocheras/')
+    descripcion = models.CharField(max_length=255, blank=True)
+
+    def __str__(self):
+        return f"Imagen de {self.cochera.nombre}"
+
