@@ -5,13 +5,19 @@ from .models import Perfil
 
 class RegistroUsuarioForm(UserCreationForm):
     dni = forms.CharField(max_length=20, required=True, label="DNI")
+    email = forms.EmailField(required=True, label="Correo electrónico")
 
     class Meta:
         model = User
-        fields = ("username", "first_name", "last_name", "email", "password1", "password2", "dni")
+        fields = ("email", "first_name", "last_name", "password1", "password2", "dni")
 
     def save(self, commit=True):
-        user = super().save(commit)
-        dni = self.cleaned_data["dni"]
-        Perfil.objects.create(usuario=user, dni=dni)
+        user = super().save(commit=False)
+        email = self.cleaned_data["email"]
+        user.username = email  # Asigna el email como username
+        user.email = email
+        if commit:
+            user.save()
+            dni = self.cleaned_data["dni"]
+            Perfil.objects.create(usuario=user, dni=dni)
         return user

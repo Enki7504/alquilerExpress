@@ -14,7 +14,18 @@ from .models import (
     ClienteInmueble,
     Resenia,
     Comentario,
+    InmuebleImagen,
+    CocheraImagen
 )
+
+# --- Inlines para mostrar imágenes asociadas ---
+class InmuebleImagenInline(admin.TabularInline):
+    model = InmuebleImagen
+    extra = 1
+
+class CocheraImagenInline(admin.TabularInline):
+    model = CocheraImagen
+    extra = 1
 
 # Inline para mostrar Perfil dentro del admin de User
 class PerfilInline(admin.StackedInline):
@@ -46,12 +57,14 @@ class InmuebleAdmin(admin.ModelAdmin):
     list_display = ('nombre', 'ubicacion', 'precio_por_dia', 'estado')
     search_fields = ('nombre', 'ubicacion')
     list_filter = ('estado', 'cochera')
+    inlines = [InmuebleImagenInline]
 
 @admin.register(Cochera)
 class CocheraAdmin(admin.ModelAdmin):
     list_display = ('nombre', 'cantidad_vehiculos', 'precio_por_dia', 'estado')
     search_fields = ('nombre', 'ubicacion')
     list_filter = ('estado', 'con_techo')
+    inlines = [CocheraImagenInline]
 
 @admin.register(InmuebleCochera)
 class InmuebleCocheraAdmin(admin.ModelAdmin):
