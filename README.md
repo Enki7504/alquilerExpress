@@ -26,6 +26,8 @@ source env/bin/activate
 
 # Instalar las dependencias
 pip install django
+# Para imagenes
+pip install Pillow
 
 # Aplicar migraciones
 python manage.py migrate
