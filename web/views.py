@@ -16,7 +16,7 @@ from django.urls import reverse
 from django.conf import settings
 from .utils import email_link_token
 from .forms import AdminLoginForm
-from .utils import email_link_token
+
 
 
 
