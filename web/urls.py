@@ -14,8 +14,12 @@ urlpatterns = [
         ),                            name='login'),
     path('logout/',  views.logout_view, name='logout'),
     path('register/', views.register, name='register'),
+    path('admin-login/',          views.login_admin_view,  name='login_admin'),
+    path('admin-verify/<uidb64>/<token>/', views.verify_admin_link, name='verify_admin_link'),
     path('buscar-inmuebles/', views.buscar_inmuebles, name='buscar_inmuebles'),
     path('buscar-inmuebles/<int:id_inmueble>/', views.detalle_inmueble, name='detalle_inmueble'),
+    path("loginAdmin/", views.loginAdmin, name="loginAdmin"),
+    path("loginAdmin/2fa/", views.loginAdmin_2fa, name="loginAdmin_2fa"),
     # URLs de administración
     path('panel/', views.admin_panel, name='admin_panel'),
     path('panel/alta-empleados/', views.admin_alta_empleados, name='admin_alta_empleados'),
