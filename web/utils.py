@@ -60,6 +60,7 @@ def enviar_mail_a_empleados_sobre_reserva(id_reserva):
         print("Error al enviar mail a empleados:", e)
         return False
 
+#si borro esto da error, no se porque
 class EmailLinkTokenGenerator(PasswordResetTokenGenerator):
     """
     Genera tokens únicos ligados al usuario y su estado.

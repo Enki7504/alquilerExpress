@@ -22,7 +22,7 @@ class RegistroUsuarioForm(UserCreationForm):
             Perfil.objects.create(usuario=user, dni=dni)
         return user
 
-
+# esto sirve? 
 class AdminLoginForm(forms.Form):
     email = forms.EmailField(label='Email')
     password = forms.CharField(widget=forms.PasswordInput, label='Contraseña')
