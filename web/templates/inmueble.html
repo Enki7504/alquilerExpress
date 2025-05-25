@@ -11,6 +11,9 @@
 
   <!-- Contenido principal -->
   <main class="container mt-5 pt-5">
+    <a href="{% url 'buscar_inmuebles' %}" class="btn btn-outline-secondary mb-3">
+  &larr; Volver a la búsqueda
+</a>
     <div id="detalle-inmueble" class="row">
       <!-- Info del inmueble -->
       <div class="col-lg-8">
@@ -167,11 +170,10 @@
         <h3 class="h4 mb-3">Iniciá sesión para dejar tu reseña</h3>
         <p class="mb-4">Compartí tu experiencia con este alojamiento</p>
         <div class="d-flex justify-content-center gap-3">
-          <a href="#">
-            class="btn btn-primary btn-azul">
+          <a href="#" class="btn btn-primary btn-azul">
             Iniciar sesión
           </a>
-          <a href="{% url 'registro' %}" class="btn btn-outline-primary">
+          <a href="{% url 'register' %}" class="btn btn-outline-primary">
             Registrarse
           </a>
         </div>

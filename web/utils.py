@@ -3,6 +3,7 @@ from django.template import Template, Context
 from django.conf import settings
 from django.contrib.auth.models import User
 from .models import Reserva, ClienteInmueble, Perfil
+from django.contrib.auth.tokens import PasswordResetTokenGenerator
 
 from datetime import timedelta
 from django.contrib.auth.models import Group
@@ -74,3 +75,14 @@ def enviar_mail_a_empleados_sobre_reserva(id_reserva):
     except Exception as e:
         print("Error al enviar mail a empleados:", e)
         return False
+
+#si borro esto da error, no se porque
+class EmailLinkTokenGenerator(PasswordResetTokenGenerator):
+    """
+    Genera tokens únicos ligados al usuario y su estado.
+    """
+    def _make_hash_value(self, user, timestamp):
+        return f"{user.pk}{timestamp}{user.is_active}"
+
+# instanciamos un generador
+email_link_token = EmailLinkTokenGenerator()

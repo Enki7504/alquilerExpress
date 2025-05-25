@@ -3,8 +3,25 @@ from django.contrib.auth import logout
 from django.contrib import messages
 from django.shortcuts import redirect, render
 from django.contrib.auth.forms import UserCreationForm
-from django.shortcuts import render, get_object_or_404
 from .models import Inmueble, Resenia
+from .forms import RegistroUsuarioForm
+from django.shortcuts import get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth import authenticate, login
+from django.contrib.auth.models import User
+from django.core.mail import send_mail
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.urls import reverse
+from django.conf import settings
+from .utils import email_link_token
+from .forms import AdminLoginForm
+from .models import LoginOTP
+import random
+from django.utils import timezone
+
+
+
 
 # Create your views here.
 
@@ -24,12 +41,12 @@ def logout_view(request):
 
 def register(request):
     if request.method == 'POST':
-        form = UserCreationForm(request.POST)
+        form = RegistroUsuarioForm(request.POST)
         if form.is_valid():
             form.save()
             return redirect('login')
     else:
-        form = UserCreationForm()
+        form = RegistroUsuarioForm()
     return render(request, 'register.html', {'form': form})
 
 def lista_inmuebles(request):
@@ -55,3 +72,61 @@ def detalle_inmueble(request, id_inmueble):
         'inmueble': inmueble,
         'resenias': resenias
     })
+
+
+#Para el login con doble factor por mail
+
+def loginAdmin(request):
+    if request.method == "POST":
+        username = request.POST.get("username")
+        password = request.POST.get("password")
+
+        user = authenticate(request, username=username, password=password)
+        if user and user.is_staff:
+            codigo = f"{random.randint(0, 999999):06d}"
+
+            LoginOTP.objects.update_or_create(
+                user=user,
+                defaults={"codigo": codigo, "creado_en": timezone.now()},
+            )
+
+            send_mail(
+                "Código de verificación",
+                f"Tu código para ingresar al panel administrativo es: {codigo}",
+                "admin@tusitio.com",
+                [user.email],
+                fail_silently=False,
+            )
+
+            request.session["username_otp"] = username
+            return redirect("loginAdmin_2fa")
+
+        return render(request, "loginAdmin.html", {"error": "Credenciales inválidas o no es administrador"})
+
+    return render(request, "loginAdmin.html")
+
+
+def loginAdmin_2fa(request):
+    if request.method == "POST":
+        codigo_ingresado = request.POST.get("codigo")
+        username = request.session.get("username_otp")
+
+        if not username:
+            return redirect("loginAdmin")
+
+        try:
+            user = User.objects.get(username=username)
+            otp_obj = LoginOTP.objects.get(user=user)
+        except (User.DoesNotExist, LoginOTP.DoesNotExist):
+            return redirect("loginAdmin")
+
+        if otp_obj.is_valido() and otp_obj.codigo == codigo_ingresado:
+            login(request, user)
+            del request.session["username_otp"]
+            otp_obj.delete()
+            return redirect("/admin/")
+        else:
+            return render(request, "loginAdmin_2fa.html", {"error": "Código inválido o expirado"})
+
+    return render(request, "loginAdmin_2fa.html")
+
