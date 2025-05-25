@@ -4,16 +4,15 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from .models import Reserva, ClienteInmueble, Perfil
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
-
 from datetime import timedelta
 from django.contrib.auth.models import Group
 
 
 #comando para ejecutar el script en consola
 # python manage.py shell
-from web.utils import enviar_mail_a_empleados_sobre_reserva
-from web.models import Reserva
-enviar_mail_a_empleados_sobre_reserva(1)
+#from web.utils import enviar_mail_a_empleados_sobre_reserva
+#from web.models import Reserva
+#enviar_mail_a_empleados_sobre_reserva(1)
 
 
 def enviar_mail_a_empleados_sobre_reserva(id_reserva):

@@ -19,7 +19,8 @@ from .forms import AdminLoginForm
 from .models import LoginOTP
 import random
 from django.utils import timezone
-
+from .forms import ClienteCreationForm
+from .forms import EmpleadoCreationForm
 
 
 
@@ -130,3 +131,22 @@ def loginAdmin_2fa(request):
 
     return render(request, "loginAdmin_2fa.html")
 
+def registrar_empleado(request):
+    if request.method == "POST":
+        form = EmpleadoCreationForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect("login")  # o donde quieras
+    else:
+        form = EmpleadoCreationForm()
+    return render(request, "registrar_empleado.html", {"form": form})
+
+def registrar_cliente(request):
+    if request.method == "POST":
+        form = ClienteCreationForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect("login")  # o a donde quieras redirigir
+    else:
+        form = ClienteCreationForm()
+    return render(request, "registrar_cliente.html", {"form": form})
