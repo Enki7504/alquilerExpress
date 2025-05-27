@@ -3,8 +3,9 @@ from django.contrib.auth import logout
 from django.contrib import messages
 from django.shortcuts import redirect, render
 from django.contrib.auth.forms import UserCreationForm
-from .models import Inmueble, Resenia
-from .forms import RegistroUsuarioForm
+from django.contrib.auth.decorators import login_required, user_passes_test
+from .models import Inmueble, InmuebleImagen, Resenia, LoginOTP
+from .forms import RegistroUsuarioForm, InmuebleForm
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login
@@ -15,7 +16,6 @@ from django.utils.encoding import force_bytes, force_str
 from django.urls import reverse
 from django.conf import settings
 from .utils import email_link_token
-from .models import LoginOTP
 import random
 from django.utils import timezone
 
@@ -170,7 +170,7 @@ def loginAdmin_2fa(request):
         })
 
 
-# Funcionalidades del Admin
+# Funcionalidades del Panel de Admin
 def is_admin(user):
     return user.is_authenticated and user.is_staff
 
@@ -179,10 +179,33 @@ def is_admin(user):
 def admin_panel(request):
     return render(request, 'admin/admin_base.html')
 
-@login_required
-@user_passes_test(is_admin)
 def admin_alta_inmuebles(request):
-    return render(request, 'admin/admin_alta_inmuebles.html')
+    if request.method == 'POST':
+        form = InmuebleForm(request.POST, request.FILES)
+        if form.is_valid():
+            # Guardar el inmueble completamente
+            inmueble = form.save(commit=False)
+            inmueble.fecha_publicacion = timezone.now().date()
+            inmueble.save()  # Guardar el inmueble en la base de datos
+            form.save_m2m()  # Guardar relaciones many-to-many si las hay
+            
+            # Crear la imagen después de guardar el inmueble
+            if form.cleaned_data.get('imagen'):
+                InmuebleImagen.objects.create(
+                    inmueble=inmueble,
+                    imagen=form.cleaned_data['imagen'],
+                    descripcion="Imagen principal"
+                )
+            
+            messages.success(request, 'Inmueble creado exitosamente.')
+            return redirect('admin_alta_inmuebles')
+        else:
+            messages.error(request, 'Por favor, corrige los errores en el formulario.')
+    else:
+        form = InmuebleForm()
+    
+    return render(request, 'admin/admin_alta_inmuebles.html', {'form': form})
+
 
 @login_required
 @user_passes_test(is_admin)
@@ -213,3 +236,4 @@ def admin_estadisticas_cocheras(request):
 @user_passes_test(is_admin)
 def admin_estadisticas_inmuebles(request):
     return render(request, 'admin/admin_estadisticas_inmuebles.html')
+
