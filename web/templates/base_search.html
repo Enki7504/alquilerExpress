@@ -23,6 +23,19 @@
           <img src="{% static 'img/logo-alquiler-express-2.png' %}" alt="Logo Alquiler Express" class="navbar__icon">
         </a>
       </div>
+      <!-- Barrita de busqueda -->
+      <form class="navbar__search d-flex flex-grow-1 justify-content-center mx-3">
+        <div class="search__input input-group w-100">
+          <input type="text" class="form-control" placeholder="¿Qué estás buscando?">
+          <select class="search__select form-select">
+            <option value="inmuebles">Inmuebles</option>
+            <option value="cocheras">Cocheras</option>
+          </select>
+          <button class="search__button btn btn-outline-success" type="submit">
+            <i class="bi bi-search"></i>
+          </button>
+        </div>
+      </form>
       <!-- Botoncitos -->
       <div class="navbar__buttons d-flex align-items-center ms-3">
         <button class="buttons_notification btn btn-outline-secondary me-2"><i class="bi bi-bell"></i></button>

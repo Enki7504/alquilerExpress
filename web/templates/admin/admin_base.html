@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Panel de Administrador{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+  <div class="container-fluid" style="margin-top: 70px;">
+    <div class="row">
+      <!-- Sidebar -->
+      <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar vh-100 shadow-sm">
+        <div class="position-sticky pt-3">
+          <ul class="nav flex-column">
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'admin_alta_empleados' %}">
+                <i class="bi bi-person-plus"></i> Registrar empleados
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'admin_alta_inmuebles' %}">
+                <i class="bi bi-house-add"></i> Alta de inmueble
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'admin_alta_cocheras' %}">
+                <i class="bi bi-car-front"></i> Alta de cochera
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'admin_estadisticas_usuarios' %}">
+                <i class="bi bi-graph-up"></i> Estadísticas de usuarios
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'admin_estadisticas_empleados' %}">
+                <i class="bi bi-people"></i> Estadísticas de empleados
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'admin_estadisticas_cocheras' %}">
+                <i class="bi bi-car-front-fill"></i> Estadísticas de cocheras
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'admin_estadisticas_inmuebles' %}">
+                <i class="bi bi-building"></i> Estadísticas de inmuebles
+              </a>
+            </li>
+          </ul>
+        </div>
+      </nav>
+      
+      <!-- Contenido principal -->
+      <main id="contenido-principal" class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4">
+        {% block admin_content %}
+          <!-- Contenido por defecto (página de inicio del admin) -->
+          <h2>Bienvenido al panel de administrador</h2>
+          <p>Seleccione una opción del menú lateral para comenzar.</p>
+        {% endblock %}
+      </main>
+    </div>
+  </div>
+{% endblock %}
