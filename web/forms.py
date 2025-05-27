@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
-from .models import Perfil, Comentario, Inmueble, Estado
+from .models import Perfil, Comentario, Inmueble, Estado, Cochera
 
 class ComentarioForm(forms.ModelForm):
     class Meta:
@@ -64,5 +64,30 @@ class InmuebleForm(forms.ModelForm):
             'cantidad_huespedes': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
             'precio_por_dia': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
             'cochera': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'estado': forms.Select(attrs={'class': 'form-select'}),
+        }
+
+class CocheraForm(forms.ModelForm):
+    imagen = forms.ImageField(required=False, label="Foto de la cochera")
+    estado = forms.ModelChoiceField(queryset=Estado.objects.all(), required=True, label="Estado")
+
+    class Meta:
+        model = Cochera
+        fields = [
+            'nombre', 'ubicacion', 'descripcion', 'alto', 'ancho', 'largo',
+            'cantidad_vehiculos', 'con_techo', 'precio_por_dia', 'politica_cancelacion',
+            'estado'
+        ]
+        widgets = {
+            'nombre': forms.TextInput(attrs={'class': 'form-control'}),
+            'ubicacion': forms.TextInput(attrs={'class': 'form-control'}),
+            'descripcion': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+            'alto': forms.NumberInput(attrs={'class': 'form-control', 'min': 0, 'step': '0.01'}),
+            'ancho': forms.NumberInput(attrs={'class': 'form-control', 'min': 0, 'step': '0.01'}),
+            'largo': forms.NumberInput(attrs={'class': 'form-control', 'min': 0, 'step': '0.01'}),
+            'cantidad_vehiculos': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+            'con_techo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'precio_por_dia': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+            'politica_cancelacion': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
             'estado': forms.Select(attrs={'class': 'form-select'}),
         }

@@ -4,8 +4,8 @@ from django.contrib import messages
 from django.shortcuts import redirect, render
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.decorators import login_required, user_passes_test
-from .models import Inmueble, InmuebleImagen, Resenia, LoginOTP
-from .forms import RegistroUsuarioForm, InmuebleForm
+from .models import Inmueble, InmuebleImagen, Resenia, LoginOTP, CocheraImagen
+from .forms import RegistroUsuarioForm, InmuebleForm, CocheraForm
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login
@@ -210,7 +210,31 @@ def admin_alta_inmuebles(request):
 @login_required
 @user_passes_test(is_admin)
 def admin_alta_cocheras(request):
-    return render(request, 'admin/admin_alta_cocheras.html')
+    if request.method == 'POST':
+        form = CocheraForm(request.POST, request.FILES)
+        if form.is_valid():
+            # Guardar la cochera completamente
+            cochera = form.save(commit=False)
+            cochera.fecha_publicacion = timezone.now().date()
+            cochera.save()  # Guardar la cochera en la base de datos
+            form.save_m2m()  # Guardar relaciones many-to-many si las hay
+            
+            # Crear la imagen después de guardar la cochera
+            if form.cleaned_data.get('imagen'):
+                CocheraImagen.objects.create(
+                    cochera=cochera,
+                    imagen=form.cleaned_data['imagen'],
+                    descripcion="Imagen principal"
+                )
+            
+            messages.success(request, 'Cochera creada exitosamente.')
+            return redirect('admin_alta_cocheras')
+        else:
+            messages.error(request, 'Por favor, corrige los errores en el formulario.')
+    else:
+        form = CocheraForm()
+    
+    return render(request, 'admin/admin_alta_cocheras.html', {'form': form})
 
 @login_required
 @user_passes_test(is_admin)
@@ -236,4 +260,3 @@ def admin_estadisticas_cocheras(request):
 @user_passes_test(is_admin)
 def admin_estadisticas_inmuebles(request):
     return render(request, 'admin/admin_estadisticas_inmuebles.html')
-
