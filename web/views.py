@@ -1,31 +1,32 @@
+import random
+
 from django.contrib import messages
-from django.contrib.auth import logout
-from django.contrib import messages
-from django.shortcuts import redirect, render
-from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
-from .models import Inmueble, InmuebleImagen, Resenia, LoginOTP, CocheraImagen
-from .forms import RegistroUsuarioForm, InmuebleForm, CocheraForm
-from django.shortcuts import get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth import authenticate, login
 from django.contrib.auth.models import User
 from django.core.mail import send_mail
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-from django.utils.encoding import force_bytes, force_str
-from django.urls import reverse
-from django.conf import settings
-from .utils import email_link_token
-import random
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.utils.encoding import force_str
+from django.utils.http import urlsafe_base64_decode
 
+from .forms import (
+    RegistroUsuarioForm,
+    InmuebleForm,
+    CocheraForm,
+    ComentarioForm,
+    LoginForm,
+)
+from .models import (
+    Inmueble,
+    InmuebleImagen,
+    CocheraImagen,
+    Resenia,
+    Comentario,
+    LoginOTP,
+)
+from .utils import email_link_token
 
-
-
-from django.contrib.auth.decorators import login_required, user_passes_test
-from django.shortcuts import get_object_or_404, render, redirect
-from .models import Inmueble, Resenia, Comentario
-from .forms import RegistroUsuarioForm, ComentarioForm, LoginForm
 # Create your views here.
 
 def index(request):
