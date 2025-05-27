@@ -142,19 +142,11 @@ class CocheraImagen(models.Model):
     def __str__(self):
         return f"Imagen de {self.cochera.nombre}"
 
-<<<<<<< HEAD
-"""class LoginOTP(models.Model):
-=======
 class LoginOTP(models.Model):
->>>>>>> fd88279700f7f702891059572ca6b7cc8c258698
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     codigo = models.CharField(max_length=6)
     creado_en = models.DateTimeField(auto_now_add=True)
 
     def is_valido(self):
         # Verifica si el código es válido (dentro de 10 minutos)        
-<<<<<<< HEAD
-        return timezone.now() < self.creado_en + timedelta(minutes=10)"""
-=======
         return timezone.now() < self.creado_en + timedelta(minutes=10)
->>>>>>> fd88279700f7f702891059572ca6b7cc8c258698

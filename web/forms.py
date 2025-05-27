@@ -25,29 +25,12 @@ class RegistroUsuarioForm(UserCreationForm):
     class Meta:
         model = User
         fields = ("email", "first_name", "last_name", "password1", "password2", "dni")
-<<<<<<< HEAD
-
-    def clean_first_name(self):
-        first_name = self.cleaned_data.get('first_name', '')
-        return first_name.title()
-
-    def clean_last_name(self):
-        last_name = self.cleaned_data.get('last_name', '')
-        return last_name.title()
-=======
->>>>>>> fd88279700f7f702891059572ca6b7cc8c258698
 
     def save(self, commit=True):
         user = super().save(commit=False)
         email = self.cleaned_data["email"]
         user.username = email  # Asigna el email como username
         user.email = email
-<<<<<<< HEAD
-        # Normaliza los nombres antes de guardar
-        user.first_name = self.cleaned_data["first_name"]
-        user.last_name = self.cleaned_data["last_name"]
-=======
->>>>>>> fd88279700f7f702891059572ca6b7cc8c258698
         if commit:
             user.save()
             dni = self.cleaned_data["dni"]
@@ -56,9 +39,6 @@ class RegistroUsuarioForm(UserCreationForm):
 
 class LoginForm(forms.Form):
     email = forms.EmailField(label='Correo electrónico')
-<<<<<<< HEAD
-    password = forms.CharField(widget=forms.PasswordInput, label='Contraseña')
-=======
     password = forms.CharField(widget=forms.PasswordInput, label='Contraseña')
 
 
@@ -111,4 +91,3 @@ class CocheraForm(forms.ModelForm):
             'politica_cancelacion': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
             'estado': forms.Select(attrs={'class': 'form-select'}),
         }
->>>>>>> fd88279700f7f702891059572ca6b7cc8c258698

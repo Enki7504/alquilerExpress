@@ -11,22 +11,12 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.models import User
 from django.core.mail import send_mail
-<<<<<<< HEAD
-from django.utils.http import urlsafe_base64_encode
-from django.utils.encoding import force_bytes
-from .utils import email_link_token  # Ya tienes un token generator
-from django.urls import reverse
-from django.conf import settings
-#from .models import LoginOTP
-#import random
-=======
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.urls import reverse
 from django.conf import settings
 from .utils import email_link_token
 import random
->>>>>>> fd88279700f7f702891059572ca6b7cc8c258698
 from django.utils import timezone
 
 
@@ -110,19 +100,6 @@ def login_view(request):
             user_auth = authenticate(request, username=user.username, password=password)
             if user_auth is not None:
                 if user_auth.is_staff:
-<<<<<<< HEAD
-                    # Generar link seguro y mostrarlo en pantalla
-                    uid = urlsafe_base64_encode(force_bytes(user_auth.pk))
-                    token = email_link_token.make_token(user_auth)
-                    link = request.build_absolute_uri(
-                        reverse('verify_admin_link', kwargs={'uidb64': uid, 'token': token})
-                    )
-                    # Mostrar el link en pantalla (no enviar mail)
-                    return render(request, 'login_link_sent.html', {
-                        'email': user_auth.email,
-                        'link': link
-                    })
-=======
                     # Si es admin, inicia 2FA
                     codigo = f"{random.randint(0, 999999):06d}"
                     LoginOTP.objects.update_or_create(
@@ -138,7 +115,6 @@ def login_view(request):
                     )
                     request.session["username_otp"] = user_auth.username
                     return redirect("loginAdmin_2fa")
->>>>>>> fd88279700f7f702891059572ca6b7cc8c258698
                 else:
                     login(request, user_auth)
                     return redirect('index')
@@ -147,12 +123,6 @@ def login_view(request):
     return render(request, 'login.html', {'form': form})
 
 
-<<<<<<< HEAD
-from django.utils.http import urlsafe_base64_decode
-from django.utils.encoding import force_str
-
-=======
->>>>>>> fd88279700f7f702891059572ca6b7cc8c258698
 def verify_admin_link(request, uidb64, token):
     """
     Vista que se accede haciendo clic en el email.
@@ -165,11 +135,7 @@ def verify_admin_link(request, uidb64, token):
 
     if user is not None and email_link_token.check_token(user, token):
         login(request, user)
-<<<<<<< HEAD
-        return redirect('/admin/')   # o la vista principal de admin
-=======
         return redirect('index')   # o la vista principal de admin
->>>>>>> fd88279700f7f702891059572ca6b7cc8c258698
     else:
         return render(request, 'link_invalid.html')
 
@@ -204,11 +170,7 @@ def loginAdmin_2fa(request):
         })
 
 
-<<<<<<< HEAD
-# Funcionalidades del Admin
-=======
 # Funcionalidades del Panel de Admin
->>>>>>> fd88279700f7f702891059572ca6b7cc8c258698
 def is_admin(user):
     return user.is_authenticated and user.is_staff
 
@@ -217,12 +179,6 @@ def is_admin(user):
 def admin_panel(request):
     return render(request, 'admin/admin_base.html')
 
-<<<<<<< HEAD
-@login_required
-@user_passes_test(is_admin)
-def admin_alta_inmuebles(request):
-    return render(request, 'admin/admin_alta_inmuebles.html')
-=======
 def admin_alta_inmuebles(request):
     if request.method == 'POST':
         form = InmuebleForm(request.POST, request.FILES)
@@ -250,14 +206,10 @@ def admin_alta_inmuebles(request):
     
     return render(request, 'admin/admin_alta_inmuebles.html', {'form': form})
 
->>>>>>> fd88279700f7f702891059572ca6b7cc8c258698
 
 @login_required
 @user_passes_test(is_admin)
 def admin_alta_cocheras(request):
-<<<<<<< HEAD
-    return render(request, 'admin/admin_alta_cocheras.html')
-=======
     if request.method == 'POST':
         form = CocheraForm(request.POST, request.FILES)
         if form.is_valid():
@@ -283,7 +235,6 @@ def admin_alta_cocheras(request):
         form = CocheraForm()
     
     return render(request, 'admin/admin_alta_cocheras.html', {'form': form})
->>>>>>> fd88279700f7f702891059572ca6b7cc8c258698
 
 @login_required
 @user_passes_test(is_admin)

@@ -18,9 +18,5 @@ urlpatterns = [
     path('panel/estadisticas-empleados/', views.admin_estadisticas_empleados, name='admin_estadisticas_empleados'),
     path('panel/estadisticas-cocheras/', views.admin_estadisticas_cocheras, name='admin_estadisticas_cocheras'),
     path('panel/estadisticas-inmuebles/', views.admin_estadisticas_inmuebles, name='admin_estadisticas_inmuebles'),
-<<<<<<< HEAD
-    path('admin-link/<uidb64>/<token>/', views.verify_admin_link, name='verify_admin_link'),
-=======
->>>>>>> fd88279700f7f702891059572ca6b7cc8c258698
 ]
 
