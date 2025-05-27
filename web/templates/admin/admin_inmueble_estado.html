@@ -1,0 +1,17 @@
+{% extends 'admin/admin_base.html' %}
+{% load static %}
+
+{% block title %}Reservas del Inmueble | Admin{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">Estado del Inmueble: {{ inmueble.nombre }}</h1>
+  <a href="{% url 'detalle_inmueble' id_inmueble=inmueble.id_inmueble %}" class="btn btn-outline-secondary">Volver</a>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    <div class="alert alert-secondary">No hay reservas para este inmueble.</div>
+  </div>
+</div>
+{% endblock %}

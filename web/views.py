@@ -1,3 +1,4 @@
+import datetime
 import random
 
 from django.contrib import messages
@@ -20,10 +21,16 @@ from .forms import (
 from .models import (
     Inmueble,
     InmuebleImagen,
+    InmuebleEstado,
+    InmuebleCochera,
     CocheraImagen,
     Resenia,
     Comentario,
     LoginOTP,
+    Reserva,
+    ClienteInmueble,
+    Estado,
+    Perfil
 )
 from .utils import email_link_token
 
@@ -64,9 +71,13 @@ def detalle_inmueble(request, id_inmueble):
         Inmueble.objects.select_related('estado'),
         id_inmueble=id_inmueble
     )
-
     resenias = Resenia.objects.filter(inmueble=inmueble)
     comentarios = Comentario.objects.filter(inmueble=inmueble).order_by('-fecha_creacion')
+    # Obtener reservas activas
+    reservas = Reserva.objects.filter(inmueble=inmueble, estado__nombre__in=['Confirmada', 'Pendiente']).order_by('-fecha_inicio')
+    # Obtener historial de estados (ajustado para manejar casos sin InmuebleCochera)
+    historial = InmuebleEstado.objects.filter(inmueble_cochera__inmueble=inmueble).order_by('-fecha_inicio') if InmuebleCochera.objects.filter(inmueble=inmueble).exists() else []
+
     if request.method == 'POST' and request.user.is_authenticated:
         comentario_form = ComentarioForm(request.POST)
         if comentario_form.is_valid():
@@ -83,6 +94,8 @@ def detalle_inmueble(request, id_inmueble):
         'resenias': resenias,
         'comentarios': comentarios,
         'comentario_form': comentario_form,
+        'reservas': reservas,
+        'historial': historial,
     })
 
 
@@ -261,3 +274,50 @@ def admin_estadisticas_cocheras(request):
 @user_passes_test(is_admin)
 def admin_estadisticas_inmuebles(request):
     return render(request, 'admin/admin_estadisticas_inmuebles.html')
+
+# Cosas de los inmuebles
+@login_required
+@user_passes_test(is_admin)
+def admin_inmueble_editar(request, id_inmueble):
+    inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
+    if request.method == 'POST':
+        form = InmuebleForm(request.POST, request.FILES, instance=inmueble)
+        if form.is_valid():
+            inmueble = form.save()
+            if form.cleaned_data.get('imagen'):
+                InmuebleImagen.objects.create(
+                    inmueble=inmueble,
+                    imagen=form.cleaned_data['imagen'],
+                    descripcion="Imagen actualizada"
+                )
+            messages.success(request, 'Inmueble actualizado exitosamente.')
+            return redirect('detalle_inmueble', id_inmueble=id_inmueble)
+        else:
+            messages.error(request, 'Por favor, corrige los errores en el formulario.')
+    else:
+        form = InmuebleForm(instance=inmueble)
+    return render(request, 'admin/admin_inmueble_editar.html', {'form': form, 'inmueble': inmueble})
+
+@login_required
+@user_passes_test(is_admin)
+def admin_inmueble_eliminar(request, id_inmueble):
+    inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
+    if request.method == 'POST':
+        inmueble.delete()
+        messages.success(request, 'Inmueble eliminado exitosamente.')
+        return redirect('buscar_inmuebles')
+    return redirect('detalle_inmueble', id_inmueble=id_inmueble)
+
+@login_required
+@user_passes_test(is_admin)
+def admin_inmueble_historial(request, id_inmueble):
+    inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
+    historial = InmuebleEstado.objects.filter(inmueble_cochera__inmueble=inmueble).order_by('-fecha_inicio') if InmuebleCochera.objects.filter(inmueble=inmueble).exists() else []
+    return render(request, 'admin/admin_inmueble_historial.html', {'inmueble': inmueble, 'historial': historial})
+
+@login_required
+@user_passes_test(is_admin)
+def admin_inmueble_estado(request, id_inmueble):
+    inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
+    reservas = Reserva.objects.filter(inmueble=inmueble).order_by('-fecha_inicio')
+    return render(request, 'admin/admin_inmueble_estado.html', {'inmueble': inmueble, 'reservas': reservas})
