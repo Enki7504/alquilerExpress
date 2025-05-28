@@ -18,7 +18,8 @@ from django.conf import settings
 from .utils import email_link_token
 import random
 from django.utils import timezone
-
+from .forms import ClienteCreationForm
+from .forms import EmpleadoCreationForm
 
 
 
@@ -85,59 +86,36 @@ def detalle_inmueble(request, id_inmueble):
     })
 
 
-def login_view(request):
-    form = LoginForm(request.POST or None)
-    if request.method == 'POST':
-        if form.is_valid():
-            email = form.cleaned_data['email']
-            password = form.cleaned_data['password']
-            try:
-                user = User.objects.get(email=email)
-            except User.DoesNotExist:
-                messages.error(request, 'Usuario o contraseña inválidos.')
-                return render(request, 'login.html', {'form': form})
+#Para el login con doble factor por mail
 
-            user_auth = authenticate(request, username=user.username, password=password)
-            if user_auth is not None:
-                if user_auth.is_staff:
-                    # Si es admin, inicia 2FA
-                    codigo = f"{random.randint(0, 999999):06d}"
-                    LoginOTP.objects.update_or_create(
-                        user=user_auth,
-                        defaults={"codigo": codigo, "creado_en": timezone.now()},
-                    )
-                    send_mail(
-                        "Código de verificación",
-                        f"Tu código para ingresar al panel administrativo es: {codigo}",
-                        "admin@tusitio.com",
-                        [user_auth.email],
-                        fail_silently=False,
-                    )
-                    request.session["username_otp"] = user_auth.username
-                    return redirect("loginAdmin_2fa")
-                else:
-                    login(request, user_auth)
-                    return redirect('index')
-            else:
-                messages.error(request, 'Usuario o contraseña inválidos.')
-    return render(request, 'login.html', {'form': form})
+def loginAdmin(request):
+    if request.method == "POST":
+        username = request.POST.get("username")
+        password = request.POST.get("password")
 
+        user = authenticate(request, username=username, password=password)
+        if user and user.is_staff:
+            codigo = f"{random.randint(0, 999999):06d}"
 
-def verify_admin_link(request, uidb64, token):
-    """
-    Vista que se accede haciendo clic en el email.
-    """
-    try:
-        uid = force_str(urlsafe_base64_decode(uidb64))
-        user = User.objects.get(pk=uid)
-    except (User.DoesNotExist, ValueError, TypeError):
-        user = None
+            LoginOTP.objects.update_or_create(
+                user=user,
+                defaults={"codigo": codigo, "creado_en": timezone.now()},
+            )
 
-    if user is not None and email_link_token.check_token(user, token):
-        login(request, user)
-        return redirect('index')   # o la vista principal de admin
-    else:
-        return render(request, 'link_invalid.html')
+            send_mail(
+                "Código de verificación",
+                f"Tu código para ingresar al panel administrativo es: {codigo}",
+                "admin@tusitio.com",
+                [user.email],
+                fail_silently=False,
+            )
+
+            request.session["username_otp"] = username
+            return redirect("loginAdmin_2fa")
+
+        return render(request, "loginAdmin.html", {"error": "Credenciales inválidas o no es administrador"})
+
+    return render(request, "loginAdmin.html")
 
 
 def loginAdmin_2fa(request):
@@ -260,3 +238,24 @@ def admin_estadisticas_cocheras(request):
 @user_passes_test(is_admin)
 def admin_estadisticas_inmuebles(request):
     return render(request, 'admin/admin_estadisticas_inmuebles.html')
+
+# para registrar empleados y clientes
+def registrar_empleado(request):
+    if request.method == "POST":
+        form = EmpleadoCreationForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect("login")  # o donde quieras
+    else:
+        form = EmpleadoCreationForm()
+    return render(request, "registrar_empleado.html", {"form": form})
+
+def registrar_cliente(request):
+    if request.method == "POST":
+        form = ClienteCreationForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect("login")  # o a donde quieras redirigir
+    else:
+        form = ClienteCreationForm()
+    return render(request, "registrar_cliente.html", {"form": form})
