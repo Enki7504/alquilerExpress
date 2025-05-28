@@ -6,6 +6,16 @@ from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.core.mail import send_mail
 
 from .models import ClienteInmueble, Reserva
+from datetime import timedelta
+from django.contrib.auth.models import Group
+
+
+#comando para ejecutar el script en consola
+# python manage.py shell
+#from web.utils import enviar_mail_a_empleados_sobre_reserva
+#from web.models import Reserva
+#enviar_mail_a_empleados_sobre_reserva(1)
+
 
 def enviar_mail_a_empleados_sobre_reserva(id_reserva):
     try:
@@ -34,10 +44,17 @@ def enviar_mail_a_empleados_sobre_reserva(id_reserva):
             f"hasta el {reserva.fecha_fin}. Debe pagar ${precio_por_dia:.2f} por día, "
             f"en total son ${total:.2f} por {cantidad_dias} días. "
             f"¿Desea confirmar la reserva para que el cliente pueda pagar?"
+            f"Para aceptar la reserva, haga click en el siguiente enlace: "
+            f"http://localhost:8000/reservas/confirmar/{reserva.id_reserva}/"
+            f"Para rechazar la reserva, haga click en el siguiente enlace: "
+            f"http://localhost:8000/reservas/rechazar/{reserva.id_reserva}/"
+            f"Para ver la reserva, haga click en el siguiente enlace: "
+            f"http://localhost:8000/reservas/{reserva.id_reserva}/"
         )
 
         # Obtener todos los mails de empleados
-        empleados = User.objects.filter(is_staff=True)  # Todos los que pueden entrar al admin
+        empleados_group = Group.objects.get(name="empleados")
+        empleados = empleados_group.user_set.all()
         lista_mails = [emp.email for emp in empleados if emp.email]
 
         if not lista_mails:
@@ -60,6 +77,7 @@ def enviar_mail_a_empleados_sobre_reserva(id_reserva):
         print("Error al enviar mail a empleados:", e)
         return False
 
+#si borro esto da error, no se porque
 class EmailLinkTokenGenerator(PasswordResetTokenGenerator):
     """
     Genera tokens únicos ligados al usuario y su estado.

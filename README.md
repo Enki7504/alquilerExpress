@@ -28,6 +28,8 @@ source env/bin/activate
 pip install django
 # Para imagenes
 pip install Pillow
+# Para personalizar los formularios en las plantillas de Django (lo use con el login del admin)
+pip install django-widget-tweaks
 
 # Aplicar migraciones
 python manage.py migrate
