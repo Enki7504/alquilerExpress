@@ -1,15 +1,19 @@
 import datetime
 import random
+import json
 
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User
 from django.core.mail import send_mail
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
+from django.views.decorators.http import require_POST
+
 
 from .forms import (
     RegistroUsuarioForm,
@@ -30,7 +34,8 @@ from .models import (
     Reserva,
     ClienteInmueble,
     Estado,
-    Perfil
+    Perfil,
+    ReservaEstado,
 )
 from .utils import email_link_token
 
@@ -321,3 +326,110 @@ def admin_inmueble_estado(request, id_inmueble):
     inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
     reservas = Reserva.objects.filter(inmueble=inmueble).order_by('-fecha_inicio')
     return render(request, 'admin/admin_inmueble_estado.html', {'inmueble': inmueble, 'reservas': reservas})
+
+def crear_reserva(request, id_inmueble):
+    inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
+    
+    if request.method == 'POST':
+        fecha_inicio = request.POST.get('fecha_inicio')
+        fecha_fin = request.POST.get('fecha_fin')
+        
+        if not fecha_inicio or not fecha_fin:
+            messages.error(request, 'Debes ingresar ambas fechas.')
+            return redirect('detalle_inmueble', id_inmueble=id_inmueble)
+            
+        try:
+            fecha_inicio = datetime.datetime.strptime(fecha_inicio, '%Y-%m-%d').date()
+            fecha_fin = datetime.datetime.strptime(fecha_fin, '%Y-%m-%d').date()
+            
+            if fecha_inicio >= fecha_fin:
+                messages.error(request, 'La fecha de salida debe ser posterior a la de llegada.')
+                return redirect('detalle_inmueble', id_inmueble=id_inmueble)
+                
+            # Calcular días y precio total
+            dias = (fecha_fin - fecha_inicio).days
+            precio_total = dias * inmueble.precio_por_dia
+            
+            # Crear la reserva
+            reserva = Reserva.objects.create(
+                fecha_inicio=fecha_inicio,
+                fecha_fin=fecha_fin,
+                precio_total=precio_total,
+                inmueble=inmueble,
+                estado=Estado.objects.get(nombre='Pendiente'),  # Asegúrate de que este estado exista
+                descripcion=f"Reserva para {inmueble.nombre} del {fecha_inicio} al {fecha_fin}"
+            )
+            
+            # Relacionar el cliente con la reserva
+            if request.user.is_authenticated:
+                ClienteInmueble.objects.create(
+                    cliente=request.user.perfil,
+                    inmueble=inmueble,
+                    reserva=reserva
+                )
+            
+            messages.success(request, 'Reserva creada exitosamente!')
+            return redirect('detalle_inmueble', id_inmueble=id_inmueble)
+            
+        except ValueError:
+            messages.error(request, 'Formato de fecha inválido.')
+            return redirect('detalle_inmueble', id_inmueble=id_inmueble)
+    
+    # Si no es POST, redirigir al detalle del inmueble
+    return redirect('detalle_inmueble', id_inmueble=id_inmueble)
+
+
+@require_POST
+@login_required
+@user_passes_test(is_admin)
+def cambiar_estado_reserva(request, id_reserva):
+    reserva = get_object_or_404(Reserva, id_reserva=id_reserva)
+    
+    try:
+        # Parsear el cuerpo JSON de la solicitud
+        data = json.loads(request.body)
+        nuevo_estado = data.get('estado')
+        comentario = data.get('comentario', '')
+    except json.JSONDecodeError:
+        return JsonResponse(
+            {'success': False, 'error': 'Formato JSON inválido'}, 
+            status=400
+        )
+    
+    try:
+        estado = Estado.objects.get(nombre=nuevo_estado)
+        
+        # Validar transición de estados permitida
+        transiciones_permitidas = {
+            'Pendiente': ['Aprobada', 'Rechazada', 'Cancelada'],
+            'Aprobada': ['Pagada', 'Cancelada', 'Rechazada'],
+            'Pagada': ['Confirmada', 'Cancelada'],
+            'Confirmada': ['Finalizada', 'Cancelada']
+        }
+        
+        if (reserva.estado.nombre in transiciones_permitidas and 
+            nuevo_estado in transiciones_permitidas[reserva.estado.nombre]):
+            
+            reserva.estado = estado
+            reserva.save()
+            
+            # # Registrar en historial
+            # HistorialEstadoReserva.objects.create(
+            #     reserva=reserva,
+            #     estado=estado,
+            #     usuario=request.user,
+            #     comentario=comentario
+            # )
+            
+            return JsonResponse({'success': True})
+        else:
+            return JsonResponse(
+                {'success': False, 'error': 'Transición no permitida'}, 
+                status=400
+            )
+            
+    except Estado.DoesNotExist:
+        return JsonResponse(
+            {'success': False, 'error': 'Estado no válido'}, 
+            status=400
+        )

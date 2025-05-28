@@ -1,17 +1,259 @@
 {% extends 'admin/admin_base.html' %}
 {% load static %}
 
-{% block title %}Reservas del Inmueble | Admin{% endblock %}
-
 {% block admin_content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-  <h1 class="h2">Estado del Inmueble: {{ inmueble.nombre }}</h1>
-  <a href="{% url 'detalle_inmueble' id_inmueble=inmueble.id_inmueble %}" class="btn btn-outline-secondary">Volver</a>
+  <h1 class="h2">Reservas de: {{ inmueble.nombre }}</h1>
 </div>
 
-<div class="card shadow-sm">
+<div class="card shadow-sm mb-4">
   <div class="card-body">
-    <div class="alert alert-secondary">No hay reservas para este inmueble.</div>
+    <h5 class="card-title">Reservas Activas</h5>
+    <div class="table-responsive">
+      <table class="table table-hover">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Cliente</th>
+            <th>Fechas</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for reserva in reservas %}
+          <tr>
+            <td>{{ reserva.id_reserva }}</td>
+            <td>
+              {% with cliente=reserva.clienteinmueble_set.first.cliente %}
+                {{ cliente.usuario.get_full_name|default:cliente.usuario.username }}
+              {% endwith %}
+            </td>
+            <td>{{ reserva.fecha_inicio|date:"d/m/Y" }} - {{ reserva.fecha_fin|date:"d/m/Y" }}</td>
+            <td>
+              <span class="badge 
+                {% if reserva.estado.nombre == 'Confirmada' %}bg-success
+                {% elif reserva.estado.nombre == 'Cancelada' %}bg-danger
+                {% elif reserva.estado.nombre == 'Rechazada' %}bg-secondary
+                {% else %}bg-warning{% endif %}">
+                {{ reserva.estado.nombre }}
+              </span>
+            </td>
+            <td>
+              {% if reserva.estado.nombre == 'Pendiente' %}
+                <button class="btn btn-sm btn-success" onclick="showConfirmModal('{{ reserva.id_reserva }}', 'Aprobada')">Aprobar Solicitud</button>
+                <button class="btn btn-sm btn-danger" onclick="showConfirmModal('{{ reserva.id_reserva }}', 'Rechazada')">Rechazar Solicitud</button>
+              {% elif reserva.estado.nombre == 'Aprobada' %}
+                <p>Esperando Pago</p>
+              {% elif reserva.estado.nombre == 'Pagada' %}
+                <button class="btn btn-sm btn-success" onclick="showConfirmModal('{{ reserva.id_reserva }}', 'Confirmada')">Confirmar Pago</button>
+              {% endif %}
+              {% if reserva.estado.nombre != 'Cancelada' %}
+              <button class="btn btn-sm btn-danger" onclick="showConfirmModal('{{ reserva.id_reserva }}', 'Cancelada')">Cancelar</button>
+              {% endif %}
+              <a href="#" class="btn btn-sm btn-info">Detalles</a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="text-center">No hay reservas activas</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
+
+<div id="confirmationModal" class="modal" tabindex="-1" role="dialog" style="display: none;">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Confirmar Acción</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close" onclick="hideConfirmModal()">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p id="confirmationMessage"></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="hideConfirmModal()">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="confirmActionButton">Confirmar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="inputModal" class="modal" tabindex="-1" role="dialog" style="display: none;">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Ingrese Comentario</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close" onclick="hideInputModal()">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p>Ingrese un comentario (opcional):</p>
+        <input type="text" class="form-control" id="commentInput">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="hideInputModal()">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="inputSubmitButton">Enviar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script>
+let currentReservaId;
+let currentNuevoEstado;
+
+function showConfirmModal(reservaId, nuevoEstado) {
+  currentReservaId = reservaId;
+  currentNuevoEstado = nuevoEstado;
+  document.getElementById('confirmationMessage').innerText = `¿Estás seguro de cambiar el estado a ${nuevoEstado}?`;
+  document.getElementById('confirmationModal').style.display = 'block';
+  document.getElementById('confirmationModal').classList.add('show');
+  document.getElementById('confirmActionButton').onclick = function() {
+    hideConfirmModal();
+    showInputModal();
+  };
+}
+
+function hideConfirmModal() {
+  document.getElementById('confirmationModal').style.display = 'none';
+  document.getElementById('confirmationModal').classList.remove('show');
+}
+
+function showInputModal() {
+  document.getElementById('commentInput').value = ''; // Clear previous input
+  document.getElementById('inputModal').style.display = 'block';
+  document.getElementById('inputModal').classList.add('show');
+  document.getElementById('inputSubmitButton').onclick = function() {
+    const comentario = document.getElementById('commentInput').value;
+    hideInputModal();
+    cambiarEstado(currentReservaId, currentNuevoEstado, comentario);
+  };
+}
+
+function hideInputModal() {
+  document.getElementById('inputModal').style.display = 'none';
+  document.getElementById('inputModal').classList.remove('show');
+}
+
+function cambiarEstado(reservaId, nuevoEstado, comentario) {
+  fetch(`/panel/reserva/${reservaId}/cambiar-estado/`, {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': '{{ csrf_token }}',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      estado: nuevoEstado,
+      comentario: comentario
+    })
+  })
+  .then(response => {
+    if (response.ok) {
+      location.reload();
+    } else {
+      response.json().then(data => {
+        // Use a custom alert for error messages
+        showCustomAlert(data.error || 'Error al actualizar el estado');
+      }).catch(() => {
+        showCustomAlert('Error al actualizar el estado');
+      });
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    showCustomAlert('Error de conexión');
+  });
+}
+
+// Custom Alert Modal (instead of alert())
+function showCustomAlert(message) {
+  const alertModal = document.createElement('div');
+  alertModal.className = 'modal';
+  alertModal.tabIndex = '-1';
+  alertModal.role = 'dialog';
+  alertModal.style.display = 'block';
+  alertModal.innerHTML = `
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Alerta</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close" onclick="this.closest('.modal').remove()">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p>${message}</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary" onclick="this.closest('.modal').remove()">Aceptar</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(alertModal);
+}
+
+// Basic modal styling (add this to your CSS or a style block)
+const style = document.createElement('style');
+style.innerHTML = `
+  .modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1050;
+  }
+  .modal-dialog {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    width: 90%;
+    max-width: 500px;
+  }
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+  }
+  .modal-title {
+    margin: 0;
+  }
+  .modal-body {
+    margin-bottom: 15px;
+  }
+  .modal-footer {
+    border-top: 1px solid #dee2e6;
+    padding-top: 10px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+  .close {
+    border: none;
+    background: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+  }
+`;
+document.head.appendChild(style);
+
+</script>
 {% endblock %}
