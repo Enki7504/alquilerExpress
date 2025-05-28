@@ -10,6 +10,7 @@ urlpatterns = [
     path('register/', views.register, name='register'),
     path('buscar-inmuebles/', views.buscar_inmuebles, name='buscar_inmuebles'),
     path('buscar-inmuebles/<int:id_inmueble>/', views.detalle_inmueble, name='detalle_inmueble'),
+    path("loginAdmin/", views.loginAdmin, name="loginAdmin"), # lo dejo para poder testear el login de admin solo, pero se puede eliminar
     path("loginAdmin/2fa/", views.loginAdmin_2fa, name="loginAdmin_2fa"),
     # URLs de administración
     path('panel/', views.admin_panel, name='admin_panel'),

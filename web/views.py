@@ -173,16 +173,11 @@ def loginAdmin_2fa(request):
             login(request, user)
             del request.session["username_otp"]
             otp_obj.delete()
-            return redirect("/panel/")  # Redirige al panel de admin
+            return redirect("/admin/")
         else:
             return render(request, "loginAdmin_2fa.html", {"error": "Código inválido o expirado"})
 
     return render(request, "loginAdmin_2fa.html")
-    ({
-            'resenias': resenias,
-            'comentarios': comentarios,
-            'comentario_form': comentario_form,
-        })
 
 
 # Funcionalidades del Panel de Admin
