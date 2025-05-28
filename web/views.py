@@ -86,6 +86,43 @@ def detalle_inmueble(request, id_inmueble):
     })
 
 
+def login_view(request):
+    form = LoginForm(request.POST or None)
+    if request.method == 'POST':
+        if form.is_valid():
+            email = form.cleaned_data['email']
+            password = form.cleaned_data['password']
+            try:
+                user = User.objects.get(email=email)
+            except User.DoesNotExist:
+                messages.error(request, 'Usuario o contraseña inválidos.')
+                return render(request, 'login.html', {'form': form})
+
+            user_auth = authenticate(request, username=user.username, password=password)
+            if user_auth is not None:
+                if user_auth.is_staff:
+                    # Si es admin, inicia 2FA
+                    codigo = f"{random.randint(0, 999999):06d}"
+                    LoginOTP.objects.update_or_create(
+                        user=user_auth,
+                        defaults={"codigo": codigo, "creado_en": timezone.now()},
+                    )
+                    send_mail(
+                        "Código de verificación",
+                        f"Tu código para ingresar al panel administrativo es: {codigo}",
+                        "admin@tusitio.com",
+                        [user_auth.email],
+                        fail_silently=False,
+                    )
+                    request.session["username_otp"] = user_auth.username
+                    return redirect("loginAdmin_2fa")
+                else:
+                    login(request, user_auth)
+                    return redirect('index')
+            else:
+                messages.error(request, 'Usuario o contraseña inválidos.')
+    return render(request, 'login.html', {'form': form})
+
 #Para el login con doble factor por mail
 
 def loginAdmin(request):
@@ -239,7 +276,7 @@ def admin_estadisticas_cocheras(request):
 def admin_estadisticas_inmuebles(request):
     return render(request, 'admin/admin_estadisticas_inmuebles.html')
 
-# para registrar empleados y clientes
+# Registrar empleado y cliente
 def registrar_empleado(request):
     if request.method == "POST":
         form = EmpleadoCreationForm(request.POST)
