@@ -10,49 +10,47 @@
 {% block content %}
 
   <!-- Contenido principal -->
+  <!-- Contenido principal -->
   <main class="container mt-5 pt-5">
     <a href="{% url 'buscar_inmuebles' %}" class="btn btn-outline-secondary mb-3">
-  &larr; Volver a la búsqueda
-</a>
+      ← Volver a la búsqueda
+    </a>
     <div id="detalle-inmueble" class="row">
       <!-- Info del inmueble -->
       <div class="col-lg-8">
         <!-- Carrusel de imágenes -->
         <div id="inmuebleCarousel" class="carousel slide mb-4 shadow-sm rounded" data-bs-ride="carousel">
-          <!-- Fotos -->
           <div class="carousel-inner rounded">
-            {% if inmueble.imagen %}
-            <div class="carousel-item active">
-              <img src="{{ inmueble.imagen.url }}" class="d-block w-100 inmueble-hero-img" alt="{{ inmueble.nombre }}">
-            </div>
-            {% else %}
-            <div class="carousel-item active">
-              <img src="{% static 'img/default-property-large.jpg' %}" class="d-block w-100 inmueble-hero-img" alt="Imagen por defecto">
-            </div>
-            {% endif %}
+            {% for imagen in inmueble.imagenes.all %}
+              <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                <img src="{{ imagen.imagen.url }}" class="d-block w-100 inmueble-hero-img" alt="{{ inmueble.nombre }}">
+              </div>
+            {% empty %}
+              <div class="carousel-item active">
+                <img src="{% static 'img/default-property-large.jpg' %}" class="d-block w-100 inmueble-hero-img" alt="Imagen por defecto">
+              </div>
+            {% endfor %}
           </div>
-          <!-- Botones -->
-          <button class="carousel-control-prev" type="button" data-bs-target="#inmuebleCarousel" data-bs-slide="prev">
-            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-            <span class="visually-hidden">Previous</span>
-          </button>
-          <button class="carousel-control-next" type="button" data-bs-target="#inmuebleCarousel" data-bs-slide="next">
-            <span class="carousel-control-next-icon" aria-hidden="true"></span>
-            <span class="visually-hidden">Next</span>
-          </button>
+          {% if inmueble.imagenes.count > 1 %}
+            <button class="carousel-control-prev" type="button" data-bs-target="#inmuebleCarousel" data-bs-slide="prev">
+              <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+              <span class="visually-hidden">Previous</span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#inmuebleCarousel" data-bs-slide="next">
+              <span class="carousel-control-next-icon" aria-hidden="true"></span>
+              <span class="visually-hidden">Next</span>
+            </button>
+          {% endif %}
         </div>
         <!-- Información detallada -->
         <div class="card mb-4 shadow-sm">
           <div class="card-body">
-            <!-- Datos Básicos -->
             <h1 class="h2 mb-3">{{ inmueble.nombre }}</h1>
             <div class="d-flex align-items-center mb-3">
               <i class="bi bi-geo-alt-fill text-primary me-2"></i>
               <span class="text-muted">{{ inmueble.ubicacion }}</span>
             </div>
-            <!-- Características principales -->
             <div class="d-flex flex-wrap gap-3 mb-4">
-              <!-- Datos básicos -->
               <div class="d-flex align-items-center">
                 <i class="bi bi-door-open text-primary me-2"></i>
                 <span>{{ inmueble.cantidad_ambientes }} ambientes</span>
@@ -73,52 +71,93 @@
                 <i class="bi bi-calendar-date me-1"></i>
                 Publicado el {{ inmueble.fecha_publicacion|date:"d/m/Y" }}
               </p>
-              <!-- Si tiene cochera -->
               {% if inmueble.cochera %}
               <div class="d-flex align-items-center">
                 <i class="bi bi-car-front text-primary me-2"></i>
                 <span>Cochera</span>
               </div>
               {% endif %}
-              <!-- Estado del inmueble -->
               {% if inmueble.estado %}
               <span class="badge bg-{% if inmueble.estado.nombre == 'Disponible' %}success{% else %}warning{% endif %}">
                 {{ inmueble.estado.nombre }}
               </span>
               {% endif %}
             </div>
-            <!-- Descripción -->
             <h3 class="h4 mb-3">Descripción</h3>
             <p class="mb-4">{{ inmueble.descripcion }}</p>
-            <!-- Políticas -->
             <h3 class="h4 mb-3">Política de cancelación</h3>
             <p>{{ inmueble.politica_cancelacion }}</p>
           </div>
         </div>
       </div>
-      <!-- Sidebar - Reserva -->
+      <!-- Sidebar - Panel administrativo o reserva -->
       <div class="col-lg-4">
         <div class="card shadow-sm sticky-top" style="top: 20px;">
           <div class="card-body">
-            <h3 class="h4 mb-3">Reservar</h3>
-            <div class="d-flex align-items-end mb-3">
-              <span class="h3 text-primary">${{ inmueble.precio_por_dia|floatformat:"0" }}</span>
-              <span class="text-muted ms-1">/ noche</span>
-            </div>
+            {% if user.is_staff %}
+              <!-- Panel administrativo -->
+              <h3 class="h4 mb-3">Gestión del Inmueble</h3>
+              <div class="d-flex align-items-end mb-3">
+                <span class="h3 text-primary">${{ inmueble.precio_por_dia|floatformat:"0" }}</span>
+                <span class="text-muted ms-1">/ noche</span>
+              </div>
+              <div class="d-grid gap-2">
+                <a href="{% url 'admin_inmueble_editar' id_inmueble=inmueble.id_inmueble %}" class="btn btn-primary btn-azul">
+                  <i class="bi bi-pencil-square me-2"></i> Editar Inmueble
+                </a>
+                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">
+                  <i class="bi bi-trash me-2"></i> Eliminar Inmueble
+                </button>
+                <a href="{% url 'admin_inmueble_historial' id_inmueble=inmueble.id_inmueble %}" class="btn btn-outline-secondary">
+                  <i class="bi bi-clock-history me-2"></i> Ver Historial
+                </a>
+                <a href="{% url 'admin_inmueble_estado' id_inmueble=inmueble.id_inmueble %}" class="btn btn-outline-secondary">
+                  <i class="bi bi-calendar-check me-2"></i> Ver Reserva
+                </a>
+              </div>
+            {% else %}
+              <!-- Formulario de reserva para usuarios no administradores -->
+              <h3 class="h4 mb-3">Reservar</h3>
+              <div class="d-flex align-items-end mb-3">
+                <span class="h3 text-primary">${{ inmueble.precio_por_dia|floatformat:"0" }}</span>
+                <span class="text-muted ms-1">/ noche</span>
+              </div>
+              <form method="post" action="{% url 'crear_reserva' id_inmueble=inmueble.id_inmueble %}">
+                {% csrf_token %}
+                <div class="mb-3">
+                  <label for="fecha_inicio" class="form-label">Fecha de llegada</label>
+                  <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio" required>
+                </div>
+                <div class="mb-3">
+                  <label for="fecha_fin" class="form-label">Fecha de salida</label>
+                  <input type="date" class="form-control" id="fecha_fin" name="fecha_fin" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-azul w-100 py-2">
+                  <i class="bi bi-calendar-check me-2"></i> Reservar ahora
+                </button>
+              </form>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
 
-            <form>
+    <!-- Modal de confirmación para eliminar -->
+    <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="confirmDeleteModalLabel">Confirmar Eliminación</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            ¿Estás seguro de que quieres eliminar el inmueble "{{ inmueble.nombre }}"? Esta acción no se puede deshacer.
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <form method="post" action="{% url 'admin_inmueble_eliminar' id_inmueble=inmueble.id_inmueble %}">
               {% csrf_token %}
-              <div class="mb-3">
-                <label for="fecha_inicio" class="form-label">Fecha de llegada</label>
-                <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio" required>
-              </div>
-              <div class="mb-3">
-                <label for="fecha_fin" class="form-label">Fecha de salida</label>
-                <input type="date" class="form-control" id="fecha_fin" name="fecha_fin" required>
-              </div>
-              <button type="submit" class="btn btn-primary btn-azul w-100 py-2">
-                <i class="bi bi-calendar-check me-2"></i> Reservar ahora
-              </button>
+              <button type="submit" class="btn btn-danger">Eliminar</button>
             </form>
           </div>
         </div>
@@ -126,8 +165,7 @@
     </div>
   </main>
 
-<!-- COMENTARIOS -->
-
+<!-- Comentarios -->
 <div class="container mt-5 mb-5">
   <h3 class="h4 mb-4 border-bottom pb-3">Comentarios</h3>
   {% for comentario in comentarios %}

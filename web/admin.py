@@ -15,7 +15,9 @@ from .models import (
     Resenia,
     Comentario,
     InmuebleImagen,
-    CocheraImagen
+    CocheraImagen,
+    Provincia,
+    Ciudad
 )
 
 # --- Inlines para mostrar imágenes asociadas ---
@@ -101,3 +103,12 @@ class ReseniaAdmin(admin.ModelAdmin):
 class ComentarioAdmin(admin.ModelAdmin):
     list_display = ('usuario', 'descripcion')
     search_fields = ('usuario__usuario__username',)
+
+@admin.register(Provincia)
+class ProvinciaAdmin(admin.ModelAdmin):
+    list_display = ('nombre',)
+
+@admin.register(Ciudad)
+class CiudadAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'provincia')
+    list_filter = ('provincia',)
