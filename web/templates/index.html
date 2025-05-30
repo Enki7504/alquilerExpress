@@ -57,7 +57,7 @@
           <li class="nav-item"><a class="nav-link" href="#">Contacto</a></li>
           {% if user.is_authenticated %}
           <li class="nav-item">
-            <span class="nav-link">Hola, {{ user.username }}</span>
+            <span class="nav-link">Hola, {{ user.first_name }}</span>
           </li>
           <li class="nav-item">
             <form action="{% url 'logout' %}" method="post" style="display:inline;">

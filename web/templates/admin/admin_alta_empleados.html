@@ -1,0 +1,42 @@
+{% extends 'admin/admin_base.html' %}
+{% load static %}
+
+{% block title %}Registro de Empleados | Panel Admin{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">Registrar Empleado</h1>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+      
+      <div class="mb-3">
+        <label for="nombre" class="form-label">Nombre</label>
+        <input type="text" class="form-control" id="nombre" name="nombre" required>
+      </div>
+      
+      <div class="mb-3">
+        <label for="apellido" class="form-label">Apellido</label>
+        <input type="text" class="form-control" id="apellido" name="apellido" required>
+      </div>
+      
+      <div class="mb-3">
+        <label for="dni" class="form-label">DNI</label>
+        <input type="text" class="form-control" id="dni" name="dni" required pattern="\d+">
+      </div>
+      
+      <div class="mb-3">
+        <label for="email" class="form-label">Email</label>
+        <input type="email" class="form-control" id="email" name="email" required>
+      </div>
+      
+      <button type="submit" class="btn btn-primary w-100 btn-azul">Registrar Empleado</button>
+    </form>
+    
+    <div id="mensajeResultado" class="mt-3 text-center alert" style="display: none;"></div>
+  </div>
+</div>
+{% endblock %}

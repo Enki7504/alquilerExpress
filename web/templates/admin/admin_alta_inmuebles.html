@@ -1,0 +1,95 @@
+{% extends 'admin/admin_base.html' %}
+{% load static %}
+
+{% block title %}Alta de Inmuebles | Panel Admin{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">Dar de Alta de Inmueble</h1>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    {% if messages %}
+      <div class="mt-4">
+        {% for message in messages %}
+          <div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-danger{% endif %}">
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <div class="row g-3">
+        <!-- Renderizar campos individualmente -->
+        <div class="col-md-4">
+          {{ form.nombre.label_tag }}
+          {{ form.nombre }}
+          {{ form.nombre.errors }}
+        </div>
+        <div class="col-md-4">
+          {{ form.ubicacion.label_tag }}
+          {{ form.ubicacion }}
+          {{ form.ubicacion.errors }}
+        </div>
+        <div class="col-md-4">
+          {{ form.precio_por_dia.label_tag }}
+          {{ form.precio_por_dia }}
+          {{ form.precio_por_dia.errors }}
+        </div>
+        <div class="col-12">
+          {{ form.descripcion.label_tag }}
+          {{ form.descripcion }}
+          {{ form.descripcion.errors }}
+        </div>
+        <div class="col-md-3">
+          {{ form.cantidad_ambientes.label_tag }}
+          {{ form.cantidad_ambientes }}
+          {{ form.cantidad_ambientes.errors }}
+        </div>
+        <div class="col-md-3">
+          {{ form.cantidad_banios.label_tag }}
+          {{ form.cantidad_banios }}
+          {{ form.cantidad_banios.errors }}
+        </div>
+        <div class="col-md-3">
+          {{ form.cantidad_camas.label_tag }}
+          {{ form.cantidad_camas }}
+          {{ form.cantidad_camas.errors }}
+        </div>
+        <div class="col-md-3">
+          {{ form.cantidad_huespedes.label_tag }}
+          {{ form.cantidad_huespedes }}
+          {{ form.cantidad_huespedes.errors }}
+        </div>
+        <div class="col-12">
+          {{ form.politica_cancelacion.label_tag }}
+          {{ form.politica_cancelacion }}
+          {{ form.politica_cancelacion.errors }}
+        </div>
+        <div class="col-md-4">
+          {{ form.cochera.label_tag }}
+          {{ form.cochera }}
+          {{ form.cochera.errors }}
+        </div>
+        <div class="col-md-4">
+          {{ form.estado.label_tag }}
+          {{ form.estado }}
+          {{ form.estado.errors }}
+        </div>
+        <div class="col-md-4">
+          {{ form.imagen.label_tag }}
+          {{ form.imagen }}
+          {{ form.imagen.errors }}
+          <img id="preview" class="img-fluid mt-3" style="max-height: 100px; display: none;">
+        </div>
+        <div class="col-12">
+          <button type="submit" class="btn btn-primary btn-azul">Cargar Inmueble</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

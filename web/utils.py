@@ -1,9 +1,11 @@
-from django.core.mail import send_mail
-from django.template import Template, Context
+from datetime import timedelta
+
 from django.conf import settings
 from django.contrib.auth.models import User
-from .models import Reserva, ClienteInmueble, Perfil
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from django.core.mail import send_mail
+
+from .models import ClienteInmueble, Reserva
 from datetime import timedelta
 from django.contrib.auth.models import Group
 
