@@ -226,3 +226,23 @@ class EmpleadoCreationForm(forms.Form):
         user.groups.add(grupo_empleado)
         Perfil.objects.create(usuario=user, dni=data["dni"])
         return user
+
+class EmpleadoAdminCreationForm(forms.Form):
+    first_name = forms.CharField(label="Nombre", max_length=30)
+    last_name = forms.CharField(label="Apellido", max_length=30)
+    email = forms.EmailField(label="Correo electrónico")
+    dni = forms.CharField(label="DNI", max_length=20)
+
+    def clean_email(self):
+        email = self.cleaned_data["email"]
+        from django.contrib.auth.models import User
+        if User.objects.filter(username=email).exists():
+            raise forms.ValidationError("Ya existe un usuario con este email.")
+        return email
+
+    def clean_dni(self):
+        dni = self.cleaned_data["dni"]
+        from .models import Perfil
+        if Perfil.objects.filter(dni=dni).exists():
+            raise forms.ValidationError("Este DNI ya está registrado.")
+        return dni
