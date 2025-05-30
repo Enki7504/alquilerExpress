@@ -193,7 +193,7 @@ def loginAdmin_2fa(request):
             login(request, user)
             del request.session["username_otp"]
             otp_obj.delete()
-            return redirect("/admin/")
+            return redirect("/panel/")
         else:
             return render(request, "loginAdmin_2fa.html", {"error": "Código inválido o expirado"})
 
@@ -444,6 +444,7 @@ def cambiar_estado_reserva(request, id_reserva):
             {'success': False, 'error': 'Estado no válido'}, 
             status=400
         )
+        
 # Registrar empleado y cliente
 def registrar_empleado(request):
     if request.method == "POST":
