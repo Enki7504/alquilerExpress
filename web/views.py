@@ -1,11 +1,13 @@
 import datetime
 import random
 import json
+import secrets
+import string
 
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 from django.core.mail import send_mail
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -13,9 +15,11 @@ from django.utils import timezone
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
 from django.views.decorators.http import require_POST
+from django.conf import settings
 
 from .forms import ClienteCreationForm
 from .forms import EmpleadoCreationForm
+from .forms import EmpleadoAdminCreationForm
 
 from .forms import (
     RegistroUsuarioForm,
@@ -193,7 +197,7 @@ def loginAdmin_2fa(request):
             login(request, user)
             del request.session["username_otp"]
             otp_obj.delete()
-            return redirect("/admin/")
+            return redirect("/panel")
         else:
             return render(request, "loginAdmin_2fa.html", {"error": "Código inválido o expirado"})
 
@@ -204,8 +208,11 @@ def loginAdmin_2fa(request):
 def is_admin(user):
     return user.is_authenticated and user.is_staff
 
+def is_admin_or_empleado(user):
+    return user.is_authenticated and (user.is_staff or user.groups.filter(name="empleado").exists())
+
 @login_required
-@user_passes_test(is_admin)
+@user_passes_test(is_admin_or_empleado)
 def admin_panel(request):
     return render(request, 'admin/admin_base.html')
 
@@ -269,25 +276,74 @@ def admin_alta_cocheras(request):
 @login_required
 @user_passes_test(is_admin)
 def admin_alta_empleados(request):
-    return render(request, 'admin/admin_alta_empleados.html')
+    mensaje = None
+    error = None
+    if request.method == "POST":
+        form = EmpleadoAdminCreationForm(request.POST)
+        if form.is_valid():
+            data = form.cleaned_data
+            # Generar contraseña aleatoria segura
+            password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(10))
+            from django.contrib.auth.models import User
+            from .models import Perfil
+
+            # Crear usuario
+            user = User.objects.create_user(
+                username=data["email"],
+                email=data["email"],
+                password=password,
+                first_name=data["first_name"].title(),
+                last_name=data["last_name"].title(),
+            )
+            # Asignar grupo "empleado"
+            grupo_empleado, _ = Group.objects.get_or_create(name="empleado")
+            user.groups.add(grupo_empleado)
+            # Crear perfil
+            Perfil.objects.create(usuario=user, dni=data["dni"])
+
+            # Enviar mail con la contraseña
+            try:
+                send_mail(
+                    "Bienvenido a AlquilerExpress - Acceso de Empleado",
+                    f"Hola {user.first_name},\n\n"
+                    f"Tu cuenta de empleado ha sido creada.\n"
+                    f"Usuario: {user.email}\n"
+                    f"Contraseña temporal: {password}\n\n"
+                    f"Por favor, inicia sesión y cambia tu contraseña.",
+                    settings.DEFAULT_FROM_EMAIL,
+                    [user.email],
+                    fail_silently=False,
+                )
+                mensaje = f"Empleado registrado y correo enviado a {user.email}."
+            except Exception as e:
+                error = f"Empleado creado, pero error enviando el correo: {e}"
+        else:
+            error = "Corrige los errores del formulario."
+    else:
+        form = EmpleadoAdminCreationForm()
+    return render(request, 'admin/admin_alta_empleados.html', {
+        'form': form,
+        'mensaje': mensaje,
+        'error': error,
+    })
 
 @login_required
-@user_passes_test(is_admin)
+@user_passes_test(is_admin_or_empleado)
 def admin_estadisticas_usuarios(request):
     return render(request, 'admin/admin_estadisticas_usuarios.html')
 
 @login_required
-@user_passes_test(is_admin)
+@user_passes_test(is_admin_or_empleado)
 def admin_estadisticas_empleados(request):
     return render(request, 'admin/admin_estadisticas_empleados.html')
 
 @login_required
-@user_passes_test(is_admin)
+@user_passes_test(is_admin_or_empleado)
 def admin_estadisticas_cocheras(request):
     return render(request, 'admin/admin_estadisticas_cocheras.html')
 
 @login_required
-@user_passes_test(is_admin)
+@user_passes_test(is_admin_or_empleado)
 def admin_estadisticas_inmuebles(request):
     return render(request, 'admin/admin_estadisticas_inmuebles.html')
 
@@ -325,14 +381,14 @@ def admin_inmueble_eliminar(request, id_inmueble):
     return redirect('detalle_inmueble', id_inmueble=id_inmueble)
 
 @login_required
-@user_passes_test(is_admin)
+@user_passes_test(is_admin_or_empleado)
 def admin_inmueble_historial(request, id_inmueble):
     inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
     historial = InmuebleEstado.objects.filter(inmueble_cochera__inmueble=inmueble).order_by('-fecha_inicio') if InmuebleCochera.objects.filter(inmueble=inmueble).exists() else []
     return render(request, 'admin/admin_inmueble_historial.html', {'inmueble': inmueble, 'historial': historial})
 
 @login_required
-@user_passes_test(is_admin)
+@user_passes_test(is_admin_or_empleado)
 def admin_inmueble_estado(request, id_inmueble):
     inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
     reservas = Reserva.objects.filter(inmueble=inmueble).order_by('-fecha_inicio')
