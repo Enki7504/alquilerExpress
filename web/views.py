@@ -89,8 +89,8 @@ def detalle_inmueble(request, id_inmueble):
     comentarios = Comentario.objects.filter(inmueble=inmueble).order_by('-fecha_creacion')
     # Obtener reservas activas
     reservas = Reserva.objects.filter(inmueble=inmueble, estado__nombre__in=['Confirmada', 'Pendiente']).order_by('-fecha_inicio')
-    # Obtener historial de estados (ajustado para manejar casos sin InmuebleCochera)
-    historial = InmuebleEstado.objects.filter(inmueble_cochera__inmueble=inmueble).order_by('-fecha_inicio') if InmuebleCochera.objects.filter(inmueble=inmueble).exists() else []
+    # Eliminar referencia a InmuebleCochera
+    historial = InmuebleEstado.objects.filter(inmueble=inmueble).order_by('-fecha_inicio')
 
     if request.method == 'POST' and request.user.is_authenticated:
         comentario_form = ComentarioForm(request.POST)
@@ -387,7 +387,8 @@ def admin_inmueble_eliminar(request, id_inmueble):
 @user_passes_test(is_admin_or_empleado)
 def admin_inmueble_historial(request, id_inmueble):
     inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
-    historial = InmuebleEstado.objects.filter(inmueble_cochera__inmueble=inmueble).order_by('-fecha_inicio') if InmuebleCochera.objects.filter(inmueble=inmueble).exists() else []
+    # Eliminar referencia a InmuebleCochera
+    historial = InmuebleEstado.objects.filter(inmueble=inmueble).order_by('-fecha_inicio')
     return render(request, 'admin/admin_inmueble_historial.html', {'inmueble': inmueble, 'historial': historial})
 
 @login_required
