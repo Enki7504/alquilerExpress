@@ -354,7 +354,7 @@ def admin_panel(request):
 
 @login_required
 @user_passes_test(is_admin)
-def admin_alta_inmuebles(request):
+def admin_inmuebles_alta(request):
     """
     Permite a los administradores dar de alta nuevos inmuebles.
     Maneja la creación del inmueble y la carga de su imagen principal.
@@ -377,17 +377,17 @@ def admin_alta_inmuebles(request):
                 )
             
             messages.success(request, 'Inmueble creado exitosamente.')
-            return redirect('admin_alta_inmuebles')
+            return redirect('admin_inmuebles_alta')
         else:
             messages.error(request, 'Por favor, corrige los errores en el formulario.')
     else:
         form = InmuebleForm()
     
-    return render(request, 'admin/admin_alta_inmuebles.html', {'form': form})
+    return render(request, 'admin/admin_inmuebles_alta.html', {'form': form})
 
 @login_required
 @user_passes_test(is_admin)
-def admin_alta_cocheras(request):
+def admin_cocheras_alta(request):
     """
     Permite a los administradores dar de alta nuevas cocheras.
     Maneja la creación de la cochera y la carga de su imagen principal.
@@ -410,13 +410,13 @@ def admin_alta_cocheras(request):
                 )
             
             messages.success(request, 'Cochera creada exitosamente.')
-            return redirect('admin_alta_cocheras')
+            return redirect('admin_cocheras_alta')
         else:
             messages.error(request, 'Por favor, corrige los errores en el formulario.')
     else:
         form = CocheraForm()
     
-    return render(request, 'admin/admin_alta_cocheras.html', {'form': form})
+    return render(request, 'admin/admin_cocheras_alta.html', {'form': form})
 
 @login_required
 @user_passes_test(is_admin)
@@ -476,6 +476,49 @@ def admin_alta_empleados(request):
 
 @login_required
 @user_passes_test(is_admin_or_empleado)
+def admin_inmuebles(request):
+    """
+    Lista todos los inmuebles y permite la búsqueda.
+    Incluye botones para acciones rápidas (ver, editar, eliminar, estado, historial).
+    """
+    query = request.GET.get('q', '').strip()
+    inmuebles = Inmueble.objects.all().order_by('nombre') # Ordenar para una mejor visualización
+
+    if query:
+        # Búsqueda por nombre o descripción
+        inmuebles = inmuebles.filter(
+            Q(nombre__icontains=query) | Q(descripcion__icontains=query)
+        ).distinct() # Usar distinct por si hay duplicados en el join de Q
+
+    return render(request, 'admin/admin_inmuebles.html', {
+        'inmuebles': inmuebles,
+        'query': query
+    })
+
+@login_required
+@user_passes_test(is_admin_or_empleado)
+def admin_cocheras(request):
+    """
+    Lista todas las cocheras y permite la búsqueda.
+    Incluye botones para acciones rápidas (ver, editar, eliminar, estado, historial).
+    """
+    query = request.GET.get('q', '').strip()
+    cocheras = Cochera.objects.all().order_by('nombre') # Ordenar para una mejor visualización
+
+    if query:
+        # Búsqueda por nombre o descripción
+        cocheras = cocheras.filter(
+            Q(nombre__icontains=query) | Q(descripcion__icontains=query)
+        ).distinct()
+
+    return render(request, 'admin/admin_cocheras.html', {
+        'cocheras': cocheras,
+        'query': query
+    })
+
+
+@login_required
+@user_passes_test(is_admin_or_empleado)
 def admin_estadisticas_usuarios(request):
     """
     Muestra estadísticas relacionadas con los usuarios.
@@ -513,7 +556,7 @@ def admin_estadisticas_inmuebles(request):
 
 @login_required
 @user_passes_test(is_admin)
-def admin_inmueble_editar(request, id_inmueble):
+def admin_inmuebles_editar(request, id_inmueble):
     """
     Permite a los administradores editar la información de un inmueble existente.
     """
@@ -534,11 +577,11 @@ def admin_inmueble_editar(request, id_inmueble):
             messages.error(request, 'Por favor, corrige los errores en el formulario.')
     else:
         form = InmuebleForm(instance=inmueble)
-    return render(request, 'admin/admin_inmueble_editar.html', {'form': form, 'inmueble': inmueble})
+    return render(request, 'admin/admin_inmuebles_editar.html', {'form': form, 'inmueble': inmueble})
 
 @login_required
 @user_passes_test(is_admin)
-def admin_inmueble_eliminar(request, id_inmueble):
+def admin_inmuebles_eliminar(request, id_inmueble):
     """
     Permite a los administradores eliminar un inmueble existente.
     """
@@ -552,23 +595,23 @@ def admin_inmueble_eliminar(request, id_inmueble):
 
 @login_required
 @user_passes_test(is_admin_or_empleado)
-def admin_inmueble_historial(request, id_inmueble):
+def admin_inmuebles_historial(request, id_inmueble):
     """
     Muestra el historial de estados de un inmueble específico.
     """
     inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
     historial = InmuebleEstado.objects.filter(inmueble_cochera__inmueble=inmueble).order_by('-fecha_inicio') if InmuebleCochera.objects.filter(inmueble=inmueble).exists() else []
-    return render(request, 'admin/admin_inmueble_historial.html', {'inmueble': inmueble, 'historial': historial})
+    return render(request, 'admin/admin_inmuebles_historial.html', {'inmueble': inmueble, 'historial': historial})
 
 @login_required
 @user_passes_test(is_admin_or_empleado)
-def admin_inmueble_estado(request, id_inmueble):
+def admin_inmuebles_estado(request, id_inmueble):
     """
     Muestra el estado actual y las reservas de un inmueble específico.
     """
     inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
     reservas = Reserva.objects.filter(inmueble=inmueble).order_by('-fecha_inicio')
-    return render(request, 'admin/admin_inmueble_estado.html', {'inmueble': inmueble, 'reservas': reservas})
+    return render(request, 'admin/admin_inmuebles_estado.html', {'inmueble': inmueble, 'reservas': reservas})
 
 
 ################################################################################################################
@@ -577,7 +620,7 @@ def admin_inmueble_estado(request, id_inmueble):
 
 @login_required
 @user_passes_test(is_admin)
-def admin_cochera_editar(request, id_cochera):
+def admin_cocheras_editar(request, id_cochera):
     """
     Permite a los administradores editar la información de una cochera existente.
     """
@@ -598,11 +641,11 @@ def admin_cochera_editar(request, id_cochera):
             messages.error(request, 'Por favor, corrige los errores en el formulario.')
     else:
         form = CocheraForm(instance=cochera)
-    return render(request, 'admin/admin_cochera_editar.html', {'form': form, 'cochera': cochera})
+    return render(request, 'admin/admin_cocheras_editar.html', {'form': form, 'cochera': cochera})
 
 @login_required
 @user_passes_test(is_admin)
-def admin_cochera_eliminar(request, id_cochera):
+def admin_cocheras_eliminar(request, id_cochera):
     """
     Permite a los administradores eliminar una cochera existente.
     """
@@ -616,23 +659,23 @@ def admin_cochera_eliminar(request, id_cochera):
 
 @login_required
 @user_passes_test(is_admin)
-def admin_cochera_historial(request, id_cochera):
+def admin_cocheras_historial(request, id_cochera):
     """
     Muestra el historial de estados de una cochera específica.
     """
     cochera = get_object_or_404(Cochera, id_cochera=id_cochera)
     historial = InmuebleEstado.objects.filter(inmueble_cochera__cochera=cochera).order_by('-fecha_inicio') if InmuebleCochera.objects.filter(cochera=cochera).exists() else []
-    return render(request, 'admin/admin_cochera_historial.html', {'cochera': cochera, 'historial': historial})
+    return render(request, 'admin/admin_cocheras_historial.html', {'cochera': cochera, 'historial': historial})
 
 @login_required
 @user_passes_test(is_admin)
-def admin_cochera_estado(request, id_cochera):
+def admin_cocheras_estado(request, id_cochera):
     """
     Muestra el estado actual y las reservas de una cochera específica.
     """
     cochera = get_object_or_404(Cochera, id_cochera=id_cochera)
     reservas = Reserva.objects.filter(cochera=cochera).order_by('-fecha_inicio')
-    return render(request, 'admin/admin_cochera_estado.html', {'cochera': cochera, 'reservas': reservas})
+    return render(request, 'admin/admin_cocheras_estado.html', {'cochera': cochera, 'reservas': reservas})
 
 
 ################################################################################################################

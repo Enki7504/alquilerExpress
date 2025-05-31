@@ -46,15 +46,15 @@
             </div>
             <ul class="nav flex-column">
               <li class="nav-item">
-                <a class="nav-link {% if request.resolver_match.url_name == 'admin_alta_inmuebles' %}active{% endif %}" 
-                   href="{% url 'admin_alta_inmuebles' %}">
-                  <i class="bi bi-house-add"></i> Alta de Inmuebles
+                <a class="nav-link {% if request.resolver_match.url_name == 'admin_inmuebles' or request.resolver_match.url_name == 'admin_inmuebles_alta' or 'admin_inmuebles_' in request.resolver_match.url_name %}active{% endif %}"
+                  href="{% url 'admin_inmuebles' %}">
+                  <i class="bi bi-house-add"></i> Gestión de Inmuebles
                 </a>
               </li>
               <li class="nav-item">
-                <a class="nav-link {% if request.resolver_match.url_name == 'admin_alta_cocheras' %}active{% endif %}" 
-                   href="{% url 'admin_alta_cocheras' %}">
-                  <i class="bi bi-car-front"></i> Alta de Cocheras
+                <a class="nav-link {% if request.resolver_match.url_name == 'admin_cocheras' or request.resolver_match.url_name == 'admin_cocheras_alta' or 'admin_cocheras_' in request.resolver_match.url_name %}active{% endif %}"
+                  href="{% url 'admin_cocheras' %}">
+                  <i class="bi bi-car-front"></i> Gestión de Cocheras
                 </a>
               </li>
             </ul>
