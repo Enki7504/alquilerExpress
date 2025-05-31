@@ -70,9 +70,15 @@
           {{ form.politica_cancelacion.errors }}
         </div>
         <div class="col-md-4">
-          {{ form.cochera.label_tag }}
-          {{ form.cochera }}
-          {{ form.cochera.errors }}
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" id="toggleCochera">
+            <label class="form-check-label" for="toggleCochera">¿Agregar cochera?</label>
+          </div>
+          <div id="cocheraSelectDiv" style="display: none;">
+            {{ form.cochera.label_tag }}
+            {{ form.cochera }}
+            {{ form.cochera.errors }}
+          </div>
         </div>
         <div class="col-md-4">
           {{ form.estado.label_tag }}
@@ -93,10 +99,13 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  const checkbox = document.getElementById('cocheraCheck');
+  const checkbox = document.getElementById('toggleCochera');
   const selectDiv = document.getElementById('cocheraSelectDiv');
   checkbox.addEventListener('change', function() {
     selectDiv.style.display = this.checked ? 'block' : 'none';
+    if (!this.checked) {
+      document.getElementById('id_cochera').value = "";
+    }
   });
 });
 </script>
