@@ -1,0 +1,38 @@
+{% extends 'admin/admin_base.html' %}
+{% load static %}
+
+{% block title %}Historial de la Cochera | Admin{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between flex-wrap">
+  <h1 class="h2">Historial de la Cochera: {{ cochera.nombre }}</h1>
+  <a href="{% url 'detalle_cochera' id_cochera=cochera.id_cochera %}" class="btn btn-outline-secondary">Volver</a>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    {% if historial %}
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th>Estado</th>
+            <th>Fecha Inicio</th>
+            <th>Fecha Fin</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for registro in historial %}
+            <tr>
+              <td>{{ registro.estado.nombre }}</td>
+              <td>{{ registro.fecha_inicio|date:"d/m/Y" }}</td>
+              <td>{{ registro.fecha_fin|date:"d/m/Y" | default:"Activo" }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <div class="alert alert-secondary">No hay historial de estados para esta cochera.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

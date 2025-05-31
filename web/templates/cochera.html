@@ -78,22 +78,6 @@
             <h3 class="h4 mb-3">Descripción</h3>
             <p class="mb-4">{{ cochera.descripcion }}</p>
             
-            <h3 class="h4 mb-3">Características</h3>
-            <ul class="list-group list-group-flush mb-4">
-              <li class="list-group-item d-flex align-items-center">
-                <i class="bi bi-check-circle-fill text-success me-2"></i>
-                Espacio para {{ cochera.cantidad_vehiculos }} vehículo{{ cochera.cantidad_vehiculos|pluralize }}
-              </li>
-              <li class="list-group-item d-flex align-items-center">
-                <i class="bi bi-check-circle-fill text-success me-2"></i>
-                Dimensiones: {{ cochera.ancho }}m (ancho) × {{ cochera.largo }}m (largo) × {{ cochera.alto }}m (alto)
-              </li>
-              <li class="list-group-item d-flex align-items-center">
-                <i class="bi bi-check-circle-fill text-success me-2"></i>
-                {{ cochera.con_techo|yesno:"Con techo,Descubierta" }}
-              </li>
-            </ul>
-            
             <h3 class="h4 mb-3">Política de cancelación</h3>
             <p>{{ cochera.politica_cancelacion }}</p>
           </div>

@@ -437,6 +437,101 @@ def admin_inmueble_estado(request, id_inmueble):
     reservas = Reserva.objects.filter(inmueble=inmueble).order_by('-fecha_inicio')
     return render(request, 'admin/admin_inmueble_estado.html', {'inmueble': inmueble, 'reservas': reservas})
 
+@login_required
+@user_passes_test(is_admin)
+def admin_cochera_editar(request, id_cochera):
+    cochera = get_object_or_404(Cochera, id_cochera=id_cochera)
+    if request.method == 'POST':
+        form = CocheraForm(request.POST, request.FILES, instance=cochera)
+        if form.is_valid():
+            cochera = form.save()
+            if form.cleaned_data.get('imagen'):
+                CocheraImagen.objects.create(
+                    cochera=cochera,
+                    imagen=form.cleaned_data['imagen'],
+                    descripcion="Imagen actualizada"
+                )
+            messages.success(request, 'Cochera actualizada exitosamente.')
+            return redirect('detalle_cochera', id_cochera=id_cochera)
+        else:
+            messages.error(request, 'Por favor, corrige los errores en el formulario.')
+    else:
+        form = CocheraForm(instance=cochera)
+    return render(request, 'admin/admin_cochera_editar.html', {'form': form, 'cochera': cochera})
+
+@login_required
+@user_passes_test(is_admin)
+def admin_cochera_eliminar(request, id_cochera):
+    cochera = get_object_or_404(Cochera, id_cochera=id_cochera)
+    if request.method == 'POST':
+        cochera.delete()
+        messages.success(request, 'Cochera eliminada exitosamente.')
+        return redirect('buscar_cocheras')
+    return redirect('detalle_cochera', id_cochera=id_cochera)
+
+@login_required
+@user_passes_test(is_admin)
+def admin_cochera_historial(request, id_cochera):
+    cochera = get_object_or_404(Cochera, id_cochera=id_cochera)
+    historial = InmuebleEstado.objects.filter(inmueble_cochera__cochera=cochera).order_by('-fecha_inicio') if InmuebleCochera.objects.filter(cochera=cochera).exists() else []
+    return render(request, 'admin/admin_cochera_historial.html', {'cochera': cochera, 'historial': historial})
+
+@login_required
+@user_passes_test(is_admin)
+def admin_cochera_estado(request, id_cochera):
+    cochera = get_object_or_404(Cochera, id_cochera=id_cochera)
+    reservas = Reserva.objects.filter(cochera=cochera).order_by('-fecha_inicio')
+    return render(request, 'admin/admin_cochera_estado.html', {'cochera': cochera, 'reservas': reservas})
+
+@require_POST
+@login_required
+@user_passes_test(is_admin)
+def cambiar_estado_reserva_cochera(request, id_reserva):
+    reserva = get_object_or_404(Reserva, id_reserva=id_reserva)
+    
+    try:
+        data = json.loads(request.body)
+        nuevo_estado = data.get('estado')
+        comentario = data.get('comentario', '')
+    except json.JSONDecodeError:
+        return JsonResponse(
+            {'success': False, 'error': 'Formato JSON inválido'}, 
+            status=400
+        )
+    
+    try:
+        estado = Estado.objects.get(nombre=nuevo_estado)
+        
+        # Validar transición de estados permitida (misma lógica que para inmuebles)
+        transiciones_permitidas = {
+            'Pendiente': ['Aprobada', 'Rechazada', 'Cancelada'],
+            'Aprobada': ['Pagada', 'Cancelada', 'Rechazada'],
+            'Pagada': ['Confirmada', 'Cancelada'],
+            'Confirmada': ['Finalizada', 'Cancelada']
+        }
+        
+        if (reserva.estado and 
+            reserva.estado.nombre in transiciones_permitidas and 
+            nuevo_estado in transiciones_permitidas[reserva.estado.nombre]):
+            
+            reserva.estado = estado
+            reserva.save()
+            
+            return JsonResponse({'success': True})
+        else:
+            return JsonResponse(
+                {'success': False, 'error': 'Transición no permitida'}, 
+                status=400
+            )
+            
+    except Estado.DoesNotExist:
+        return JsonResponse(
+            {'success': False, 'error': 'Estado no válido'}, 
+            status=400
+        )
+
+
+
 def crear_reserva(request, id_inmueble):
     inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
     

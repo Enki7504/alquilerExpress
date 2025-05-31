@@ -35,10 +35,19 @@ urlpatterns = [
     # path('panel/inmuebles/historial-inmueble/<int:id_inmueble>/', views.admin_inmueble_historial, name='admin_inmueble_historial'),
     # path('panel/inmuebles/reservas-inmueble/<int:id_inmueble>/', views.admin_inmueble_reservas, name='admin_inmueble_reservas'),
     # path('panel/inmuebles/crear-reserva/<int:id_inmueble>/', views.crear_reserva, name='crear_reserva'),
+    
+    # Gestion de inmuebles
     path('panel/editar-inmueble/<int:id_inmueble>/', views.admin_inmueble_editar, name='admin_inmueble_editar'),
     path('panel/eliminar-inmueble/<int:id_inmueble>/', views.admin_inmueble_eliminar, name='admin_inmueble_eliminar'),
     path('panel/historial-inmueble/<int:id_inmueble>/', views.admin_inmueble_historial, name='admin_inmueble_historial'),
     path('panel/estado-inmueble/<int:id_inmueble>/', views.admin_inmueble_estado, name='admin_inmueble_estado'),
+
+    # Gestion de cocheras
+    path('panel/editar-cochera/<int:id_cochera>/', views.admin_cochera_editar, name='admin_cochera_editar'),
+    path('panel/eliminar-cochera/<int:id_cochera>/', views.admin_cochera_eliminar, name='admin_cochera_eliminar'),
+    path('panel/historial-cochera/<int:id_cochera>/', views.admin_cochera_historial, name='admin_cochera_historial'),
+    path('panel/estado-cochera/<int:id_cochera>/', views.admin_cochera_estado, name='admin_cochera_estado'),
+    path('panel/reserva-cochera/<int:id_reserva>/cambiar-estado/', views.cambiar_estado_reserva_cochera, name='cambiar_estado_reserva_cochera'),
 
     # registrar empleado y cliente
     path("registrar-empleado/", views.registrar_empleado, name="registrar_empleado"),
