@@ -18,18 +18,19 @@ from django.utils.http import urlsafe_base64_decode
 from django.views.decorators.http import require_POST
 from django.db.models import Q
 
-
-from .forms import ClienteCreationForm
-from .forms import EmpleadoCreationForm
-from .forms import EmpleadoAdminCreationForm
-
+# Importaciones de formularios locales
 from .forms import (
     RegistroUsuarioForm,
     InmuebleForm,
     CocheraForm,
     ComentarioForm,
     LoginForm,
+    ClienteCreationForm,
+    EmpleadoCreationForm,
+    EmpleadoAdminCreationForm,
 )
+
+# Importaciones de modelos locales
 from .models import (
     Inmueble,
     InmuebleImagen,
@@ -47,34 +48,187 @@ from .models import (
     Perfil,
     ReservaEstado,
 )
+
+# Importaciones de utilidades locales
 from .utils import email_link_token
 
-# Create your views here.
+
+################################################################################################################
+# --- Vistas Públicas Generales ---
+################################################################################################################
 
 def index(request):
+    """
+    Renderiza la página de inicio de la aplicación.
+    """
     return render(request, 'index.html')
 
 def logout_view(request):
-    """Sólo procesa POST para cerrar sesión y redirige a login"""
+    """
+    Cierra la sesión del usuario. Solo procesa solicitudes POST.
+    Redirige al usuario a la página de login después de cerrar sesión.
+    """
     if request.method == 'POST':
         logout(request)
         messages.success(request, "Has cerrado sesión correctamente.")
         return redirect('login')
-    # si alguien entra por GET, lo mandamos al index
+    # Si alguien entra por GET, lo mandamos al index
     return redirect('index')
 
 def register(request):
+    """
+    Maneja el registro de nuevos usuarios (clientes).
+    """
     if request.method == 'POST':
         form = RegistroUsuarioForm(request.POST)
         if form.is_valid():
             form.save()
+            messages.success(request, "Cuenta creada exitosamente. Por favor, inicia sesión.")
             return redirect('login')
+        else:
+            messages.error(request, "Por favor, corrige los errores en el formulario.")
     else:
         form = RegistroUsuarioForm()
     return render(request, 'register.html', {'form': form})
 
+def login_view(request):
+    """
+    Maneja el inicio de sesión de usuarios (clientes y administradores/empleados).
+    Si es un administrador/empleado, inicia el flujo de autenticación de dos factores.
+    """
+    form = LoginForm(request.POST or None)
+    if request.method == 'POST':
+        if form.is_valid():
+            email = form.cleaned_data['email']
+            password = form.cleaned_data['password']
+            try:
+                user = User.objects.get(email=email)
+            except User.DoesNotExist:
+                messages.error(request, 'Usuario o contraseña inválidos.')
+                return render(request, 'login.html', {'form': form})
+
+            user_auth = authenticate(request, username=user.username, password=password)
+            if user_auth is not None:
+                if user_auth.is_staff or user_auth.groups.filter(name="empleado").exists():
+                    # Si es admin o empleado, inicia 2FA
+                    codigo = f"{random.randint(0, 999999):06d}"
+                    LoginOTP.objects.update_or_create(
+                        user=user_auth,
+                        defaults={"codigo": codigo, "creado_en": timezone.now()},
+                    )
+                    send_mail(
+                        "Código de verificación",
+                        f"Tu código para ingresar al panel administrativo es: {codigo}",
+                        settings.DEFAULT_FROM_EMAIL,
+                        [user_auth.email],
+                        fail_silently=False,
+                    )
+                    request.session["username_otp"] = user_auth.username
+                    return redirect("loginAdmin_2fa")
+                else:
+                    login(request, user_auth)
+                    messages.success(request, f"Bienvenido, {user_auth.first_name}!")
+                    return redirect('index')
+            else:
+                messages.error(request, 'Usuario o contraseña inválidos.')
+    return render(request, 'login.html', {'form': form})
+
+def loginAdmin(request):
+    """
+    Vista para el login inicial de administradores/empleados antes del 2FA.
+    Genera y envía el código OTP al correo del usuario.
+    """
+    if request.method == "POST":
+        username = request.POST.get("username")
+        password = request.POST.get("password")
+
+        user = authenticate(request, username=username, password=password)
+        if user and (user.is_staff or user.groups.filter(name="empleado").exists()):
+            codigo = f"{random.randint(0, 999999):06d}"
+
+            LoginOTP.objects.update_or_create(
+                user=user,
+                defaults={"codigo": codigo, "creado_en": timezone.now()},
+            )
+
+            send_mail(
+                "Código de verificación",
+                f"Tu código para ingresar al panel administrativo es: {codigo}",
+                settings.DEFAULT_FROM_EMAIL,
+                [user.email],
+                fail_silently=False,
+            )
+
+            request.session["username_otp"] = username
+            messages.info(request, "Se ha enviado un código de verificación a tu correo electrónico.")
+            return redirect("loginAdmin_2fa")
+        messages.error(request, "Credenciales inválidas o no tienes permisos de administrador/empleado.")
+        return render(request, "loginAdmin.html", {"error": "Credenciales inválidas o no es administrador"})
+
+    return render(request, "loginAdmin.html")
+
+def loginAdmin_2fa(request):
+    """
+    Vista para la verificación de dos factores (2FA) para administradores/empleados.
+    Verifica el código OTP ingresado por el usuario.
+    """
+    if request.method == "POST":
+        codigo_ingresado = request.POST.get("codigo")
+        username = request.session.get("username_otp")
+
+        if not username:
+            messages.error(request, 'Sesión 2FA inválida o expirada. Por favor, inicia sesión de nuevo.')
+            return redirect("login") # Redirigir a login en lugar de loginAdmin
+
+        try:
+            user = User.objects.get(username=username)
+            otp_obj = LoginOTP.objects.get(user=user)
+        except (User.DoesNotExist, LoginOTP.DoesNotExist):
+            # Si no encuentra el usuario o el OTP, significa que no hay sesión válida para 2FA
+            messages.error(request, 'Sesión 2FA inválida o expirada. Por favor, inicia sesión de nuevo.')
+            return redirect("login")
+
+        if otp_obj.is_valido() and otp_obj.codigo == codigo_ingresado:
+            login(request, user)
+            request.session.pop("username_otp", None) # Usar .pop() para evitar KeyError
+            otp_obj.delete()
+            messages.success(request, "Inicio de sesión exitoso en el panel administrativo.")
+            return redirect("/panel")
+        else:
+            messages.error(request, "Código inválido o expirado.")
+            return render(request, "loginAdmin_2fa.html", {"error": "Código inválido o expirado"})
+
+    return render(request, "loginAdmin_2fa.html")
+
+def verify_admin_link(request, uidb64, token):
+    """
+    Vista para verificar el enlace de inicio de sesión de administrador enviado por correo.
+    (Actualmente no utilizada en el flujo principal de 2FA, pero mantenida si es necesaria).
+    """
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user = User.objects.get(pk=uid)
+    except (User.DoesNotExist, ValueError, TypeError):
+        user = None
+
+    if user is not None and email_link_token.check_token(user, token):
+        login(request, user)
+        messages.success(request, "Inicio de sesión exitoso a través del enlace.")
+        return redirect('index')   # o la vista principal de admin
+    else:
+        messages.error(request, "El enlace de verificación es inválido o ha expirado.")
+        return render(request, 'link_invalid.html')
+
+
+################################################################################################################
+# --- Vistas de Búsqueda y Detalle de Inmuebles/Cocheras ---
+################################################################################################################
+
 def buscar_inmuebles(request):
-    query = request.GET.get('q', '').strip()  # Elimina espacios en blanco
+    """
+    Permite buscar inmuebles por nombre y muestra todos si no hay consulta.
+    """
+    query = request.GET.get('q', '').strip() # Elimina espacios en blanco
     
     if query:
         # Búsqueda solo por nombre (insensible a mayúsculas/minúsculas)
@@ -89,6 +243,9 @@ def buscar_inmuebles(request):
     })
 
 def buscar_cocheras(request):
+    """
+    Permite buscar cocheras por nombre y muestra todas si no hay consulta.
+    """
     query = request.GET.get('q', '').strip()
     
     if query:
@@ -103,10 +260,17 @@ def buscar_cocheras(request):
     })
 
 def lista_inmuebles(request):
+    """
+    Muestra una lista completa de todos los inmuebles disponibles.
+    """
     inmuebles = Inmueble.objects.all()
     return render(request, 'lista_inmuebles.html', {'inmuebles': inmuebles})
 
 def detalle_inmueble(request, id_inmueble):
+    """
+    Muestra los detalles de un inmueble específico, incluyendo reseñas, comentarios,
+    reservas activas e historial de estados. Permite añadir comentarios.
+    """
     inmueble = get_object_or_404(
         Inmueble.objects.select_related('estado'),
         id_inmueble=id_inmueble
@@ -125,7 +289,10 @@ def detalle_inmueble(request, id_inmueble):
             comentario.usuario = request.user.perfil
             comentario.inmueble = inmueble
             comentario.save()
+            messages.success(request, "Comentario añadido exitosamente.")
             return redirect('detalle_inmueble', id_inmueble=id_inmueble)
+        else:
+            messages.error(request, "Error al añadir el comentario.")
     else:
         comentario_form = ComentarioForm()
 
@@ -139,6 +306,10 @@ def detalle_inmueble(request, id_inmueble):
     })
 
 def detalle_cochera(request, id_cochera):
+    """
+    Muestra los detalles de una cochera específica, incluyendo reservas activas
+    e historial de estados.
+    """
     cochera = get_object_or_404(
         Cochera.objects.select_related('estado'),
         id_cochera=id_cochera
@@ -155,120 +326,47 @@ def detalle_cochera(request, id_cochera):
         'historial': historial,
     })
 
-def login_view(request):
-    form = LoginForm(request.POST or None)
-    if request.method == 'POST':
-        if form.is_valid():
-            email = form.cleaned_data['email']
-            password = form.cleaned_data['password']
-            try:
-                user = User.objects.get(email=email)
-            except User.DoesNotExist:
-                messages.error(request, 'Usuario o contraseña inválidos.')
-                return render(request, 'login.html', {'form': form})
 
-            user_auth = authenticate(request, username=user.username, password=password)
-            if user_auth is not None:
-                if user_auth.is_staff:
-                    # Si es admin, inicia 2FA
-                    codigo = f"{random.randint(0, 999999):06d}"
-                    LoginOTP.objects.update_or_create(
-                        user=user_auth,
-                        defaults={"codigo": codigo, "creado_en": timezone.now()},
-                    )
-                    send_mail(
-                        "Código de verificación",
-                        f"Tu código para ingresar al panel administrativo es: {codigo}",
-                        "admin@tusitio.com",
-                        [user_auth.email],
-                        fail_silently=False,
-                    )
-                    request.session["username_otp"] = user_auth.username
-                    return redirect("loginAdmin_2fa")
-                else:
-                    login(request, user_auth)
-                    return redirect('index')
-            else:
-                messages.error(request, 'Usuario o contraseña inválidos.')
-    return render(request, 'login.html', {'form': form})
+################################################################################################################
+# --- Funciones de Ayuda para Permisos ---
+################################################################################################################
 
-#Para el login con doble factor por mail
-def loginAdmin(request):
-    if request.method == "POST":
-        username = request.POST.get("username")
-        password = request.POST.get("password")
-
-        user = authenticate(request, username=username, password=password)
-        if user and user.is_staff:
-            codigo = f"{random.randint(0, 999999):06d}"
-
-            LoginOTP.objects.update_or_create(
-                user=user,
-                defaults={"codigo": codigo, "creado_en": timezone.now()},
-            )
-
-            send_mail(
-                "Código de verificación",
-                f"Tu código para ingresar al panel administrativo es: {codigo}",
-                "admin@tusitio.com",
-                [user.email],
-                fail_silently=False,
-            )
-
-            request.session["username_otp"] = username
-            return redirect("loginAdmin_2fa")
-
-        return render(request, "loginAdmin.html", {"error": "Credenciales inválidas o no es administrador"})
-
-    return render(request, "loginAdmin.html")
-
-
-def loginAdmin_2fa(request):
-    if request.method == "POST":
-        codigo_ingresado = request.POST.get("codigo")
-        username = request.session.get("username_otp")
-
-        if not username:
-            return redirect("loginAdmin")
-
-        try:
-            user = User.objects.get(username=username)
-            otp_obj = LoginOTP.objects.get(user=user)
-        except (User.DoesNotExist, LoginOTP.DoesNotExist):
-            return redirect("loginAdmin")
-
-        if otp_obj.is_valido() and otp_obj.codigo == codigo_ingresado:
-            login(request, user)
-            del request.session["username_otp"]
-            otp_obj.delete()
-            return redirect("/panel")
-        else:
-            return render(request, "loginAdmin_2fa.html", {"error": "Código inválido o expirado"})
-
-    return render(request, "loginAdmin_2fa.html")
-
-
-# Funcionalidades del Panel de Admin
 def is_admin(user):
+    """Verifica si el usuario es un superusuario."""
     return user.is_authenticated and user.is_staff
 
 def is_admin_or_empleado(user):
+    """Verifica si el usuario es un superusuario o pertenece al grupo 'empleado'."""
     return user.is_authenticated and (user.is_staff or user.groups.filter(name="empleado").exists())
+
+
+################################################################################################################
+# --- Vistas del Panel de Administración/Empleado ---
+################################################################################################################
 
 @login_required
 @user_passes_test(is_admin_or_empleado)
 def admin_panel(request):
+    """
+    Renderiza el panel principal de administración/empleado.
+    """
     return render(request, 'admin/admin_base.html')
 
+@login_required
+@user_passes_test(is_admin)
 def admin_alta_inmuebles(request):
+    """
+    Permite a los administradores dar de alta nuevos inmuebles.
+    Maneja la creación del inmueble y la carga de su imagen principal.
+    """
     if request.method == 'POST':
         form = InmuebleForm(request.POST, request.FILES)
         if form.is_valid():
             # Guardar el inmueble completamente
             inmueble = form.save(commit=False)
             inmueble.fecha_publicacion = timezone.now().date()
-            inmueble.save()  # Guardar el inmueble en la base de datos
-            form.save_m2m()  # Guardar relaciones many-to-many si las hay
+            inmueble.save()
+            form.save_m2m()
             
             # Crear la imagen después de guardar el inmueble
             if form.cleaned_data.get('imagen'):
@@ -287,18 +385,21 @@ def admin_alta_inmuebles(request):
     
     return render(request, 'admin/admin_alta_inmuebles.html', {'form': form})
 
-
 @login_required
 @user_passes_test(is_admin)
 def admin_alta_cocheras(request):
+    """
+    Permite a los administradores dar de alta nuevas cocheras.
+    Maneja la creación de la cochera y la carga de su imagen principal.
+    """
     if request.method == 'POST':
         form = CocheraForm(request.POST, request.FILES)
         if form.is_valid():
             # Guardar la cochera completamente
             cochera = form.save(commit=False)
             cochera.fecha_publicacion = timezone.now().date()
-            cochera.save()  # Guardar la cochera en la base de datos
-            form.save_m2m()  # Guardar relaciones many-to-many si las hay
+            cochera.save()
+            form.save_m2m()
             
             # Crear la imagen después de guardar la cochera
             if form.cleaned_data.get('imagen'):
@@ -320,6 +421,10 @@ def admin_alta_cocheras(request):
 @login_required
 @user_passes_test(is_admin)
 def admin_alta_empleados(request):
+    """
+    Permite a los administradores dar de alta nuevos empleados.
+    Genera una contraseña temporal y la envía por correo electrónico.
+    """
     mensaje = None
     error = None
     if request.method == "POST":
@@ -328,9 +433,7 @@ def admin_alta_empleados(request):
             data = form.cleaned_data
             # Generar contraseña aleatoria segura
             password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(10))
-            from django.contrib.auth.models import User
-            from .models import Perfil
-
+            
             # Crear usuario
             user = User.objects.create_user(
                 username=data["email"],
@@ -374,27 +477,46 @@ def admin_alta_empleados(request):
 @login_required
 @user_passes_test(is_admin_or_empleado)
 def admin_estadisticas_usuarios(request):
+    """
+    Muestra estadísticas relacionadas con los usuarios.
+    """
     return render(request, 'admin/admin_estadisticas_usuarios.html')
 
 @login_required
 @user_passes_test(is_admin_or_empleado)
 def admin_estadisticas_empleados(request):
+    """
+    Muestra estadísticas relacionadas con los empleados.
+    """
     return render(request, 'admin/admin_estadisticas_empleados.html')
 
 @login_required
 @user_passes_test(is_admin_or_empleado)
 def admin_estadisticas_cocheras(request):
+    """
+    Muestra estadísticas relacionadas con las cocheras.
+    """
     return render(request, 'admin/admin_estadisticas_cocheras.html')
 
 @login_required
 @user_passes_test(is_admin_or_empleado)
 def admin_estadisticas_inmuebles(request):
+    """
+    Muestra estadísticas relacionadas con los inmuebles.
+    """
     return render(request, 'admin/admin_estadisticas_inmuebles.html')
 
-# Cosas de los inmuebles
+
+################################################################################################################
+# --- Vistas de Gestión de Inmuebles (Admin/Empleado) ---
+################################################################################################################
+
 @login_required
 @user_passes_test(is_admin)
 def admin_inmueble_editar(request, id_inmueble):
+    """
+    Permite a los administradores editar la información de un inmueble existente.
+    """
     inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
     if request.method == 'POST':
         form = InmuebleForm(request.POST, request.FILES, instance=inmueble)
@@ -417,16 +539,23 @@ def admin_inmueble_editar(request, id_inmueble):
 @login_required
 @user_passes_test(is_admin)
 def admin_inmueble_eliminar(request, id_inmueble):
+    """
+    Permite a los administradores eliminar un inmueble existente.
+    """
     inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
     if request.method == 'POST':
         inmueble.delete()
         messages.success(request, 'Inmueble eliminado exitosamente.')
         return redirect('buscar_inmuebles')
+    messages.info(request, "Confirmación de eliminación de inmueble.")
     return redirect('detalle_inmueble', id_inmueble=id_inmueble)
 
 @login_required
 @user_passes_test(is_admin_or_empleado)
 def admin_inmueble_historial(request, id_inmueble):
+    """
+    Muestra el historial de estados de un inmueble específico.
+    """
     inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
     historial = InmuebleEstado.objects.filter(inmueble_cochera__inmueble=inmueble).order_by('-fecha_inicio') if InmuebleCochera.objects.filter(inmueble=inmueble).exists() else []
     return render(request, 'admin/admin_inmueble_historial.html', {'inmueble': inmueble, 'historial': historial})
@@ -434,13 +563,24 @@ def admin_inmueble_historial(request, id_inmueble):
 @login_required
 @user_passes_test(is_admin_or_empleado)
 def admin_inmueble_estado(request, id_inmueble):
+    """
+    Muestra el estado actual y las reservas de un inmueble específico.
+    """
     inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
     reservas = Reserva.objects.filter(inmueble=inmueble).order_by('-fecha_inicio')
     return render(request, 'admin/admin_inmueble_estado.html', {'inmueble': inmueble, 'reservas': reservas})
 
+
+################################################################################################################
+# --- Vistas de Gestión de Cocheras (Admin) ---
+################################################################################################################
+
 @login_required
 @user_passes_test(is_admin)
 def admin_cochera_editar(request, id_cochera):
+    """
+    Permite a los administradores editar la información de una cochera existente.
+    """
     cochera = get_object_or_404(Cochera, id_cochera=id_cochera)
     if request.method == 'POST':
         form = CocheraForm(request.POST, request.FILES, instance=cochera)
@@ -463,16 +603,23 @@ def admin_cochera_editar(request, id_cochera):
 @login_required
 @user_passes_test(is_admin)
 def admin_cochera_eliminar(request, id_cochera):
+    """
+    Permite a los administradores eliminar una cochera existente.
+    """
     cochera = get_object_or_404(Cochera, id_cochera=id_cochera)
     if request.method == 'POST':
         cochera.delete()
         messages.success(request, 'Cochera eliminada exitosamente.')
         return redirect('buscar_cocheras')
+    messages.info(request, "Confirmación de eliminación de cochera.")
     return redirect('detalle_cochera', id_cochera=id_cochera)
 
 @login_required
 @user_passes_test(is_admin)
 def admin_cochera_historial(request, id_cochera):
+    """
+    Muestra el historial de estados de una cochera específica.
+    """
     cochera = get_object_or_404(Cochera, id_cochera=id_cochera)
     historial = InmuebleEstado.objects.filter(inmueble_cochera__cochera=cochera).order_by('-fecha_inicio') if InmuebleCochera.objects.filter(cochera=cochera).exists() else []
     return render(request, 'admin/admin_cochera_historial.html', {'cochera': cochera, 'historial': historial})
@@ -480,60 +627,23 @@ def admin_cochera_historial(request, id_cochera):
 @login_required
 @user_passes_test(is_admin)
 def admin_cochera_estado(request, id_cochera):
+    """
+    Muestra el estado actual y las reservas de una cochera específica.
+    """
     cochera = get_object_or_404(Cochera, id_cochera=id_cochera)
     reservas = Reserva.objects.filter(cochera=cochera).order_by('-fecha_inicio')
     return render(request, 'admin/admin_cochera_estado.html', {'cochera': cochera, 'reservas': reservas})
 
-@require_POST
-@login_required
-@user_passes_test(is_admin)
-def cambiar_estado_reserva_cochera(request, id_reserva):
-    reserva = get_object_or_404(Reserva, id_reserva=id_reserva)
-    
-    try:
-        data = json.loads(request.body)
-        nuevo_estado = data.get('estado')
-        comentario = data.get('comentario', '')
-    except json.JSONDecodeError:
-        return JsonResponse(
-            {'success': False, 'error': 'Formato JSON inválido'}, 
-            status=400
-        )
-    
-    try:
-        estado = Estado.objects.get(nombre=nuevo_estado)
-        
-        # Validar transición de estados permitida (misma lógica que para inmuebles)
-        transiciones_permitidas = {
-            'Pendiente': ['Aprobada', 'Rechazada', 'Cancelada'],
-            'Aprobada': ['Pagada', 'Cancelada', 'Rechazada'],
-            'Pagada': ['Confirmada', 'Cancelada'],
-            'Confirmada': ['Finalizada', 'Cancelada']
-        }
-        
-        if (reserva.estado and 
-            reserva.estado.nombre in transiciones_permitidas and 
-            nuevo_estado in transiciones_permitidas[reserva.estado.nombre]):
-            
-            reserva.estado = estado
-            reserva.save()
-            
-            return JsonResponse({'success': True})
-        else:
-            return JsonResponse(
-                {'success': False, 'error': 'Transición no permitida'}, 
-                status=400
-            )
-            
-    except Estado.DoesNotExist:
-        return JsonResponse(
-            {'success': False, 'error': 'Estado no válido'}, 
-            status=400
-        )
 
-
+################################################################################################################
+# --- Vistas de Gestión de Reservas ---
+################################################################################################################
 
 def crear_reserva(request, id_inmueble):
+    """
+    Permite a los usuarios crear una reserva para un inmueble.
+    Valida las fechas y calcula el precio total.
+    """
     inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
     
     if request.method == 'POST':
@@ -585,6 +695,10 @@ def crear_reserva(request, id_inmueble):
     return redirect('detalle_inmueble', id_inmueble=id_inmueble)
 
 def crear_reserva_cochera(request, id_cochera):
+    """
+    Permite a los usuarios crear una reserva para una cochera.
+    Valida las fechas y calcula el precio total.
+    """
     cochera = get_object_or_404(Cochera, id_cochera=id_cochera)
     
     if request.method == 'POST':
@@ -638,6 +752,10 @@ def crear_reserva_cochera(request, id_cochera):
 @login_required
 @user_passes_test(is_admin)
 def cambiar_estado_reserva(request, id_reserva):
+    """
+    Permite a los administradores cambiar el estado de una reserva de inmueble.
+    Valida las transiciones de estado permitidas.
+    """
     reserva = get_object_or_404(Reserva, id_reserva=id_reserva)
     
     try:
@@ -662,13 +780,14 @@ def cambiar_estado_reserva(request, id_reserva):
             'Confirmada': ['Finalizada', 'Cancelada']
         }
         
-        if (reserva.estado.nombre in transiciones_permitidas and 
+        if (reserva.estado and # Asegurarse de que reserva.estado no sea None
+            reserva.estado.nombre in transiciones_permitidas and 
             nuevo_estado in transiciones_permitidas[reserva.estado.nombre]):
             
             reserva.estado = estado
             reserva.save()
             
-            # # Registrar en historial
+            # Registrar en historial (descomentar si la funcionalidad está activa)
             # HistorialEstadoReserva.objects.create(
             #     reserva=reserva,
             #     estado=estado,
@@ -688,59 +807,140 @@ def cambiar_estado_reserva(request, id_reserva):
             {'success': False, 'error': 'Estado no válido'}, 
             status=400
         )
-# Registrar empleado y cliente
+
+@require_POST
+@login_required
+@user_passes_test(is_admin)
+def cambiar_estado_reserva_cochera(request, id_reserva):
+    """
+    Permite a los administradores cambiar el estado de una reserva de cochera.
+    Valida las transiciones de estado permitidas.
+    """
+    reserva = get_object_or_404(Reserva, id_reserva=id_reserva)
+    
+    try:
+        data = json.loads(request.body)
+        nuevo_estado = data.get('estado')
+        comentario = data.get('comentario', '')
+    except json.JSONDecodeError:
+        return JsonResponse(
+            {'success': False, 'error': 'Formato JSON inválido'}, 
+            status=400
+        )
+    
+    try:
+        estado = Estado.objects.get(nombre=nuevo_estado)
+        
+        # Validar transición de estados permitida (misma lógica que para inmuebles)
+        transiciones_permitidas = {
+            'Pendiente': ['Aprobada', 'Rechazada', 'Cancelada'],
+            'Aprobada': ['Pagada', 'Cancelada', 'Rechazada'],
+            'Pagada': ['Confirmada', 'Cancelada'],
+            'Confirmada': ['Finalizada', 'Cancelada']
+        }
+        
+        if (reserva.estado and # Asegurarse de que reserva.estado no sea None
+            reserva.estado.nombre in transiciones_permitidas and 
+            nuevo_estado in transiciones_permitidas[reserva.estado.nombre]):
+            
+            reserva.estado = estado
+            reserva.save()
+            
+            return JsonResponse({'success': True})
+        else:
+            return JsonResponse(
+                {'success': False, 'error': 'Transición no permitida'}, 
+                status=400
+            )
+            
+    except Estado.DoesNotExist:
+        return JsonResponse(
+            {'success': False, 'error': 'Estado no válido'}, 
+            status=400
+        )
+
+
+################################################################################################################
+# --- Vistas de Registro de Clientes/Empleados (por Admin) ---
+################################################################################################################
+
 def registrar_empleado(request):
+    """
+    Permite a los administradores registrar un nuevo empleado.
+    (Esta vista parece ser una alternativa a admin_alta_empleados, revisar si ambas son necesarias).
+    """
     if request.method == "POST":
         form = EmpleadoCreationForm(request.POST)
         if form.is_valid():
             form.save()
+            messages.success(request, "Empleado registrado exitosamente.")
             return redirect("login")  # o donde quieras
+        else:
+            messages.error(request, "Error al registrar el empleado. Por favor, corrige los errores.")
     else:
         form = EmpleadoCreationForm()
     return render(request, "registrar_empleado.html", {"form": form})
 
 def registrar_cliente(request):
+    """
+    Permite a los administradores registrar un nuevo cliente.
+    (Esta vista parece ser una alternativa a 'register', revisar si ambas son necesarias).
+    """
     if request.method == "POST":
         form = ClienteCreationForm(request.POST)
         if form.is_valid():
             form.save()
+            messages.success(request, "Cliente registrado exitosamente.")
             return redirect("login")  # o a donde quieras redirigir
+        else:
+            messages.error(request, "Error al registrar el cliente. Por favor, corrige los errores.")
     else:
         form = ClienteCreationForm()
     return render(request, "registrar_cliente.html", {"form": form})
 
+
+################################################################################################################
+# --- Vistas de Notificaciones ---
+################################################################################################################
+
 @login_required
 def marcar_notificacion(request, id_notificacion):
+    """
+    Marca una notificación específica como leída para el usuario actual.
+    """
     notificacion = get_object_or_404(Notificacion, id=id_notificacion, usuario=request.user.perfil)
     if not notificacion.leido:
         notificacion.leido = True
         notificacion.save()
+        messages.info(request, "Notificación marcada como leída.")
     next_url = request.POST.get('next', '/')
     return redirect(next_url)
 
 @login_required
-def ver_notificaciones(request):
-    # Marcar todas como leídas al abrir el dropdown
-    request.user.perfil.notificacion_set.filter(leido=False).update(leido=True)
-    
-    # Resto de tu lógica actual...
-    return render(request, 'tu_template.html', context)
-
-@login_required
 def eliminar_notificacion(request, notificacion_id):
+    """
+    Elimina una notificación específica para el usuario actual.
+    """
     notificacion = get_object_or_404(
         Notificacion, 
         id=notificacion_id, 
         usuario=request.user.perfil
     )
     notificacion.delete()
+    messages.success(request, "Notificación eliminada.")
     return redirect(request.META.get('HTTP_REFERER', 'index'))
 
 @require_POST
 @login_required
 def marcar_todas_leidas(request):
+    """
+    Marca todas las notificaciones no leídas del usuario actual como leídas.
+    """
     try:
         request.user.perfil.notificacion_set.filter(leido=False).update(leido=True)
+        messages.success(request, "Todas las notificaciones han sido marcadas como leídas.")
         return JsonResponse({'success': True})
     except Exception as e:
+        messages.error(request, f"Error al marcar notificaciones: {e}")
         return JsonResponse({'success': False, 'error': str(e)})
+
