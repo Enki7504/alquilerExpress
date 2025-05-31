@@ -60,7 +60,11 @@ class InmuebleForm(forms.ModelForm):
         label="Ciudad",
         widget=forms.Select(attrs={'class': 'form-select', 'id': 'id_ciudad'})
     )
-    estado = forms.ModelChoiceField(queryset=Estado.objects.all(), required=True, label="Estado")
+    estado = forms.ModelChoiceField(
+        queryset=Estado.objects.filter(nombre__in=["Disponible", "Ocupado", "Oculto", "En Mantenimiento"]),
+        required=True,
+        label="Estado"
+    )
     cochera = forms.ModelChoiceField(
         queryset=Cochera.objects.all(),
         required=False,
@@ -102,6 +106,20 @@ class InmuebleForm(forms.ModelForm):
             'estado': forms.Select(attrs={'class': 'form-select'}),
         }
 
+    # Esto pone el estado de la cochera a "Oculto" cuando se guarda el inmueble
+    def save(self, commit=True):
+        inmueble = super().save(commit=False)
+        cochera = self.cleaned_data.get('cochera')
+        if cochera:
+            # Cambiar el estado de la cochera a "Oculto"
+            estado_oculto = Estado.objects.get(nombre="Oculto")
+            cochera.estado = estado_oculto
+            cochera.save()
+        if commit:
+            inmueble.save()
+            self.save_m2m()
+        return inmueble
+
 class CocheraForm(forms.ModelForm):
     provincia = forms.ModelChoiceField(
         queryset=Provincia.objects.all(),
@@ -115,7 +133,11 @@ class CocheraForm(forms.ModelForm):
         label="Ciudad",
         widget=forms.Select(attrs={'class': 'form-select', 'id': 'id_ciudad'})
     )
-    estado = forms.ModelChoiceField(queryset=Estado.objects.all(), required=True, label="Estado")
+    estado = forms.ModelChoiceField(
+        queryset=Estado.objects.filter(nombre__in=["Disponible", "Ocupado", "Oculto", "En Mantenimiento"]),
+        required=True,
+        label="Estado"
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
