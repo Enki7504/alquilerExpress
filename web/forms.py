@@ -48,8 +48,13 @@ class LoginForm(forms.Form):
 
 
 class InmuebleForm(forms.ModelForm):
-    imagen = forms.ImageField(required=False, label="Foto del inmueble")
     estado = forms.ModelChoiceField(queryset=Estado.objects.all(), required=True, label="Estado")
+    cochera = forms.ModelChoiceField(
+        queryset=Cochera.objects.all(),
+        required=False,
+        label="Cochera",
+        widget=forms.Select(attrs={'class': 'form-select', 'id': 'cocheraSelect'})
+    )
 
     class Meta:
         model = Inmueble
@@ -228,10 +233,50 @@ class EmpleadoCreationForm(forms.Form):
         return user
 
 class EmpleadoAdminCreationForm(forms.Form):
-    first_name = forms.CharField(label="Nombre", max_length=30)
-    last_name = forms.CharField(label="Apellido", max_length=30)
-    email = forms.EmailField(label="Correo electrónico")
-    dni = forms.CharField(label="DNI", max_length=20)
+    first_name = forms.CharField(
+        label="Nombre",
+        max_length=30,
+        required=True,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'id': 'nombre',
+            'name': 'nombre',
+            'required': 'required',
+        })
+    )
+    last_name = forms.CharField(
+        label="Apellido",
+        max_length=30,
+        required=True,
+        widget=forms.TextInput(attrs={
+            "class": "form-control",
+            "id": "apellido",
+            "name": "apellido",
+            "required": "required",
+        })
+    )
+    email = forms.EmailField(
+        label="Correo electrónico",
+        required=True,
+        widget=forms.EmailInput(attrs={
+            "class": "form-control",
+            "id": "email",
+            "name": "email",
+            "required": "required",
+        })
+    )
+    dni = forms.CharField(
+        label="DNI",
+        max_length=20,
+        required=True,
+        widget=forms.TextInput(attrs={
+            "class": "form-control",
+            "id": "dni",
+            "name": "dni",
+            "required": "required",
+            "pattern": r"\d+",
+        })
+    )
 
     def clean_email(self):
         email = self.cleaned_data["email"]
