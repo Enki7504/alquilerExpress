@@ -32,7 +32,6 @@ from .models import (
     Inmueble,
     InmuebleImagen,
     InmuebleEstado,
-    InmuebleCochera,
     CocheraImagen,
     Resenia,
     Comentario,
@@ -223,15 +222,15 @@ def admin_alta_inmuebles(request):
             # Guardar el inmueble completamente
             inmueble = form.save(commit=False)
             inmueble.fecha_publicacion = timezone.now().date()
-            inmueble.save()  # Guardar el inmueble en la base de datos
-            form.save_m2m()  # Guardar relaciones many-to-many si las hay
-            
-            # Crear la imagen después de guardar el inmueble
-            if form.cleaned_data.get('imagen'):
+            inmueble.save()
+            form.save_m2m()
+
+            # Guardar todas las imágenes
+            for img in request.FILES.getlist('imagenes'):
                 InmuebleImagen.objects.create(
                     inmueble=inmueble,
-                    imagen=form.cleaned_data['imagen'],
-                    descripcion="Imagen principal"
+                    imagen=img,
+                    descripcion="Imagen del inmueble"
                 )
             
             messages.success(request, 'Inmueble creado exitosamente.')

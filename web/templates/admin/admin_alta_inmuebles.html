@@ -80,10 +80,8 @@
           {{ form.estado.errors }}
         </div>
         <div class="col-md-4">
-          {{ form.imagen.label_tag }}
-          {{ form.imagen }}
-          {{ form.imagen.errors }}
-          <img id="preview" class="img-fluid mt-3" style="max-height: 100px; display: none;">
+          <label for="id_imagenes" class="form-label">Fotos del inmueble</label>
+          <input type="file" name="imagenes" id="id_imagenes" class="form-control" multiple accept="image/*">
         </div>
         <div class="col-12">
           <button type="submit" class="btn btn-primary btn-azul">Cargar Inmueble</button>
@@ -92,4 +90,14 @@
     </form>
   </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const checkbox = document.getElementById('cocheraCheck');
+  const selectDiv = document.getElementById('cocheraSelectDiv');
+  checkbox.addEventListener('change', function() {
+    selectDiv.style.display = this.checked ? 'block' : 'none';
+  });
+});
+</script>
 {% endblock %}

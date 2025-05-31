@@ -36,27 +36,6 @@ class Ciudad(models.Model):
     def __str__(self):
         return f"{self.nombre} ({self.provincia.nombre})"
 
-class Inmueble(models.Model):
-    id_inmueble = models.AutoField(primary_key=True)
-    nombre = models.CharField(max_length=100)
-    ubicacion = models.TextField()
-    provincia = models.ForeignKey(Provincia, on_delete=models.SET_NULL, null=True)
-    ciudad = models.ForeignKey(Ciudad, on_delete=models.SET_NULL, null=True)
-    descripcion = models.TextField()
-    cantidad_banios = models.IntegerField()
-    cantidad_ambientes = models.IntegerField()
-    cantidad_camas = models.IntegerField()
-    cantidad_huespedes = models.IntegerField()
-    precio_por_dia = models.DecimalField(max_digits=10, decimal_places=2)
-    politica_cancelacion = models.TextField()
-    fecha_publicacion = models.DateField()
-    cochera = models.BooleanField()
-    estado = models.ForeignKey(Estado, on_delete=models.SET_NULL, null=True)
-
-    def __str__(self):
-        return self.nombre
-
-
 class Cochera(models.Model):
     id_cochera = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=100)
@@ -77,11 +56,27 @@ class Cochera(models.Model):
     def __str__(self):
         return self.nombre
 
+class Inmueble(models.Model):
+    id_inmueble = models.AutoField(primary_key=True)
+    nombre = models.CharField(max_length=100)
+    ubicacion = models.TextField()
+    provincia = models.ForeignKey(Provincia, on_delete=models.SET_NULL, null=True)
+    ciudad = models.ForeignKey(Ciudad, on_delete=models.SET_NULL, null=True)
+    descripcion = models.TextField()
+    cantidad_banios = models.IntegerField()
+    cantidad_ambientes = models.IntegerField()
+    cantidad_camas = models.IntegerField()
+    cantidad_huespedes = models.IntegerField()
+    precio_por_dia = models.DecimalField(max_digits=10, decimal_places=2)
+    politica_cancelacion = models.TextField()
+    fecha_publicacion = models.DateField()
+    cochera = models.ForeignKey(Cochera, null=True, blank=True, on_delete=models.SET_NULL)
+    estado = models.ForeignKey(Estado, on_delete=models.SET_NULL, null=True)
 
-class InmuebleCochera(models.Model):
-    id_inmueble_cochera = models.AutoField(primary_key=True)
-    inmueble = models.ForeignKey(Inmueble, on_delete=models.CASCADE)
-    cochera = models.ForeignKey(Cochera, on_delete=models.CASCADE)
+    def __str__(self):
+        return self.nombre
+
+
 
 
 class Reserva(models.Model):
@@ -107,7 +102,7 @@ class ReservaEstado(models.Model):
 
 class InmuebleEstado(models.Model):
     id_inmueble_estado = models.AutoField(primary_key=True)
-    inmueble_cochera = models.ForeignKey(InmuebleCochera, on_delete=models.CASCADE)
+    inmueble = models.ForeignKey(Inmueble, null=True, blank=True, on_delete=models.SET_NULL)
     estado = models.ForeignKey(Estado, on_delete=models.CASCADE)
     fecha_inicio = models.DateField()
     fecha_fin = models.DateField(null=True, blank=True)
