@@ -1,23 +1,24 @@
-/* =========== global =========== */
-
+/* =========== ESTILOS GLOBALES =========== */
 html, body {
   height: 100%;
   margin: 0;
   overflow-x: hidden;
 }
 
-/* =========== main =========== */
+.container-fluid {
+  padding: 0;
+}
 
+/* =========== LAYOUT PRINCIPAL =========== */
 .container-wrapper {
   flex: 1;
   display: flex;
   flex-direction: row;
   margin-top: 70px;
-  height: calc(100vh - 70px); /* alto sin navbar */
+  height: calc(100vh - 70px);
 }
 
-/* =========== filtros =========== */
-
+/* =========== FILTROS =========== */
 .filtros {
   background-color: #f8f9fa;
   overflow-y: auto;
@@ -26,56 +27,131 @@ html, body {
   top: 70px;
   height: calc(100vh - 70px);
   flex-shrink: 0;
+  padding: 1rem;
 }
 
 .filtros__campo {
   font-size: 12px;
 }
 
-/* =========== lista de inmuebles =========== */
- 
-.inmuebles {
+/* =========== LISTADOS =========== */
+.lista-resultados {
   overflow-y: auto;
   height: calc(100vh - 70px);
+  padding: 1rem;
 }
 
-.inmueble {
-  height: 200px;
+/* =========== TARJETAS DE PROPIEDADES =========== */
+.propiedad-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background: white;
+  height: 280px;
+  margin-bottom: 1.5rem;
 }
 
-.inmueble__image {
-  height: 50%;
-  object-fit: cover;
+.propiedad-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+}
+
+.propiedad-imagen {
   width: 100%;
+  height: 150px;
+  object-fit: cover;
+  border-bottom: 1px solid #eee;
 }
 
-.inmueble__body {
-  height: 50%;
-  padding: 10px;
-  background-color: lightgray;
+.propiedad-body {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  height: calc(100% - 150px);
 }
 
-.inmueble__nombre {
-  font-size: 14px;
-  font-weight: 700;
+.propiedad-nombre {
+  font-weight: 600;
   color: #333;
+  margin-bottom: 8px;
+  font-size: 16px;
 }
 
-.inmueble__precio, .inmueble__ubicacion {
+.propiedad-precio {
+  font-weight: 700;
+  color: #2a6f97;
+  margin-bottom: 6px;
+}
+
+.propiedad-ubicacion {
+  color: #666;
   font-size: 14px;
+  margin-bottom: 8px;
 }
 
+.propiedad-detalle {
+  color: #555;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
 
-/* =========== mapa =========== */
+/* =========== MENSAJES VACÍOS =========== */
+.mensaje-vacio {
+  margin-top: 20px;
+  text-align: center;
+}
 
-.mapa {
+/* =========== MAPA =========== */
+.mapa-contenedor {
   position: sticky;
   top: 70px;
   height: calc(100vh - 70px);
   flex-shrink: 0;
 }
 
-.mapa__content {
+.mapa-content {
   height: 100%;
-  background-color: #e0e0e0;
+  background-color: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+}
+
+/* =========== RESPONSIVE =========== */
+@media (max-width: 992px) {
+  .container-wrapper {
+    flex-direction: column;
+  }
+  
+  .filtros, .mapa-contenedor {
+    position: relative;
+    top: auto;
+    height: auto;
+  }
+  
+  .lista-resultados {
+    height: auto;
+    overflow-y: visible;
+    order: 1;
+  }
+  
+  .filtros {
+    order: 2;
+  }
+  
+  .mapa-contenedor {
+    order: 3;
+    height: 300px;
+  }
+}
+
+@media (max-width: 768px) {
+  .propiedad-card {
+    height: 240px;
+  }
+  
+  .propiedad-imagen {
+    height: 120px;
+  }
 }

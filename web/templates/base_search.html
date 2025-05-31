@@ -24,12 +24,14 @@
         </a>
       </div>
       <!-- Barrita de busqueda -->
-      <form class="navbar__search d-flex flex-grow-1 justify-content-center mx-3">
+      <form class="navbar__search d-flex flex-grow-1 justify-content-center mx-3" 
+            action="{% if 'cochera' in request.path %}{% url 'buscar_cocheras' %}{% else %}{% url 'buscar_inmuebles' %}{% endif %}" 
+            method="get">
         <div class="search__input input-group w-100">
-          <input type="text" class="form-control" placeholder="¿Qué estás buscando?">
-          <select class="search__select form-select">
-            <option value="inmuebles">Inmuebles</option>
-            <option value="cocheras">Cocheras</option>
+          <input type="text" class="form-control" name="q" placeholder="¿Qué estas buscando?..." value="{{ request.GET.q }}">
+          <select class="search__select form-select" name="tipo" id="searchType">
+            <option value="inmuebles" {% if 'inmueble' in request.path %}selected{% endif %}>Inmuebles</option>
+            <option value="cocheras" {% if 'cochera' in request.path %}selected{% endif %}>Cocheras</option>
           </select>
           <button class="search__button btn btn-outline-success" type="submit">
             <i class="bi bi-search"></i>
@@ -49,6 +51,30 @@
 
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const searchType = document.getElementById('searchType');
+    
+    // Redirigir inmediatamente al cambiar el select
+    searchType.addEventListener('change', function() {
+      const url = this.value === 'inmuebles' 
+        ? "{% url 'buscar_inmuebles' %}" 
+        : "{% url 'buscar_cocheras' %}";
+      window.location.href = url;
+    });
+
+    // El resto del código del formulario se mantiene igual
+    document.getElementById('searchForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const query = this.q.value.trim();
+      const url = searchType.value === 'inmuebles'
+        ? "{% url 'buscar_inmuebles' %}"
+        : "{% url 'buscar_cocheras' %}";
+      
+      window.location.href = query ? `${url}?q=${encodeURIComponent(query)}` : url;
+    });
+  });
+  </script>
   {% block extra_js %}{% endblock %}
 </body>
 </html>

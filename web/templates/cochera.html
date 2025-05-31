@@ -1,0 +1,240 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Detalle de la Cochera - {{ cochera.nombre }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/inmueble.css' %}">
+{% endblock %}
+
+{% block content %}
+
+  <!-- Contenido principal -->
+  <main class="container mt-5 pt-5">
+    <a href="{% url 'buscar_cocheras' %}" class="btn btn-outline-secondary mb-3">
+      ← Volver a la búsqueda
+    </a>
+    <div id="detalle-cochera" class="row">
+      <!-- Info de la cochera -->
+      <div class="col-lg-8">
+        <!-- Carrusel de imágenes -->
+        <div id="cocheraCarousel" class="carousel slide mb-4 shadow-sm rounded" data-bs-ride="carousel">
+          <div class="carousel-inner rounded">
+            {% for imagen in cochera.imagenes.all %}
+              <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                <img src="{{ imagen.imagen.url }}" class="d-block w-100 cochera-hero-img" alt="{{ cochera.nombre }}">
+              </div>
+            {% empty %}
+              <div class="carousel-item active">
+                <img src="{% static 'img/default-garage-large.jpg' %}" class="d-block w-100 cochera-hero-img" alt="Imagen por defecto">
+              </div>
+            {% endfor %}
+          </div>
+          {% if cochera.imagenes.count > 1 %}
+            <button class="carousel-control-prev" type="button" data-bs-target="#cocheraCarousel" data-bs-slide="prev">
+              <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+              <span class="visually-hidden">Previous</span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#cocheraCarousel" data-bs-slide="next">
+              <span class="carousel-control-next-icon" aria-hidden="true"></span>
+              <span class="visually-hidden">Next</span>
+            </button>
+          {% endif %}
+        </div>
+        
+        <!-- Información detallada -->
+        <div class="card mb-4 shadow-sm">
+          <div class="card-body">
+            <h1 class="h2 mb-3">{{ cochera.nombre }}</h1>
+            <div class="d-flex align-items-center mb-3">
+              <i class="bi bi-geo-alt-fill text-primary me-2"></i>
+              <span class="text-muted">{{ cochera.ubicacion }}</span>
+            </div>
+            
+            <div class="d-flex flex-wrap gap-3 mb-4">
+              <div class="d-flex align-items-center">
+                <i class="bi bi-car-front text-primary me-2"></i>
+                <span>{{ cochera.cantidad_vehiculos }} vehículo{{ cochera.cantidad_vehiculos|pluralize }}</span>
+              </div>
+              <div class="d-flex align-items-center">
+                <i class="bi bi-arrows-angle-expand text-primary me-2"></i>
+                <span>{{ cochera.ancho }}m × {{ cochera.largo }}m × {{ cochera.alto }}m</span>
+              </div>
+              <div class="d-flex align-items-center">
+                <i class="bi bi-building text-primary me-2"></i>
+                <span>Techo: {{ cochera.con_techo|yesno:"Sí,No" }}</span>
+              </div>
+              <p class="text-muted small mt-2">
+                <i class="bi bi-calendar-date me-1"></i>
+                Publicado el {{ cochera.fecha_publicacion|date:"d/m/Y" }}
+              </p>
+              {% if cochera.estado %}
+              <span class="badge bg-{% if cochera.estado.nombre == 'Disponible' %}success{% else %}warning{% endif %}">
+                {{ cochera.estado.nombre }}
+              </span>
+              {% endif %}
+            </div>
+            
+            <h3 class="h4 mb-3">Descripción</h3>
+            <p class="mb-4">{{ cochera.descripcion }}</p>
+            
+            <h3 class="h4 mb-3">Características</h3>
+            <ul class="list-group list-group-flush mb-4">
+              <li class="list-group-item d-flex align-items-center">
+                <i class="bi bi-check-circle-fill text-success me-2"></i>
+                Espacio para {{ cochera.cantidad_vehiculos }} vehículo{{ cochera.cantidad_vehiculos|pluralize }}
+              </li>
+              <li class="list-group-item d-flex align-items-center">
+                <i class="bi bi-check-circle-fill text-success me-2"></i>
+                Dimensiones: {{ cochera.ancho }}m (ancho) × {{ cochera.largo }}m (largo) × {{ cochera.alto }}m (alto)
+              </li>
+              <li class="list-group-item d-flex align-items-center">
+                <i class="bi bi-check-circle-fill text-success me-2"></i>
+                {{ cochera.con_techo|yesno:"Con techo,Descubierta" }}
+              </li>
+            </ul>
+            
+            <h3 class="h4 mb-3">Política de cancelación</h3>
+            <p>{{ cochera.politica_cancelacion }}</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Sidebar - Panel administrativo o reserva -->
+      <div class="col-lg-4">
+        <div class="card shadow-sm sticky-top" style="top: 20px;">
+          <div class="card-body">
+            {% if user.is_staff %}
+              <!-- Panel administrativo -->
+              <h3 class="h4 mb-3">Gestión de la Cochera</h3>
+              <div class="d-flex align-items-end mb-3">
+                <span class="h3 text-primary">${{ cochera.precio_por_dia|floatformat:"0" }}</span>
+                <span class="text-muted ms-1">/ día</span>
+              </div>
+              <div class="d-grid gap-2">
+                <a href="{% url 'admin_cochera_editar' id_cochera=cochera.id_cochera %}" class="btn btn-primary btn-azul">
+                  <i class="bi bi-pencil-square me-2"></i> Editar Cochera
+                </a>
+                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">
+                  <i class="bi bi-trash me-2"></i> Eliminar Cochera
+                </button>
+                <a href="{% url 'admin_cochera_historial' id_cochera=cochera.id_cochera %}" class="btn btn-outline-secondary">
+                  <i class="bi bi-clock-history me-2"></i> Ver Historial
+                </a>
+                <a href="{% url 'admin_cochera_estado' id_cochera=cochera.id_cochera %}" class="btn btn-outline-secondary">
+                  <i class="bi bi-calendar-check me-2"></i> Ver Reservas
+                </a>
+              </div>
+            {% else %}
+              <!-- Formulario de reserva para usuarios no administradores -->
+              <h3 class="h4 mb-3">Reservar</h3>
+              <div class="d-flex align-items-end mb-3">
+                <span class="h3 text-primary">${{ cochera.precio_por_dia|floatformat:"0" }}</span>
+                <span class="text-muted ms-1">/ día</span>
+              </div>
+              <form method="post" action="{% url 'crear_reserva_cochera' id_cochera=cochera.id_cochera %}">
+                {% csrf_token %}
+                <div class="mb-3">
+                  <label for="fecha_inicio" class="form-label">Fecha de inicio</label>
+                  <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio" required>
+                </div>
+                <div class="mb-3">
+                  <label for="fecha_fin" class="form-label">Fecha de fin</label>
+                  <input type="date" class="form-control" id="fecha_fin" name="fecha_fin" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-azul w-100 py-2">
+                  <i class="bi bi-calendar-check me-2"></i> Reservar ahora
+                </button>
+              </form>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de confirmación para eliminar -->
+    <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="confirmDeleteModalLabel">Confirmar Eliminación</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            ¿Estás seguro de que quieres eliminar la cochera "{{ cochera.nombre }}"? Esta acción no se puede deshacer.
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <form method="post" action="{% url 'admin_cochera_eliminar' id_cochera=cochera.id_cochera %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-danger">Eliminar</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Reservas activas -->
+  <div class="container mt-5 mb-5">
+    <h3 class="h4 mb-4 border-bottom pb-3">Reservas</h3>
+    {% if reservas %}
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Fecha Inicio</th>
+              <th>Fecha Fin</th>
+              <th>Precio Total</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for reserva in reservas %}
+            <tr>
+              <td>{{ reserva.fecha_inicio|date:"d/m/Y" }}</td>
+              <td>{{ reserva.fecha_fin|date:"d/m/Y" }}</td>
+              <td>${{ reserva.precio_total|floatformat:"2" }}</td>
+              <td>
+                <span class="badge bg-{% if reserva.estado.nombre == 'Confirmada' %}success{% else %}warning{% endif %}">
+                  {{ reserva.estado.nombre }}
+                </span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="alert alert-secondary">No hay reservas activas para esta cochera.</div>
+    {% endif %}
+  </div>
+
+  <!-- Historial de estados -->
+  {% if historial %}
+  <div class="container mt-5 mb-5">
+    <h3 class="h4 mb-4 border-bottom pb-3">Historial de Estados</h3>
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Estado</th>
+            <th>Fecha Inicio</th>
+            <th>Fecha Fin</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for estado in historial %}
+          <tr>
+            <td>{{ estado.estado.nombre }}</td>
+            <td>{{ estado.fecha_inicio|date:"d/m/Y" }}</td>
+            <td>{{ estado.fecha_fin|date:"d/m/Y"|default:"-" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+{% endblock %}

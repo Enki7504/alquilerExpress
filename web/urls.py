@@ -5,13 +5,17 @@ from django.conf import settings
 
 urlpatterns = [
     path('', views.index, name='index'),
+    # Login y Logout
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
-    path('register/', views.register, name='register'),
-    path('buscar-inmuebles/', views.buscar_inmuebles, name='buscar_inmuebles'),
-    path('buscar-inmuebles/<int:id_inmueble>/', views.detalle_inmueble, name='detalle_inmueble'),
     path("loginAdmin/", views.loginAdmin, name="loginAdmin"), # lo dejo para poder testear el login de admin solo, pero se puede eliminar
     path("loginAdmin/2fa/", views.loginAdmin_2fa, name="loginAdmin_2fa"),
+    path('register/', views.register, name='register'),
+    # Busquedas
+    path('buscar-inmuebles/', views.buscar_inmuebles, name='buscar_inmuebles'),
+    path('buscar-inmuebles/<int:id_inmueble>/', views.detalle_inmueble, name='detalle_inmueble'),
+    path('buscar-cocheras/', views.buscar_cocheras, name='buscar_cocheras'),
+    path('buscar-cocheras/<int:id_cochera>/', views.detalle_cochera, name='detalle_cochera'),
     # URLs de administración
     path('panel/', views.admin_panel, name='admin_panel'),
     path('panel/alta-empleados/', views.admin_alta_empleados, name='admin_alta_empleados'),
@@ -21,8 +25,9 @@ urlpatterns = [
     path('panel/estadisticas-empleados/', views.admin_estadisticas_empleados, name='admin_estadisticas_empleados'),
     path('panel/estadisticas-cocheras/', views.admin_estadisticas_cocheras, name='admin_estadisticas_cocheras'),
     path('panel/estadisticas-inmuebles/', views.admin_estadisticas_inmuebles, name='admin_estadisticas_inmuebles'),
-
+    # Reservs
     path('crear-reserva/<int:id_inmueble>/', views.crear_reserva, name='crear_reserva'),
+    path('crear-reserva-cochera/<int:id_cochera>/', views.crear_reserva_cochera, name='crear_reserva_cochera'),
     path('panel/reserva/<int:id_reserva>/cambiar-estado/', views.cambiar_estado_reserva, name='cambiar_estado_reserva'),
     # path('panel/inmuebles/', views.admin_editar_inmueble, name='admin_editar_inmueble'),
     # path('panel/inmuebles/editar-inmueble/<int:id_inmueble>/', views.admin_inmueble_editar, name='admin_inmueble_editar'),

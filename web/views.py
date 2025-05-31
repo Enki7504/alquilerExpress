@@ -13,6 +13,8 @@ from django.utils import timezone
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
 from django.views.decorators.http import require_POST
+from django.db.models import Q
+
 
 from .forms import ClienteCreationForm
 from .forms import EmpleadoCreationForm
@@ -36,6 +38,7 @@ from .models import (
     Reserva,
     ClienteInmueble,
     Estado,
+    Cochera,
     Perfil,
     ReservaEstado,
 )
@@ -65,13 +68,38 @@ def register(request):
         form = RegistroUsuarioForm()
     return render(request, 'register.html', {'form': form})
 
+def buscar_inmuebles(request):
+    query = request.GET.get('q', '').strip()  # Elimina espacios en blanco
+    
+    if query:
+        # Búsqueda solo por nombre (insensible a mayúsculas/minúsculas)
+        inmuebles = Inmueble.objects.filter(nombre__icontains=query)
+    else:
+        # Si no hay query, mostrar todos los inmuebles
+        inmuebles = Inmueble.objects.all()
+    
+    return render(request, 'buscar_inmuebles.html', {
+        'inmuebles': inmuebles,
+        'query': query
+    })
+
+def buscar_cocheras(request):
+    query = request.GET.get('q', '').strip()
+    
+    if query:
+        # Búsqueda solo por nombre para cocheras
+        cocheras = Cochera.objects.filter(nombre__icontains=query)
+    else:
+        cocheras = Cochera.objects.all()
+    
+    return render(request, 'buscar_cocheras.html', {
+        'cocheras': cocheras,
+        'query': query
+    })
+
 def lista_inmuebles(request):
     inmuebles = Inmueble.objects.all()
     return render(request, 'lista_inmuebles.html', {'inmuebles': inmuebles})
-
-def buscar_inmuebles(request):
-    inmuebles = Inmueble.objects.all()
-    return render(request, 'buscar_inmuebles.html', {'inmuebles': inmuebles})
 
 def detalle_inmueble(request, id_inmueble):
     inmueble = get_object_or_404(
@@ -105,6 +133,22 @@ def detalle_inmueble(request, id_inmueble):
         'historial': historial,
     })
 
+def detalle_cochera(request, id_cochera):
+    cochera = get_object_or_404(
+        Cochera.objects.select_related('estado'),
+        id_cochera=id_cochera
+    )
+    # Obtener reservas activas
+    reservas = Reserva.objects.filter(cochera=cochera, estado__nombre__in=['Confirmada', 'Pendiente']).order_by('-fecha_inicio')
+    
+    # Obtener historial de estados
+    historial = InmuebleEstado.objects.filter(inmueble_cochera__cochera=cochera).order_by('-fecha_inicio') if InmuebleCochera.objects.filter(cochera=cochera).exists() else []
+    
+    return render(request, 'cochera.html', {
+        'cochera': cochera,
+        'reservas': reservas,
+        'historial': historial,
+    })
 
 def login_view(request):
     form = LoginForm(request.POST or None)
@@ -144,7 +188,6 @@ def login_view(request):
     return render(request, 'login.html', {'form': form})
 
 #Para el login con doble factor por mail
-
 def loginAdmin(request):
     if request.method == "POST":
         username = request.POST.get("username")
@@ -389,6 +432,55 @@ def crear_reserva(request, id_inmueble):
     # Si no es POST, redirigir al detalle del inmueble
     return redirect('detalle_inmueble', id_inmueble=id_inmueble)
 
+def crear_reserva_cochera(request, id_cochera):
+    cochera = get_object_or_404(Cochera, id_cochera=id_cochera)
+    
+    if request.method == 'POST':
+        fecha_inicio = request.POST.get('fecha_inicio')
+        fecha_fin = request.POST.get('fecha_fin')
+        
+        if not fecha_inicio or not fecha_fin:
+            messages.error(request, 'Debes ingresar ambas fechas.')
+            return redirect('detalle_cochera', id_cochera=id_cochera)
+            
+        try:
+            fecha_inicio = datetime.datetime.strptime(fecha_inicio, '%Y-%m-%d').date()
+            fecha_fin = datetime.datetime.strptime(fecha_fin, '%Y-%m-%d').date()
+            
+            if fecha_inicio >= fecha_fin:
+                messages.error(request, 'La fecha de fin debe ser posterior a la de inicio.')
+                return redirect('detalle_cochera', id_cochera=id_cochera)
+                
+            # Calcular días y precio total
+            dias = (fecha_fin - fecha_inicio).days
+            precio_total = dias * cochera.precio_por_dia
+            
+            # Crear la reserva
+            reserva = Reserva.objects.create(
+                fecha_inicio=fecha_inicio,
+                fecha_fin=fecha_fin,
+                precio_total=precio_total,
+                cochera=cochera,
+                estado=Estado.objects.get(nombre='Pendiente'),
+                descripcion=f"Reserva para {cochera.nombre} del {fecha_inicio} al {fecha_fin}"
+            )
+            
+            # Relacionar el cliente con la reserva
+            if request.user.is_authenticated:
+                ClienteInmueble.objects.create(
+                    cliente=request.user.perfil,
+                    cochera=cochera,
+                    reserva=reserva
+                )
+            
+            messages.success(request, 'Reserva creada exitosamente!')
+            return redirect('detalle_cochera', id_cochera=id_cochera)
+            
+        except ValueError:
+            messages.error(request, 'Formato de fecha inválido.')
+            return redirect('detalle_cochera', id_cochera=id_cochera)
+    
+    return redirect('detalle_cochera', id_cochera=id_cochera)
 
 @require_POST
 @login_required
