@@ -253,27 +253,24 @@ def admin_alta_cocheras(request):
     if request.method == 'POST':
         form = CocheraForm(request.POST, request.FILES)
         if form.is_valid():
-            # Guardar la cochera completamente
             cochera = form.save(commit=False)
             cochera.fecha_publicacion = timezone.now().date()
-            cochera.save()  # Guardar la cochera en la base de datos
-            form.save_m2m()  # Guardar relaciones many-to-many si las hay
-            
-            # Crear la imagen después de guardar la cochera
-            if form.cleaned_data.get('imagen'):
+            cochera.save() # Guardar el cochera completamente
+            form.save_m2m() # Guardar relaciones many-to-many si las hay
+
+            # Guardar todas las imágenes
+            for img in request.FILES.getlist('imagenes'):
                 CocheraImagen.objects.create(
                     cochera=cochera,
-                    imagen=form.cleaned_data['imagen'],
-                    descripcion="Imagen principal"
+                    imagen=img,
+                    descripcion="Imagen de la cochera"
                 )
-            
             messages.success(request, 'Cochera creada exitosamente.')
             return redirect('admin_alta_cocheras')
         else:
             messages.error(request, 'Por favor, corrige los errores en el formulario.')
     else:
         form = CocheraForm()
-    
     return render(request, 'admin/admin_alta_cocheras.html', {'form': form})
 
 @login_required
