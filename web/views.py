@@ -41,6 +41,10 @@ from .models import (
     Estado,
     Perfil,
     ReservaEstado,
+    Ciudad,
+    Provincia,
+    Cochera
+
 )
 from .utils import email_link_token
 
@@ -520,3 +524,10 @@ def registrar_cliente(request):
     else:
         form = ClienteCreationForm()
     return render(request, "registrar_cliente.html", {"form": form})
+
+# para cargar las ciudades en el formulario de registro
+def cargar_ciudades(request):
+    provincia_id = request.GET.get('provincia')
+    ciudades = Ciudad.objects.filter(provincia_id=provincia_id).order_by('nombre')
+    ciudades_list = [{'id': ciudad.id, 'nombre': ciudad.nombre} for ciudad in ciudades]
+    return JsonResponse({'ciudades': ciudades_list})
