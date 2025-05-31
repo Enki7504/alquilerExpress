@@ -1,3 +1,5 @@
+{% load static %}
+{% load user_groups %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -62,9 +64,12 @@
           <li class="nav-item">
             <form action="{% url 'logout' %}" method="post" style="display:inline;">
               {% csrf_token %}
-              <button type="submit" class="btn btn-link nav-link" style="display:inline; padding:0;">Cerrar sesión</button>
+              <button type="submit" class="btn btn-link nav-link" style="display:inline; padding:7px;">Cerrar sesión</button>
             </form>
           </li>
+          {% if user.is_staff or user|has_group:"empleado" %}
+          <li class="nav-item"><a class="nav-link" href="{% url 'admin_panel' %}">Panel</a></li>
+          {% endif %}
         {% else %}
           <li class="nav-item"><a class="nav-link" href="{% url 'login' %}">Iniciar sesión</a></li>
           <li class="nav-item"><a class="nav-link" href="{% url 'register' %}">Registrarse</a></li>

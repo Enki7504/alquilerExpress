@@ -1,5 +1,6 @@
 <!-- templates/base.html -->
 {% load static %}
+{% load user_groups %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -25,8 +26,20 @@
       </div>
       <!-- Botoncitos -->
       <div class="navbar__buttons d-flex align-items-center ms-3">
-        <button class="buttons_notification btn btn-outline-secondary me-2"><i class="bi bi-bell"></i></button>
-        <button class="buttons_user btn btn-outline-secondary"><i class="bi bi-person-circle"></i></button>
+        {% if user.is_authenticated %}
+          {% if user.is_staff or user|has_group:"empleado" %}
+            <a href="{% url 'admin_panel' %}" class="btn btn-outline-primary me-2">
+              <i class="bi bi-speedometer2"></i> Panel
+            </a>
+          {% endif %}
+          <form action="{% url 'logout' %}" method="post" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-secondary me-2">Cerrar sesión</button>
+          </form>
+        {% else %}
+          <a href="{% url 'login' %}" class="btn btn-outline-secondary me-2">Iniciar sesión</a>
+          <a href="{% url 'register' %}" class="btn btn-primary">Registrarse</a>
+        {% endif %}
       </div>
     </div>
   </nav>
