@@ -938,7 +938,6 @@ def marcar_todas_leidas(request):
     """
     try:
         request.user.perfil.notificacion_set.filter(leido=False).update(leido=True)
-        messages.success(request, "Todas las notificaciones han sido marcadas como leídas.")
         return JsonResponse({'success': True})
     except Exception as e:
         messages.error(request, f"Error al marcar notificaciones: {e}")
