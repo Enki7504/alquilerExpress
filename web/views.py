@@ -4,6 +4,7 @@ import json
 import secrets
 import string
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -35,6 +36,7 @@ from .models import (
     InmuebleEstado,
     InmuebleCochera,
     CocheraImagen,
+    Notificacion,
     Resenia,
     Comentario,
     LoginOTP,
@@ -706,3 +708,39 @@ def registrar_cliente(request):
     else:
         form = ClienteCreationForm()
     return render(request, "registrar_cliente.html", {"form": form})
+
+@login_required
+def marcar_notificacion(request, id_notificacion):
+    notificacion = get_object_or_404(Notificacion, id=id_notificacion, usuario=request.user.perfil)
+    if not notificacion.leido:
+        notificacion.leido = True
+        notificacion.save()
+    next_url = request.POST.get('next', '/')
+    return redirect(next_url)
+
+@login_required
+def ver_notificaciones(request):
+    # Marcar todas como leídas al abrir el dropdown
+    request.user.perfil.notificacion_set.filter(leido=False).update(leido=True)
+    
+    # Resto de tu lógica actual...
+    return render(request, 'tu_template.html', context)
+
+@login_required
+def eliminar_notificacion(request, notificacion_id):
+    notificacion = get_object_or_404(
+        Notificacion, 
+        id=notificacion_id, 
+        usuario=request.user.perfil
+    )
+    notificacion.delete()
+    return redirect(request.META.get('HTTP_REFERER', 'index'))
+
+@require_POST
+@login_required
+def marcar_todas_leidas(request):
+    try:
+        request.user.perfil.notificacion_set.filter(leido=False).update(leido=True)
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})

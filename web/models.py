@@ -171,3 +171,17 @@ class LoginOTP(models.Model):
     def is_valido(self):
         # Verifica si el código es válido (dentro de 10 minutos)        
         return timezone.now() < self.creado_en + timedelta(minutes=10)
+
+class Notificacion(models.Model):
+    usuario = models.ForeignKey(Perfil, on_delete=models.CASCADE)
+    mensaje = models.TextField()
+    leido = models.BooleanField(default=False)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Notificación'  # Nombre singular
+        verbose_name_plural = 'Notificaciones'  # Nombre plural
+        ordering = ['-fecha_creacion']
+
+    def __str__(self):
+        return f"Notificación para {self.usuario}"

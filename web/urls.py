@@ -52,6 +52,12 @@ urlpatterns = [
     # registrar empleado y cliente
     path("registrar-empleado/", views.registrar_empleado, name="registrar_empleado"),
     path("registrar-cliente/", views.registrar_cliente, name="registrar_cliente"),
+
+    # Notificaciones
+    path('notificaciones/marcar/<int:id_notificacion>/', views.marcar_notificacion, name='marcar_notificacion'),
+    path('notificaciones/eliminar/<int:notificacion_id>/', views.eliminar_notificacion, name='eliminar_notificacion'),
+    path('notificaciones/marcar-todas-leidas/', views.marcar_todas_leidas, name='marcar_todas_leidas'),
+
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 
