@@ -27,7 +27,7 @@ html, body {
   top: 70px;
   height: calc(100vh - 70px);
   flex-shrink: 0;
-  padding: 1rem;
+  padding: 30px;
 }
 
 .filtros__campo {
@@ -105,7 +105,7 @@ html, body {
 .mapa-contenedor {
   position: sticky;
   top: 70px;
-  height: calc(100vh - 70px);
+  height: 100vh;
   flex-shrink: 0;
 }
 
