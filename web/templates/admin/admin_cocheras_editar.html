@@ -30,15 +30,24 @@
           {{ form.nombre.errors }}
         </div>
         <div class="col-md-4">
+          {{ form.provincia.label_tag }}
+          {{ form.provincia }}
+          {{ form.provincia.errors }}
+        </div>
+        <div class="col-md-4">
+          {{ form.ciudad.label_tag }}
+          {{ form.ciudad }}
+          {{ form.ciudad.errors }}
+        </div>
+        <div class="col-md-6">
           {{ form.ubicacion.label_tag }}
           {{ form.ubicacion }}
           {{ form.ubicacion.errors }}
         </div>
-        <div class="col-md-4">
-          {{ form.imagen.label_tag }}
-          {{ form.imagen }}
-          {{ form.imagen.errors }}
-          <img id="preview" class="img-fluid mt-3" style="max-height: 100px; display: none;">
+        <div class="col-md-6">
+          {{ form.precio_por_dia.label_tag }}
+          {{ form.precio_por_dia }}
+          {{ form.precio_por_dia.errors }}
         </div>
         <div class="col-12">
           {{ form.descripcion.label_tag }}
@@ -46,9 +55,9 @@
           {{ form.descripcion.errors }}
         </div>
         <div class="col-md-3">
-          {{ form.cantidad_vehiculos.label_tag }}
-          {{ form.cantidad_vehiculos }}
-          {{ form.cantidad_vehiculos.errors }}
+          {{ form.alto.label_tag }}
+          {{ form.alto }}
+          {{ form.alto.errors }}
         </div>
         <div class="col-md-3">
           {{ form.ancho.label_tag }}
@@ -61,29 +70,30 @@
           {{ form.largo.errors }}
         </div>
         <div class="col-md-3">
-          {{ form.alto.label_tag }}
-          {{ form.alto }}
-          {{ form.alto.errors }}
-        </div>
-        <div class="col-md-6">
-          {{ form.precio_por_dia.label_tag }}
-          {{ form.precio_por_dia }}
-          {{ form.precio_por_dia.errors }}
-        </div>
-        <div class="col-md-6">
-          {{ form.estado.label_tag }}
-          {{ form.estado }}
-          {{ form.estado.errors }}
+          {{ form.cantidad_vehiculos.label_tag }}
+          {{ form.cantidad_vehiculos }}
+          {{ form.cantidad_vehiculos.errors }}
         </div>
         <div class="col-12">
           {{ form.politica_cancelacion.label_tag }}
           {{ form.politica_cancelacion }}
           {{ form.politica_cancelacion.errors }}
         </div>
-        <div class="col-12 form-check">
-          {{ form.con_techo }}
+        <div class="col-md-4 form-check">
           {{ form.con_techo.label_tag }}
+          {{ form.con_techo }}
           {{ form.con_techo.errors }}
+        </div>
+        <div class="col-md-4">
+          {{ form.estado.label_tag }}
+          {{ form.estado }}
+          {{ form.estado.errors }}
+        </div>
+        <div class="col-md-4">
+          {{ form.imagen.label_tag }}
+          {{ form.imagen }}
+          {{ form.imagen.errors }}
+          <img id="preview" class="img-fluid mt-3" style="max-height: 100px; display: none;">
         </div>
         <div class="col-12">
           <button type="submit" class="btn btn-primary btn-azul">Guardar Cambios</button>
@@ -96,7 +106,7 @@
 
 {% block extra_js %}
 <script>
-document.getElementById('id_imagen')?.addEventListener('change', function(e) {
+  document.getElementById('id_imagen')?.addEventListener('change', function(e) {
   const preview = document.getElementById('preview');
   const file = e.target.files[0];
   if (file && preview) {
