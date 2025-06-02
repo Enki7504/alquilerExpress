@@ -29,11 +29,21 @@
           {{ form.nombre.errors }}
         </div>
         <div class="col-md-4">
+          {{ form.provincia.label_tag }}
+          {{ form.provincia }}
+          {{ form.provincia.errors }}
+        </div>
+        <div class="col-md-4">
+          {{ form.ciudad.label_tag }}
+          {{ form.ciudad }}
+          {{ form.ciudad.errors }}
+        </div>
+        <div class="col-md-6">
           {{ form.ubicacion.label_tag }}
           {{ form.ubicacion }}
           {{ form.ubicacion.errors }}
         </div>
-        <div class="col-md-4">
+        <div class="col-md-6">
           {{ form.precio_por_dia.label_tag }}
           {{ form.precio_por_dia }}
           {{ form.precio_por_dia.errors }}
@@ -79,10 +89,8 @@
           {{ form.estado.errors }}
         </div>
         <div class="col-md-4">
-          {{ form.imagen.label_tag }}
-          {{ form.imagen }}
-          {{ form.imagen.errors }}
-          <img id="preview" class="img-fluid mt-3" style="max-height: 100px; display: none;">
+          <label for="id_imagenes" class="form-label">Fotos de la cochera</label>
+          <input type="file" name="imagenes" id="id_imagenes" class="form-control" multiple accept="image/*">
         </div>
         <div class="col-12">
           <button type="submit" class="btn btn-primary btn-azul">Cargar Cochera</button>
@@ -91,4 +99,24 @@
     </form>
   </div>
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const provinciaSelect = document.getElementById('id_provincia');
+  const ciudadSelect = document.getElementById('id_ciudad');
+  provinciaSelect.addEventListener('change', function() {
+    const provinciaId = this.value;
+    fetch(`/ajax/cargar-ciudades/?provincia=${provinciaId}`)
+      .then(response => response.json())
+      .then(data => {
+        ciudadSelect.innerHTML = '<option value="">---------</option>';
+        data.ciudades.forEach(function(ciudad) {
+          const option = document.createElement('option');
+          option.value = ciudad.id;
+          option.textContent = ciudad.nombre;
+          ciudadSelect.appendChild(option);
+        });
+      });
+  });
+});
+</script>
 {% endblock %}

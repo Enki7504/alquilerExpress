@@ -41,6 +41,10 @@ from .models import (
     Estado,
     Perfil,
     ReservaEstado,
+    Ciudad,
+    Provincia,
+    Cochera
+
 )
 from .utils import email_link_token
 
@@ -85,8 +89,8 @@ def detalle_inmueble(request, id_inmueble):
     comentarios = Comentario.objects.filter(inmueble=inmueble).order_by('-fecha_creacion')
     # Obtener reservas activas
     reservas = Reserva.objects.filter(inmueble=inmueble, estado__nombre__in=['Confirmada', 'Pendiente']).order_by('-fecha_inicio')
-    # Obtener historial de estados (ajustado para manejar casos sin InmuebleCochera)
-    historial = InmuebleEstado.objects.filter(inmueble_cochera__inmueble=inmueble).order_by('-fecha_inicio') if InmuebleCochera.objects.filter(inmueble=inmueble).exists() else []
+    # Eliminar referencia a InmuebleCochera
+    historial = InmuebleEstado.objects.filter(inmueble=inmueble).order_by('-fecha_inicio')
 
     if request.method == 'POST' and request.user.is_authenticated:
         comentario_form = ComentarioForm(request.POST)
@@ -249,27 +253,24 @@ def admin_alta_cocheras(request):
     if request.method == 'POST':
         form = CocheraForm(request.POST, request.FILES)
         if form.is_valid():
-            # Guardar la cochera completamente
             cochera = form.save(commit=False)
             cochera.fecha_publicacion = timezone.now().date()
-            cochera.save()  # Guardar la cochera en la base de datos
-            form.save_m2m()  # Guardar relaciones many-to-many si las hay
-            
-            # Crear la imagen después de guardar la cochera
-            if form.cleaned_data.get('imagen'):
+            cochera.save() # Guardar el cochera completamente
+            form.save_m2m() # Guardar relaciones many-to-many si las hay
+
+            # Guardar todas las imágenes
+            for img in request.FILES.getlist('imagenes'):
                 CocheraImagen.objects.create(
                     cochera=cochera,
-                    imagen=form.cleaned_data['imagen'],
-                    descripcion="Imagen principal"
+                    imagen=img,
+                    descripcion="Imagen de la cochera"
                 )
-            
             messages.success(request, 'Cochera creada exitosamente.')
             return redirect('admin_alta_cocheras')
         else:
             messages.error(request, 'Por favor, corrige los errores en el formulario.')
     else:
         form = CocheraForm()
-    
     return render(request, 'admin/admin_alta_cocheras.html', {'form': form})
 
 @login_required
@@ -383,7 +384,8 @@ def admin_inmueble_eliminar(request, id_inmueble):
 @user_passes_test(is_admin_or_empleado)
 def admin_inmueble_historial(request, id_inmueble):
     inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
-    historial = InmuebleEstado.objects.filter(inmueble_cochera__inmueble=inmueble).order_by('-fecha_inicio') if InmuebleCochera.objects.filter(inmueble=inmueble).exists() else []
+    # Eliminar referencia a InmuebleCochera
+    historial = InmuebleEstado.objects.filter(inmueble=inmueble).order_by('-fecha_inicio')
     return render(request, 'admin/admin_inmueble_historial.html', {'inmueble': inmueble, 'historial': historial})
 
 @login_required
@@ -520,3 +522,10 @@ def registrar_cliente(request):
     else:
         form = ClienteCreationForm()
     return render(request, "registrar_cliente.html", {"form": form})
+
+# para cargar las ciudades en el formulario de registro
+def cargar_ciudades(request):
+    provincia_id = request.GET.get('provincia')
+    ciudades = Ciudad.objects.filter(provincia_id=provincia_id).order_by('nombre')
+    ciudades_list = [{'id': ciudad.id, 'nombre': ciudad.nombre} for ciudad in ciudades]
+    return JsonResponse({'ciudades': ciudades_list})

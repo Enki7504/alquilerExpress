@@ -3,7 +3,7 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 
 from .models import Cochera, Comentario, Estado, Inmueble, Perfil
-from .models import Perfil, Comentario, Inmueble, Estado, Cochera
+from .models import Perfil, Comentario, Inmueble, Estado, Cochera, Ciudad, Provincia
 from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
 
@@ -48,7 +48,23 @@ class LoginForm(forms.Form):
 
 
 class InmuebleForm(forms.ModelForm):
-    estado = forms.ModelChoiceField(queryset=Estado.objects.all(), required=True, label="Estado")
+    provincia = forms.ModelChoiceField(
+        queryset=Provincia.objects.all(),
+        required=True,
+        label="Provincia",
+        widget=forms.Select(attrs={'class': 'form-select', 'id': 'id_provincia'})
+    )
+    ciudad = forms.ModelChoiceField(
+        queryset=Ciudad.objects.none(),
+        required=True,
+        label="Ciudad",
+        widget=forms.Select(attrs={'class': 'form-select', 'id': 'id_ciudad'})
+    )
+    estado = forms.ModelChoiceField(
+        queryset=Estado.objects.filter(nombre__in=["Disponible", "Ocupado", "Oculto", "En Mantenimiento"]),
+        required=True,
+        label="Estado"
+    )
     cochera = forms.ModelChoiceField(
         queryset=Cochera.objects.all(),
         required=False,
@@ -56,12 +72,25 @@ class InmuebleForm(forms.ModelForm):
         widget=forms.Select(attrs={'class': 'form-select', 'id': 'cocheraSelect'})
     )
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if 'provincia' in self.data:
+            try:
+                provincia_id = int(self.data.get('provincia'))
+                self.fields['ciudad'].queryset = Ciudad.objects.filter(provincia_id=provincia_id).order_by('nombre')
+            except (ValueError, TypeError):
+                self.fields['ciudad'].queryset = Ciudad.objects.none()
+        elif self.instance.pk and self.instance.provincia:
+            self.fields['ciudad'].queryset = Ciudad.objects.filter(provincia=self.instance.provincia).order_by('nombre')
+        else:
+            self.fields['ciudad'].queryset = Ciudad.objects.none()
+
     class Meta:
         model = Inmueble
         fields = [
             'nombre', 'ubicacion', 'descripcion', 'cantidad_banios', 'cantidad_ambientes',
             'cantidad_camas', 'cantidad_huespedes', 'precio_por_dia', 'politica_cancelacion',
-            'cochera', 'estado'
+            'provincia', 'ciudad', 'cochera', 'estado'
         ]
         widgets = {
             'descripcion': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
@@ -77,16 +106,58 @@ class InmuebleForm(forms.ModelForm):
             'estado': forms.Select(attrs={'class': 'form-select'}),
         }
 
+    # Esto pone el estado de la cochera a "Oculto" cuando se guarda el inmueble
+    def save(self, commit=True):
+        inmueble = super().save(commit=False)
+        cochera = self.cleaned_data.get('cochera')
+        if cochera:
+            # Cambiar el estado de la cochera a "Oculto"
+            estado_oculto = Estado.objects.get(nombre="Oculto")
+            cochera.estado = estado_oculto
+            cochera.save()
+        if commit:
+            inmueble.save()
+            self.save_m2m()
+        return inmueble
+
 class CocheraForm(forms.ModelForm):
-    imagen = forms.ImageField(required=False, label="Foto de la cochera")
-    estado = forms.ModelChoiceField(queryset=Estado.objects.all(), required=True, label="Estado")
+    provincia = forms.ModelChoiceField(
+        queryset=Provincia.objects.all(),
+        required=True,
+        label="Provincia",
+        widget=forms.Select(attrs={'class': 'form-select', 'id': 'id_provincia'})
+    )
+    ciudad = forms.ModelChoiceField(
+        queryset=Ciudad.objects.none(),
+        required=True,
+        label="Ciudad",
+        widget=forms.Select(attrs={'class': 'form-select', 'id': 'id_ciudad'})
+    )
+    estado = forms.ModelChoiceField(
+        queryset=Estado.objects.filter(nombre__in=["Disponible", "Ocupado", "Oculto", "En Mantenimiento"]),
+        required=True,
+        label="Estado"
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if 'provincia' in self.data:
+            try:
+                provincia_id = int(self.data.get('provincia'))
+                self.fields['ciudad'].queryset = Ciudad.objects.filter(provincia_id=provincia_id).order_by('nombre')
+            except (ValueError, TypeError):
+                self.fields['ciudad'].queryset = Ciudad.objects.none()
+        elif self.instance.pk and self.instance.provincia:
+            self.fields['ciudad'].queryset = Ciudad.objects.filter(provincia=self.instance.provincia).order_by('nombre')
+        else:
+            self.fields['ciudad'].queryset = Ciudad.objects.none()
 
     class Meta:
         model = Cochera
         fields = [
             'nombre', 'ubicacion', 'descripcion', 'alto', 'ancho', 'largo',
             'cantidad_vehiculos', 'con_techo', 'precio_por_dia', 'politica_cancelacion',
-            'estado'
+            'provincia', 'ciudad', 'estado'
         ]
         widgets = {
             'nombre': forms.TextInput(attrs={'class': 'form-control'}),

@@ -76,9 +76,6 @@ class Inmueble(models.Model):
     def __str__(self):
         return self.nombre
 
-
-
-
 class Reserva(models.Model):
     id_reserva = models.AutoField(primary_key=True)
     fecha_inicio = models.DateField()
