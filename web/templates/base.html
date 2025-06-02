@@ -12,6 +12,7 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
   <!-- Nuesto CSS -->
   <link rel="stylesheet" href="{% static 'css/global.css' %}">
+  <link rel="stylesheet" href="{% static 'css/notification.css' %}">
   {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -27,9 +28,50 @@
       <!-- Botoncitos -->
       <div class="navbar__buttons d-flex align-items-center ms-3">
         {% if user.is_authenticated %}
+          <!-- Notificaciones -->
+          <div class="dropdown me-2">
+            <button class="btn btn-outline-secondary position-relative dropdown-toggle" 
+                    type="button" 
+                    id="notificacionesDropdown" 
+                    data-bs-toggle="dropdown" 
+                    aria-expanded="false">
+                <i class="bi bi-bell"></i>
+                {% if notificaciones_no_leidas > 0 %}
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                        {{ notificaciones_no_leidas }}
+                        <span class="visually-hidden">notificaciones no leídas</span>
+                    </span>
+                {% endif %}
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end dropdown-menu-notifications" aria-labelledby="notificacionesDropdown">
+                {% if notificaciones %}
+                    <div class="notification-scrollable">
+                        {% for notificacion in notificaciones %}
+                            <li class="notification-item {% if not notificacion.leido %}unread{% endif %}">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="notification-content">
+                                        <div class="notification-message">{{ notificacion.mensaje }}</div>
+                                        <small class="text-muted notification-time">{{ notificacion.fecha_creacion|timesince }}</small>
+                                    </div>
+                                    <form action="{% url 'eliminar_notificacion' notificacion.id %}" method="post" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-link text-danger p-0" title="Eliminar">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </li>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <li class="notification-item text-center py-2">No hay notificaciones</li>
+                {% endif %}
+            </ul>
+          </div>
+          
           {% if user.is_staff or user|has_group:"empleado" %}
             <a href="{% url 'admin_panel' %}" class="btn btn-outline-primary me-2">
-              <i class="bi bi-speedometer2"></i> Panel
+                <i class="bi bi-speedometer2"></i> Panel
             </a>
           {% endif %}
           <form action="{% url 'logout' %}" method="post" class="d-inline">
@@ -49,6 +91,33 @@
 
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+    const dropdown = document.getElementById('notificacionesDropdown');
+    
+    dropdown.addEventListener('shown.bs.dropdown', function() {
+        // Actualizar el contador via AJAX
+        fetch('{% url "marcar_todas_leidas" %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json'
+            },
+            credentials: 'same-origin'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.success) {
+                const badge = document.querySelector('.badge.bg-danger');
+                if(badge) {
+                    badge.textContent = '0';
+                    badge.style.display = 'none';
+                }
+            }
+        });
+    });
+  });
+  </script>
   {% block extra_js %}{% endblock %}
 </body>
 </html>

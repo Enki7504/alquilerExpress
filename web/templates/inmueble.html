@@ -1,4 +1,4 @@
-{% extends 'base_search.html' %}
+{% extends 'base.html' %}
 {% load static %}
 {% load user_groups %}
 
@@ -10,7 +10,6 @@
 
 {% block content %}
 
-  <!-- Contenido principal -->
   <!-- Contenido principal -->
   <main class="container mt-5 pt-5">
     <a href="{% url 'buscar_inmuebles' %}" class="btn btn-outline-secondary mb-3">
@@ -72,11 +71,11 @@
                 <i class="bi bi-calendar-date text-primary me-1"></i>
                 Publicado el {{ inmueble.fecha_publicacion|date:"d/m/Y" }}
               </p>
-              {% if inmueble.cochera %}
-                <div class="d-flex align-items-center">
-                  <i class="bi bi-car-front text-primary me-2"></i>
-                  <span>Cochera: {{ inmueble.cochera.nombre }}</span>
-                </div>
+              {% if inmueble.inmueble %}
+              <div class="d-flex align-items-center">
+                <i class="bi bi-car-front text-primary me-2"></i>
+                <span>inmueble</span>
+              </div>
               {% endif %}
               {% if inmueble.estado %}
               <span class="badge bg-{% if inmueble.estado.nombre == 'Disponible' %}success{% else %}warning{% endif %}">
@@ -95,48 +94,46 @@
       <div class="col-lg-4">
         <div class="card shadow-sm sticky-top" style="top: 20px;">
           <div class="card-body">
-            {% if user.is_authenticated %}
-              {% if user.is_staff or user|has_group:"empleado" %}
-                <!-- Panel administrativo o empleado -->
-                <h3 class="h4 mb-3">Gestión del Inmueble</h3>
-                <div class="d-flex align-items-end mb-3">
-                  {% if user.is_staff %}
-                    <a href="{% url 'admin_inmueble_editar' id_inmueble=inmueble.id_inmueble %}" class="btn btn-primary btn-azul">
-                      <i class="bi bi-pencil-square me-2"></i> Editar Inmueble
-                    </a>
-                    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">
-                      <i class="bi bi-trash me-2"></i> Eliminar Inmueble
-                    </button>
-                  {% endif %}
-                  <a href="{% url 'admin_inmueble_historial' id_inmueble=inmueble.id_inmueble %}" class="btn btn-outline-secondary">
-                    <i class="bi bi-clock-history me-2"></i> Ver Historial
-                  </a>
-                  <a href="{% url 'admin_inmueble_estado' id_inmueble=inmueble.id_inmueble %}" class="btn btn-outline-secondary">
-                    <i class="bi bi-calendar-check me-2"></i> Ver Reserva
-                  </a>
+            {% if user.is_staff %}
+              <h3 class="h4 mb-3">Gestión del Inmueble</h3>
+              <div class="d-flex align-items-end mb-3">
+                <span class="h3 text-primary">${{ inmueble.precio_por_dia|floatformat:"0" }}</span>
+                <span class="text-muted ms-1">/ noche</span>
+              </div>
+              <div class="d-grid gap-2">
+                <a href="{% url 'admin_inmuebles_editar' id_inmueble=inmueble.id_inmueble %}" class="btn btn-warning">
+                  <i class="bi bi-pencil-square me-2"></i> Editar inmueble
+                </a>
+                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">
+                  <i class="bi bi-trash me-2"></i> Eliminar inmueble
+                </button>
+                <a href="{% url 'admin_inmuebles_historial' id_inmueble=inmueble.id_inmueble %}" class="btn btn-secondary">
+                  <i class="bi bi-clock-history me-2"></i> Ver Historial
+                </a>
+                <a href="{% url 'admin_inmuebles_estado' id_inmueble=inmueble.id_inmueble %}" class="btn btn-primary">
+                  <i class="bi bi-calendar-check me-2"></i> Ver Reservas
+                </a>
+              </div>
+            {% else %}
+              <h3 class="h4 mb-3">Reservar</h3>
+              <div class="d-flex align-items-end mb-3">
+                <span class="h3 text-primary">${{ inmueble.precio_por_dia|floatformat:"0" }}</span>
+                <span class="text-muted ms-1">/ noche</span>
+              </div>
+              <form method="post" action="{% url 'crear_reserva' id_inmueble=inmueble.id_inmueble %}">
+                {% csrf_token %}
+                <div class="mb-3">
+                  <label for="fecha_inicio" class="form-label">Fecha de llegada</label>
+                  <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio" required>
                 </div>
-              {% else %}
-                <!-- Formulario de reserva para usuarios no administradores -->
-                <h3 class="h4 mb-3">Reservar</h3>
-                <div class="d-flex align-items-end mb-3">
-                  <span class="h3 text-primary">${{ inmueble.precio_por_dia|floatformat:"0" }}</span>
-                  <span class="text-muted ms-1">/ noche</span>
+                <div class="mb-3">
+                  <label for="fecha_fin" class="form-label">Fecha de salida</label>
+                  <input type="date" class="form-control" id="fecha_fin" name="fecha_fin" required>
                 </div>
-                <form method="post" action="{% url 'crear_reserva' id_inmueble=inmueble.id_inmueble %}">
-                  {% csrf_token %}
-                  <div class="mb-3">
-                    <label for="fecha_inicio" class="form-label">Fecha de llegada</label>
-                    <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio" required>
-                  </div>
-                  <div class="mb-3">
-                    <label for="fecha_fin" class="form-label">Fecha de salida</label>
-                    <input type="date" class="form-control" id="fecha_fin" name="fecha_fin" required>
-                  </div>
-                  <button type="submit" class="btn btn-primary btn-azul w-100 py-2">
-                    <i class="bi bi-calendar-check me-2"></i> Reservar ahora
-                  </button>
-                </form>
-              {% endif %}
+                <button type="submit" class="btn btn-primary btn-azul w-100 py-2">
+                  <i class="bi bi-calendar-check me-2"></i> Reservar ahora
+                </button>
+              </form>
             {% endif %}
           </div>
         </div>
@@ -156,7 +153,7 @@
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-            <form method="post" action="{% url 'admin_inmueble_eliminar' id_inmueble=inmueble.id_inmueble %}">
+            <form method="post" action="{% url 'admin_inmuebles_eliminar' id_inmueble=inmueble.id_inmueble %}">
               {% csrf_token %}
               <button type="submit" class="btn btn-danger">Eliminar</button>
             </form>

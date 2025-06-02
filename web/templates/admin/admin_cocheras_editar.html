@@ -1,0 +1,109 @@
+{% extends 'admin/admin_base.html' %}
+{% load static %}
+
+{% block title %}Editar Cochera | Panel Admin{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">Editar Cochera: {{ cochera.nombre }}</h1>
+  <a href="{% url 'detalle_cochera' id_cochera=cochera.id_cochera %}" class="btn btn-outline-secondary">Volver</a>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    {% if messages %}
+      <div class="mt-4">
+        {% for message in messages %}
+          <div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-danger{% endif %}">
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <div class="row g-3">
+        <div class="col-md-4">
+          {{ form.nombre.label_tag }}
+          {{ form.nombre }}
+          {{ form.nombre.errors }}
+        </div>
+        <div class="col-md-4">
+          {{ form.ubicacion.label_tag }}
+          {{ form.ubicacion }}
+          {{ form.ubicacion.errors }}
+        </div>
+        <div class="col-md-4">
+          {{ form.imagen.label_tag }}
+          {{ form.imagen }}
+          {{ form.imagen.errors }}
+          <img id="preview" class="img-fluid mt-3" style="max-height: 100px; display: none;">
+        </div>
+        <div class="col-12">
+          {{ form.descripcion.label_tag }}
+          {{ form.descripcion }}
+          {{ form.descripcion.errors }}
+        </div>
+        <div class="col-md-3">
+          {{ form.cantidad_vehiculos.label_tag }}
+          {{ form.cantidad_vehiculos }}
+          {{ form.cantidad_vehiculos.errors }}
+        </div>
+        <div class="col-md-3">
+          {{ form.ancho.label_tag }}
+          {{ form.ancho }}
+          {{ form.ancho.errors }}
+        </div>
+        <div class="col-md-3">
+          {{ form.largo.label_tag }}
+          {{ form.largo }}
+          {{ form.largo.errors }}
+        </div>
+        <div class="col-md-3">
+          {{ form.alto.label_tag }}
+          {{ form.alto }}
+          {{ form.alto.errors }}
+        </div>
+        <div class="col-md-6">
+          {{ form.precio_por_dia.label_tag }}
+          {{ form.precio_por_dia }}
+          {{ form.precio_por_dia.errors }}
+        </div>
+        <div class="col-md-6">
+          {{ form.estado.label_tag }}
+          {{ form.estado }}
+          {{ form.estado.errors }}
+        </div>
+        <div class="col-12">
+          {{ form.politica_cancelacion.label_tag }}
+          {{ form.politica_cancelacion }}
+          {{ form.politica_cancelacion.errors }}
+        </div>
+        <div class="col-12 form-check">
+          {{ form.con_techo }}
+          {{ form.con_techo.label_tag }}
+          {{ form.con_techo.errors }}
+        </div>
+        <div class="col-12">
+          <button type="submit" class="btn btn-primary btn-azul">Guardar Cambios</button>
+          <a href="{% url 'detalle_cochera' id_cochera=cochera.id_cochera %}" class="btn btn-secondary">Cancelar</a>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% block extra_js %}
+<script>
+document.getElementById('id_imagen')?.addEventListener('change', function(e) {
+  const preview = document.getElementById('preview');
+  const file = e.target.files[0];
+  if (file && preview) {
+    preview.src = URL.createObjectURL(file);
+    preview.style.display = 'block';
+  }
+});
+</script>
+{% endblock %}
+{% endblock %}

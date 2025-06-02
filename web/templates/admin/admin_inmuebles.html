@@ -1,0 +1,105 @@
+{% extends 'admin/admin_base.html' %}
+
+{% block title %}Gestión de Inmuebles{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Gestión de Inmuebles</h2>
+    <a href="{% url 'admin_inmuebles_alta' %}" class="btn btn-success">
+        <i class="bi bi-plus-circle"></i> Nuevo Inmueble
+    </a>
+</div>
+
+<form class="d-flex mb-4" role="search" method="GET" action="{% url 'admin_inmuebles' %}">
+    <input class="form-control me-2" type="search" placeholder="Buscar inmueble por nombre..." aria-label="Search" name="q" value="{{ query }}">
+    <button class="btn btn-outline-primary" type="submit">Buscar</button>
+</form>
+
+{% if inmuebles %}
+<div class="table-responsive">
+    <table class="table table-striped table-hover">
+        <thead class="table-dark">
+            <tr>
+                <th scope="col">ID</th>
+                <th scope="col">Nombre</th>
+                <th scope="col">Dirección</th>
+                <th scope="col">Precio Día</th>
+                <th scope="col">Estado</th>
+                <th scope="col">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for inmueble in inmuebles %}
+            <tr>
+                <th scope="row">{{ inmueble.id_inmueble }}</th>
+                <td>{{ inmueble.nombre }}</td>
+                <td>{{ inmueble.direccion }}</td>
+                <td>${{ inmueble.precio_por_dia|floatformat:2 }}</td>
+                <td>
+                    {% if inmueble.estado %}
+                        <span class="badge 
+                            {% if inmueble.estado.nombre == 'Disponible' %}bg-success
+                            {% elif inmueble.estado.nombre == 'Reservado' %}bg-warning text-dark
+                            {% elif inmueble.estado.nombre == 'Ocupado' %}bg-danger
+                            {% else %}bg-secondary{% endif %}">
+                            {{ inmueble.estado.nombre }}
+                        </span>
+                    {% else %}
+                        <span class="badge bg-secondary">Sin Estado</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="btn-group" role="group" aria-label="Acciones de Inmueble">
+                        <a href="{% url 'detalle_inmueble' inmueble.id_inmueble %}" class="btn btn-info btn-sm" title="Ver Detalles">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                        <a href="{% url 'admin_inmuebles_editar' inmueble.id_inmueble %}" class="btn btn-warning btn-sm" title="Editar">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        <a href="{% url 'admin_inmuebles_estado' inmueble.id_inmueble %}" class="btn btn-primary btn-sm" title="Ver Estado/Reservas">
+                            <i class="bi bi-calendar-check"></i>
+                        </a>
+                        <a href="{% url 'admin_inmuebles_historial' inmueble.id_inmueble %}" class="btn btn-secondary btn-sm" title="Ver Historial">
+                            <i class="bi bi-clock-history"></i>
+                        </a>
+                        {# Botón de eliminar con confirmación (opcional, pero recomendado) #}
+                        <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal{{ inmueble.id_inmueble }}" title="Eliminar">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+
+                    <div class="modal fade" id="confirmDeleteModal{{ inmueble.id_inmueble }}" tabindex="-1" aria-labelledby="confirmDeleteModalLabel{{ inmueble.id_inmueble }}" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="confirmDeleteModalLabel{{ inmueble.id_inmueble }}">Confirmar Eliminación</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    ¿Estás seguro de que quieres eliminar el inmueble "{{ inmueble.nombre }}"? Esta acción no se puede deshacer.
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                    <form action="{% url 'admin_inmuebles_eliminar' inmueble.id_inmueble %}" method="post" style="display: inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-danger">Eliminar</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+    <div class="alert alert-info" role="alert">
+        No se encontraron inmuebles.
+        {% if query %}
+            <a href="{% url 'admin_gestion_inmuebles' %}" class="alert-link">Ver todos los inmuebles</a>
+        {% endif %}
+    </div>
+{% endif %}
+{% endblock %}

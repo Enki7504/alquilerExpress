@@ -16,7 +16,8 @@ from .models import (
     InmuebleImagen,
     CocheraImagen,
     Provincia,
-    Ciudad
+    Ciudad,
+    Notificacion
 )
 
 # --- Inlines para mostrar imágenes asociadas ---
@@ -106,3 +107,19 @@ class ProvinciaAdmin(admin.ModelAdmin):
 class CiudadAdmin(admin.ModelAdmin):
     list_display = ('nombre', 'provincia')
     list_filter = ('provincia',)
+
+@admin.register(Notificacion)
+class NotificacionAdmin(admin.ModelAdmin):
+    list_display = ('usuario', 'mensaje', 'leido', 'fecha_creacion')
+    list_filter = ('leido', 'fecha_creacion')
+    search_fields = ('mensaje', 'usuario__usuario__username')
+    ordering = ('-fecha_creacion',)
+
+    # Opcional: Para mostrar mejor el nombre en el admin
+    def get_model_perms(self, request):
+        return {
+            'add': self.has_add_permission(request),
+            'change': self.has_change_permission(request),
+            'delete': self.has_delete_permission(request),
+            'view': self.has_view_permission(request),
+        }

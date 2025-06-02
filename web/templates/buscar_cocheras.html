@@ -1,0 +1,103 @@
+<!-- templates/buscar_cocheras.html -->
+{% extends 'base_search.html' %}
+{% load static %}
+
+{% block title %}Búsqueda de Cocheras{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/busqueda.css' %}">
+{% endblock %}
+
+{% block content %}
+<main class="container-fluid">
+  <div class="container-wrapper row">
+    <!-- Filtros -->
+    <aside class="filtros col-md-2 sidebar bg-light sticky-top">
+        <form>
+          <div class="mb-3">
+            <label class="form-label">Precio por dia</label>
+            <input type="number" class="form-control filtros__campo" placeholder="$" min="0">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Ubicación</label>
+            <input type="text" class="form-control filtros__campo">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Cantidad de Vehículos</label>
+            <select class="form-select filtros__campo">
+              <option>Cualquiera</option>
+              <option>1</option>
+              <option>2+</option>
+              <option>3+</option>
+              <option>4+</option>
+              <option>5+</option>
+              <option>6+</option>
+              <option>7+</option>
+              <option>8+</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Dimensiones (m²)</label>
+            <div class="row g-2">
+              <div class="col">
+                <input type="number" step="0.01" class="form-control filtros__campo" placeholder="Ancho" min="0">
+              </div>
+              <div class="col">
+                <input type="number" step="0.01" class="form-control filtros__campo" placeholder="Largo" min="0">
+              </div>
+              <div class="col">
+                <input type="number" step="0.01" class="form-control filtros__campo" placeholder="Alto" min="0">
+              </div>
+            </div>
+          </div>
+          <div class="mb-3 form-check">
+            <input type="checkbox" class="form-check-input filtros__campo" id="conTecho">
+            <label class="form-check-label" for="conTecho">Con techo</label>
+          </div>
+          <button class="btn btn-primary w-100 btn-azul">Aplicar</button>
+        </form>
+    </aside>
+
+    <!-- Lista de Cocheras -->
+    <section class="lista-resultados col-md-6 p-3">
+      <div id="lista-cocheras" class="row">
+        {% for cochera in cocheras %}
+        <div class="col-12 col-md-6 col-lg-3 mb-4">
+          <a href="{% url 'detalle_cochera' cochera.id_cochera %}" class="text-decoration-none">
+            <div class="propiedad-card card border-0 shadow-sm">
+              {% if cochera.imagen %}
+                <img src="{{ cochera.imagen.url }}" class="propiedad-imagen card-img-top" alt="{{ cochera.nombre }}">
+              {% else %}
+                <img src="{% static 'img/default-garage.jpg' %}" class="propiedad-imagen card-img-top" alt="Imagen por defecto">
+              {% endif %}
+              <div class="propiedad-body card-body">
+                <h5 class="propiedad-nombre card-title">{{ cochera.nombre }}</h5>
+                <div class="propiedad-info">
+                  <p class="propiedad-precio card-text">
+                    <i class="bi bi-cash-coin"></i> ${{ cochera.precio_por_dia|floatformat:"0" }}/día
+                  </p>
+                  <p class="propiedad-ubicacion card-text">
+                    <i class="bi bi-geo-alt-fill"></i> {{ cochera.ubicacion }}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </a>
+        </div>
+        {% empty %}
+        <div class="col-12">
+          <div class="mensaje-vacio alert alert-info" role="alert">
+            <i class="bi bi-info-circle"></i> No se encontraron cocheras disponibles.
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <!-- Mapa -->
+    <aside class="mapa-contenedor col-md-4">
+      <div class="mapa-content" id="map" role="region" aria-label="Mapa de Cocheras disponibles"></div>
+    </aside>
+  </div>
+</main>
+{% endblock %}
