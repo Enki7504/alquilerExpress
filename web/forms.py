@@ -29,17 +29,34 @@ class RegistroUsuarioForm(UserCreationForm):
 
     class Meta:
         model = User
-        fields = ("email", "first_name", "last_name", "password1", "password2", "dni")
+        fields = ("email", "first_name", "last_name", "password1", "password2")  # Quitar "dni" de aquí
+
+    def clean_email(self):
+        email = self.cleaned_data["email"]
+        if User.objects.filter(username=email).exists():
+            raise forms.ValidationError("Ya existe un usuario con este correo electrónico.")
+        return email
+
+    def clean_dni(self):
+        dni = self.cleaned_data["dni"]
+        if Perfil.objects.filter(dni=dni).exists():
+            raise forms.ValidationError("Este DNI ya está registrado.")
+        return dni
 
     def save(self, commit=True):
         user = super().save(commit=False)
         email = self.cleaned_data["email"]
-        user.username = email  # Asigna el email como username
+        user.username = email
         user.email = email
         if commit:
             user.save()
             dni = self.cleaned_data["dni"]
-            Perfil.objects.create(usuario=user, dni=dni)
+            # Solo crear el perfil si no existe
+            if not Perfil.objects.filter(usuario=user).exists():
+                Perfil.objects.create(usuario=user, dni=dni)
+            # Asignar grupo cliente
+            grupo_cliente, _ = Group.objects.get_or_create(name="cliente")
+            user.groups.add(grupo_cliente)
         return user
 
 class LoginForm(forms.Form):
@@ -66,7 +83,7 @@ class InmuebleForm(forms.ModelForm):
         label="Estado"
     )
     cochera = forms.ModelChoiceField(
-        queryset=Cochera.objects.all(),
+        queryset=Cochera.objects.filter(estado__nombre="Disponible"),
         required=False,
         label="Cochera",
         widget=forms.Select(attrs={'class': 'form-select', 'id': 'cocheraSelect'})
@@ -179,6 +196,7 @@ class AdminLoginForm(forms.Form):
     password = forms.CharField(widget=forms.PasswordInput, label='Contraseña')
 
 # para el registro de cliente
+"""
 class ClienteCreationForm(forms.ModelForm):
     email = forms.EmailField(label="Correo electrónico")
     first_name = forms.CharField(label="Nombre")
@@ -216,6 +234,8 @@ class ClienteCreationForm(forms.ModelForm):
         if commit:
             perfil.save()
         return perfil
+
+"""
 
 #para el registro de empleado
 class ClienteCreationForm(forms.ModelForm):
@@ -304,50 +324,10 @@ class EmpleadoCreationForm(forms.Form):
         return user
 
 class EmpleadoAdminCreationForm(forms.Form):
-    first_name = forms.CharField(
-        label="Nombre",
-        max_length=30,
-        required=True,
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'id': 'nombre',
-            'name': 'nombre',
-            'required': 'required',
-        })
-    )
-    last_name = forms.CharField(
-        label="Apellido",
-        max_length=30,
-        required=True,
-        widget=forms.TextInput(attrs={
-            "class": "form-control",
-            "id": "apellido",
-            "name": "apellido",
-            "required": "required",
-        })
-    )
-    email = forms.EmailField(
-        label="Correo electrónico",
-        required=True,
-        widget=forms.EmailInput(attrs={
-            "class": "form-control",
-            "id": "email",
-            "name": "email",
-            "required": "required",
-        })
-    )
-    dni = forms.CharField(
-        label="DNI",
-        max_length=20,
-        required=True,
-        widget=forms.TextInput(attrs={
-            "class": "form-control",
-            "id": "dni",
-            "name": "dni",
-            "required": "required",
-            "pattern": r"\d+",
-        })
-    )
+    first_name = forms.CharField(label="Nombre", max_length=30)
+    last_name = forms.CharField(label="Apellido", max_length=30)
+    email = forms.EmailField(label="Correo electrónico")
+    dni = forms.CharField(label="DNI", max_length=20)
 
     def clean_email(self):
         email = self.cleaned_data["email"]
