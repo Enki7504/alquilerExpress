@@ -16,6 +16,7 @@ from django.utils import timezone
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
 from django.views.decorators.http import require_POST
+from django.db import IntegrityError, transaction
 from django.db.models import Q
 
 # Importaciones de formularios locales
@@ -430,44 +431,54 @@ def admin_alta_empleados(request):
     if request.method == "POST":
         form = EmpleadoAdminCreationForm(request.POST)
         if form.is_valid():
-            data = form.cleaned_data
-            # Generar contraseña aleatoria segura
-            password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(10))
-            
-            # Crear usuario
-            user = User.objects.create_user(
-                username=data["email"],
-                email=data["email"],
-                password=password,
-                first_name=data["first_name"].title(),
-                last_name=data["last_name"].title(),
-            )
-            # Asignar grupo "empleado"
-            grupo_empleado, _ = Group.objects.get_or_create(name="empleado")
-            user.groups.add(grupo_empleado)
-            # Crear perfil
-            Perfil.objects.create(usuario=user, dni=data["dni"])
-
-            # Enviar mail con la contraseña
             try:
-                send_mail(
-                    "Bienvenido a AlquilerExpress - Acceso de Empleado",
-                    f"Hola {user.first_name},\n\n"
-                    f"Tu cuenta de empleado ha sido creada.\n"
-                    f"Usuario: {user.email}\n"
-                    f"Contraseña temporal: {password}\n\n"
-                    f"Por favor, inicia sesión y cambia tu contraseña.",
-                    settings.DEFAULT_FROM_EMAIL,
-                    [user.email],
-                    fail_silently=False,
-                )
-                mensaje = f"Empleado registrado y correo enviado a {user.email}."
-            except Exception as e:
-                error = f"Empleado creado, pero error enviando el correo: {e}"
+                with transaction.atomic():
+                    data = form.cleaned_data
+                    # Generar contraseña aleatoria segura
+                    password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(10))
+                    
+                    # Crear usuario
+                    user = User.objects.create_user(
+                        username=data["email"],
+                        email=data["email"],
+                        password=password,
+                        first_name=data["first_name"].title(),
+                        last_name=data["last_name"].title(),
+                    )
+                    
+                    # Asignar grupo "empleado"
+                    grupo_empleado, _ = Group.objects.get_or_create(name="empleado")
+                    user.groups.add(grupo_empleado)
+                    
+                    # Crear perfil solo si no existe
+                    if not hasattr(user, 'perfil'):
+                        Perfil.objects.create(usuario=user, dni=data["dni"])
+
+                    # Enviar mail con la contraseña
+                    try:
+                        send_mail(
+                            "Bienvenido a AlquilerExpress - Acceso de Empleado",
+                            f"Hola {user.first_name},\n\n"
+                            f"Tu cuenta de empleado ha sido creada.\n"
+                            f"Usuario: {user.email}\n"
+                            f"Contraseña temporal: {password}\n\n"
+                            f"Por favor, inicia sesión y cambia tu contraseña.",
+                            settings.DEFAULT_FROM_EMAIL,
+                            [user.email],
+                            fail_silently=False,
+                        )
+                        mensaje = f"Empleado registrado y correo enviado a {user.email}."
+                    except Exception as e:
+                        error = f"Empleado creado, pero error enviando el correo: {e}"
+                        
+                    return redirect('admin_alta_empleados')
+            except IntegrityError as e:
+                error = f"Error al crear el empleado: {str(e)}"
         else:
             error = "Corrige los errores del formulario."
     else:
         form = EmpleadoAdminCreationForm()
+    
     return render(request, 'admin/admin_alta_empleados.html', {
         'form': form,
         'mensaje': mensaje,

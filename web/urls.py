@@ -53,7 +53,6 @@ urlpatterns = [
     path('panel/reserva/<int:id_reserva>/cambiar-estado/', views.cambiar_estado_reserva, name='cambiar_estado_reserva'),
 
     # registrar empleado y cliente
-    path("registrar-empleado/", views.registrar_empleado, name="registrar_empleado"),
     path("registrar-cliente/", views.registrar_cliente, name="registrar_cliente"),
 
     # URL para cargar ciudades cuando se selecciona una provincia

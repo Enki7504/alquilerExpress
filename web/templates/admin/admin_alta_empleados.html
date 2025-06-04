@@ -1,5 +1,6 @@
 {% extends 'admin/admin_base.html' %}
 {% load static %}
+{% load widget_tweaks %}
 
 {% block title %}Registro de Empleados | Panel Admin{% endblock %}
 
@@ -20,22 +21,22 @@
       {% csrf_token %}
       <div class="mb-3">
         <label for="id_first_name" class="form-label">Nombre</label>
-        {{ form.first_name }}
+        {{ form.first_name|add_class:"form-control" }}
         {{ form.first_name.errors }}
       </div>
       <div class="mb-3">
         <label for="id_last_name" class="form-label">Apellido</label>
-        {{ form.last_name }}
+        {{ form.last_name|add_class:"form-control" }}
         {{ form.last_name.errors }}
       </div>
       <div class="mb-3">
         <label for="id_dni" class="form-label">DNI</label>
-        {{ form.dni }}
+        {{ form.dni|add_class:"form-control" }}
         {{ form.dni.errors }}
       </div>
       <div class="mb-3">
         <label for="id_email" class="form-label">Email</label>
-        {{ form.email }}
+        {{ form.email|add_class:"form-control" }}
         {{ form.email.errors }}
       </div>
       <button type="submit" class="btn btn-primary w-100 btn-azul">Registrar Empleado</button>
