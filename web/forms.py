@@ -66,7 +66,7 @@ class InmuebleForm(forms.ModelForm):
         label="Estado"
     )
     cochera = forms.ModelChoiceField(
-        queryset=Cochera.objects.all(),
+        queryset=Cochera.objects.filter(estado__nombre="Disponible"),
         required=False,
         label="Cochera",
         widget=forms.Select(attrs={'class': 'form-select', 'id': 'cocheraSelect'})
