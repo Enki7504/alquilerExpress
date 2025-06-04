@@ -377,10 +377,7 @@ def admin_alta_empleados(request):
                     grupo_empleado, _ = Group.objects.get_or_create(name="empleado")
                     user.groups.add(grupo_empleado)
                     # Crear perfil
-                    Perfil.objects.get_or_create(
-                        usuario=user,
-                        defaults={'dni': data["dni"]}
-                    )
+                    Perfil.objects.create(usuario=user, dni=data["dni"])
             except IntegrityError as e:
                 # Error de integridad: usuario o perfil duplicado
                 return _respuesta_empleado(
