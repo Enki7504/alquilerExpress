@@ -6,6 +6,7 @@ from .models import Cochera, Comentario, Estado, Inmueble, Perfil
 from .models import Perfil, Comentario, Inmueble, Estado, Cochera, Ciudad, Provincia
 from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator
 
 class ComentarioForm(forms.ModelForm):
     class Meta:
@@ -296,12 +297,6 @@ class EmpleadoCreationForm(forms.Form):
             raise ValidationError("Ya existe un usuario con este email.")
         return email
 
-    def clean_password(self):
-        password = self.cleaned_data.get("password")
-        if len(password) < 9:
-            raise forms.ValidationError("La contraseña debe tener más de 8 caracteres.")
-        return password
-
     def clean_dni(self):
         dni = self.cleaned_data["dni"]
         if Perfil.objects.filter(dni=dni).exists():
@@ -324,21 +319,46 @@ class EmpleadoCreationForm(forms.Form):
         return user
 
 class EmpleadoAdminCreationForm(forms.Form):
-    first_name = forms.CharField(label="Nombre", max_length=30)
-    last_name = forms.CharField(label="Apellido", max_length=30)
+    first_name = forms.CharField(
+        label="Nombre",
+        max_length=30,
+        validators=[
+            RegexValidator(
+                regex=r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$',
+                message="El nombre solo puede contener letras y espacios."
+            )
+        ]
+    )
+    last_name = forms.CharField(
+        label="Apellido",
+        max_length=30,
+        validators=[
+            RegexValidator(
+                regex=r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$',
+                message="El apellido solo puede contener letras y espacios."
+            )
+        ]
+    )
     email = forms.EmailField(label="Correo electrónico")
-    dni = forms.CharField(label="DNI", max_length=20)
+    dni = forms.CharField(
+        label="DNI",
+        max_length=20,
+        validators=[
+            RegexValidator(
+                regex=r'^\d{7,8}$',  # Para DNI argentino; ajusta según el formato de tu país
+                message="El DNI debe contener 7 u 8 dígitos numéricos."
+            )
+        ]
+    )
 
     def clean_email(self):
-        email = self.cleaned_data["email"]
-        from django.contrib.auth.models import User
-        if User.objects.filter(username=email).exists():
-            raise forms.ValidationError("Ya existe un usuario con este email.")
+        email = self.cleaned_data["email"].lower()  # Normalizar a minúsculas
+        if User.objects.filter(username__iexact=email).exists():
+            raise ValidationError("Ya existe un usuario con este correo electrónico.")
         return email
 
     def clean_dni(self):
         dni = self.cleaned_data["dni"]
-        from .models import Perfil
         if Perfil.objects.filter(dni=dni).exists():
-            raise forms.ValidationError("Este DNI ya está registrado.")
+            raise ValidationError("Este DNI ya está registrado.")
         return dni

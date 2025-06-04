@@ -22,22 +22,22 @@
       <div class="mb-3">
         <label for="id_first_name" class="form-label">Nombre</label>
         {{ form.first_name|add_class:"form-control" }}
-        {{ form.first_name.errors }}
+        <div class="text-danger">{{ form.first_name.errors }}</div>
       </div>
       <div class="mb-3">
         <label for="id_last_name" class="form-label">Apellido</label>
         {{ form.last_name|add_class:"form-control" }}
-        {{ form.last_name.errors }}
+        <div class="text-danger">{{ form.last_name.errors }}</div>
       </div>
       <div class="mb-3">
         <label for="id_dni" class="form-label">DNI</label>
         {{ form.dni|add_class:"form-control" }}
-        {{ form.dni.errors }}
+        <div class="text-danger">{{ form.dni.errors }}</div>
       </div>
       <div class="mb-3">
         <label for="id_email" class="form-label">Email</label>
         {{ form.email|add_class:"form-control" }}
-        {{ form.email.errors }}
+        <div class="text-danger">{{ form.email.errors }}</div>
       </div>
       <button type="submit" class="btn btn-primary w-100 btn-azul">Registrar Empleado</button>
     </form>

@@ -344,7 +344,7 @@ def is_admin_or_empleado(user):
 
 
 ################################################################################################################
-# --- Vistas del Panel de Administración/Empleado ---
+# --- Vistas del Panel de Administración --- Gestion de Usuarios  --- 
 ################################################################################################################
 
 @login_required
@@ -357,75 +357,7 @@ def admin_panel(request):
 
 @login_required
 @user_passes_test(is_admin)
-def admin_inmuebles_alta(request):
-    """
-    Permite a los administradores dar de alta nuevos inmuebles.
-    Maneja la creación del inmueble y la carga de su imagen principal.
-    """
-    if request.method == 'POST':
-        form = InmuebleForm(request.POST, request.FILES)
-        if form.is_valid():
-            # Guardar el inmueble completamente
-            inmueble = form.save(commit=False)
-            inmueble.fecha_publicacion = timezone.now().date()
-            inmueble.save()
-            form.save_m2m()
-
-            # Guardar todas las imágenes
-            for img in request.FILES.getlist('imagenes'):
-                InmuebleImagen.objects.create(
-                    inmueble=inmueble,
-                    imagen=img,
-                    descripcion="Imagen del inmueble"
-                )
-            
-            messages.success(request, 'Inmueble creado exitosamente.')
-            return redirect('admin_inmuebles_alta')
-        else:
-            messages.error(request, 'Por favor, corrige los errores en el formulario.')
-    else:
-        form = InmuebleForm()
-    
-    return render(request, 'admin/admin_inmuebles_alta.html', {'form': form})
-
-@login_required
-@user_passes_test(is_admin)
-def admin_cocheras_alta(request):
-    """
-    Permite a los administradores dar de alta nuevas cocheras.
-    Maneja la creación de la cochera y la carga de su imagen principal.
-    """
-    if request.method == 'POST':
-        form = CocheraForm(request.POST, request.FILES)
-        if form.is_valid():
-            cochera = form.save(commit=False)
-            cochera.fecha_publicacion = timezone.now().date()
-            cochera.save() # Guardar el cochera completamente
-            form.save_m2m() # Guardar relaciones many-to-many si las hay
-
-            # Guardar todas las imágenes
-            for img in request.FILES.getlist('imagenes'):
-                CocheraImagen.objects.create(
-                    cochera=cochera,
-                    imagen=img,
-                    descripcion="Imagen de la cochera"
-                )
-            messages.success(request, 'Cochera creada exitosamente.')
-            return redirect('admin_cocheras_alta')
-        else:
-            messages.error(request, 'Por favor, corrige los errores en el formulario.')
-    else:
-        form = CocheraForm()
-    
-    return render(request, 'admin/admin_cocheras_alta.html', {'form': form})
-
-@login_required
-@user_passes_test(is_admin)
 def admin_alta_empleados(request):
-    """
-    Permite a los administradores dar de alta nuevos empleados.
-    Genera una contraseña temporal y la envía por correo electrónico.
-    """
     mensaje = None
     error = None
     if request.method == "POST":
@@ -434,8 +366,17 @@ def admin_alta_empleados(request):
             try:
                 with transaction.atomic():
                     data = form.cleaned_data
-                    # Generar contraseña aleatoria segura
-                    password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(10))
+                    # Generar contraseña segura
+                    alphabet = string.ascii_letters + string.digits + string.punctuation
+                    password = ''.join(secrets.choice(alphabet) for _ in range(12))  # Longitud 12
+                    # Asegurar que tenga al menos una mayúscula, minúscula, dígito y símbolo
+                    while not (
+                        any(c.isupper() for c in password) and
+                        any(c.islower() for c in password) and
+                        any(c.isdigit() for c in password) and
+                        any(c in string.punctuation for c in password)
+                    ):
+                        password = ''.join(secrets.choice(alphabet) for _ in range(12))
                     
                     # Crear usuario
                     user = User.objects.create_user(
@@ -450,11 +391,11 @@ def admin_alta_empleados(request):
                     grupo_empleado, _ = Group.objects.get_or_create(name="empleado")
                     user.groups.add(grupo_empleado)
                     
-                    # Crear perfil solo si no existe
-                    if not hasattr(user, 'perfil'):
+                    # Crear perfil si no existe
+                    if not Perfil.objects.filter(usuario=user).exists():
                         Perfil.objects.create(usuario=user, dni=data["dni"])
 
-                    # Enviar mail con la contraseña
+                    # Enviar correo con contraseña
                     try:
                         send_mail(
                             "Bienvenido a AlquilerExpress - Acceso de Empleado",
@@ -476,6 +417,7 @@ def admin_alta_empleados(request):
                 error = f"Error al crear el empleado: {str(e)}"
         else:
             error = "Corrige los errores del formulario."
+            print(form.errors)  # Imprimir errores para depuración
     else:
         form = EmpleadoAdminCreationForm()
     
@@ -484,6 +426,10 @@ def admin_alta_empleados(request):
         'mensaje': mensaje,
         'error': error,
     })
+
+################################################################################################################
+# --- Vistas del Panel de Administración --- Gestion de Propiedades  --- 
+################################################################################################################
 
 @login_required
 @user_passes_test(is_admin_or_empleado)
@@ -527,43 +473,42 @@ def admin_cocheras(request):
         'query': query
     })
 
-
-@login_required
-@user_passes_test(is_admin_or_empleado)
-def admin_estadisticas_usuarios(request):
-    """
-    Muestra estadísticas relacionadas con los usuarios.
-    """
-    return render(request, 'admin/admin_estadisticas_usuarios.html')
-
-@login_required
-@user_passes_test(is_admin_or_empleado)
-def admin_estadisticas_empleados(request):
-    """
-    Muestra estadísticas relacionadas con los empleados.
-    """
-    return render(request, 'admin/admin_estadisticas_empleados.html')
-
-@login_required
-@user_passes_test(is_admin_or_empleado)
-def admin_estadisticas_cocheras(request):
-    """
-    Muestra estadísticas relacionadas con las cocheras.
-    """
-    return render(request, 'admin/admin_estadisticas_cocheras.html')
-
-@login_required
-@user_passes_test(is_admin_or_empleado)
-def admin_estadisticas_inmuebles(request):
-    """
-    Muestra estadísticas relacionadas con los inmuebles.
-    """
-    return render(request, 'admin/admin_estadisticas_inmuebles.html')
-
-
 ################################################################################################################
-# --- Vistas de Gestión de Inmuebles (Admin/Empleado) ---
+# --- Vistas de Gestión de Inmuebles ---
 ################################################################################################################
+
+@login_required
+@user_passes_test(is_admin)
+def admin_inmuebles_alta(request):
+    """
+    Permite a los administradores dar de alta nuevos inmuebles.
+    Maneja la creación del inmueble y la carga de su imagen principal.
+    """
+    if request.method == 'POST':
+        form = InmuebleForm(request.POST, request.FILES)
+        if form.is_valid():
+            # Guardar el inmueble completamente
+            inmueble = form.save(commit=False)
+            inmueble.fecha_publicacion = timezone.now().date()
+            inmueble.save()
+            form.save_m2m()
+
+            # Guardar todas las imágenes
+            for img in request.FILES.getlist('imagenes'):
+                InmuebleImagen.objects.create(
+                    inmueble=inmueble,
+                    imagen=img,
+                    descripcion="Imagen del inmueble"
+                )
+            
+            messages.success(request, 'Inmueble creado exitosamente.')
+            return redirect('admin_inmuebles_alta')
+        else:
+            messages.error(request, 'Por favor, corrige los errores en el formulario.')
+    else:
+        form = InmuebleForm()
+    
+    return render(request, 'admin/admin_inmuebles_alta.html', {'form': form})
 
 @login_required
 @user_passes_test(is_admin)
@@ -644,10 +589,40 @@ def admin_inmuebles_estado(request, id_inmueble):
     reservas = Reserva.objects.filter(inmueble=inmueble).order_by('-fecha_inicio')
     return render(request, 'admin/admin_inmuebles_estado.html', {'inmueble': inmueble, 'reservas': reservas})
 
+################################################################################################################
+# --- Vistas de Gestión de Cocheras ---
+################################################################################################################
 
-################################################################################################################
-# --- Vistas de Gestión de Cocheras (Admin) ---
-################################################################################################################
+@login_required
+@user_passes_test(is_admin)
+def admin_cocheras_alta(request):
+    """
+    Permite a los administradores dar de alta nuevas cocheras.
+    Maneja la creación de la cochera y la carga de su imagen principal.
+    """
+    if request.method == 'POST':
+        form = CocheraForm(request.POST, request.FILES)
+        if form.is_valid():
+            cochera = form.save(commit=False)
+            cochera.fecha_publicacion = timezone.now().date()
+            cochera.save() # Guardar el cochera completamente
+            form.save_m2m() # Guardar relaciones many-to-many si las hay
+
+            # Guardar todas las imágenes
+            for img in request.FILES.getlist('imagenes'):
+                CocheraImagen.objects.create(
+                    cochera=cochera,
+                    imagen=img,
+                    descripcion="Imagen de la cochera"
+                )
+            messages.success(request, 'Cochera creada exitosamente.')
+            return redirect('admin_cocheras_alta')
+        else:
+            messages.error(request, 'Por favor, corrige los errores en el formulario.')
+    else:
+        form = CocheraForm()
+    
+    return render(request, 'admin/admin_cocheras_alta.html', {'form': form})
 
 @login_required
 @user_passes_test(is_admin)
@@ -708,6 +683,41 @@ def admin_cocheras_estado(request, id_cochera):
     reservas = Reserva.objects.filter(cochera=cochera).order_by('-fecha_inicio')
     return render(request, 'admin/admin_cocheras_estado.html', {'cochera': cochera, 'reservas': reservas})
 
+################################################################################################################
+# --- Vistas del Panel de Administración --- Estadisticas  --- 
+################################################################################################################
+
+@login_required
+@user_passes_test(is_admin_or_empleado)
+def admin_estadisticas_usuarios(request):
+    """
+    Muestra estadísticas relacionadas con los usuarios.
+    """
+    return render(request, 'admin/admin_estadisticas_usuarios.html')
+
+@login_required
+@user_passes_test(is_admin_or_empleado)
+def admin_estadisticas_empleados(request):
+    """
+    Muestra estadísticas relacionadas con los empleados.
+    """
+    return render(request, 'admin/admin_estadisticas_empleados.html')
+
+@login_required
+@user_passes_test(is_admin_or_empleado)
+def admin_estadisticas_cocheras(request):
+    """
+    Muestra estadísticas relacionadas con las cocheras.
+    """
+    return render(request, 'admin/admin_estadisticas_cocheras.html')
+
+@login_required
+@user_passes_test(is_admin_or_empleado)
+def admin_estadisticas_inmuebles(request):
+    """
+    Muestra estadísticas relacionadas con los inmuebles.
+    """
+    return render(request, 'admin/admin_estadisticas_inmuebles.html')
 
 ################################################################################################################
 # --- Vistas de Gestión de Reservas ---
@@ -934,52 +944,6 @@ def cambiar_estado_reserva_cochera(request, id_reserva):
             status=400
         )
 
-
-################################################################################################################
-# --- Vistas de Registro de Clientes/Empleados (por Admin) ---
-################################################################################################################
-
-def registrar_empleado(request):
-    """
-    Permite a los administradores registrar un nuevo empleado.
-    (Esta vista parece ser una alternativa a admin_alta_empleados, revisar si ambas son necesarias).
-    """
-    if request.method == "POST":
-        form = EmpleadoCreationForm(request.POST)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Empleado registrado exitosamente.")
-            return redirect("login")  # o donde quieras
-        else:
-            messages.error(request, "Error al registrar el empleado. Por favor, corrige los errores.")
-    else:
-        form = EmpleadoCreationForm()
-    return render(request, "registrar_empleado.html", {"form": form})
-
-def registrar_cliente(request):
-    """
-    Permite a los administradores registrar un nuevo cliente.
-    (Esta vista parece ser una alternativa a 'register', revisar si ambas son necesarias).
-    """
-    if request.method == "POST":
-        form = ClienteCreationForm(request.POST)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Cliente registrado exitosamente.")
-            return redirect("login")  # o a donde quieras redirigir
-        else:
-            messages.error(request, "Error al registrar el cliente. Por favor, corrige los errores.")
-    else:
-        form = ClienteCreationForm()
-    return render(request, "registrar_cliente.html", {"form": form})
-
-# para cargar las ciudades en el formulario de registro
-def cargar_ciudades(request):
-    provincia_id = request.GET.get('provincia')
-    ciudades = Ciudad.objects.filter(provincia_id=provincia_id).order_by('nombre')
-    ciudades_list = [{'id': ciudad.id, 'nombre': ciudad.nombre} for ciudad in ciudades]
-    return JsonResponse({'ciudades': ciudades_list})
-
 ################################################################################################################
 # --- Vistas de Notificaciones ---
 ################################################################################################################
@@ -1023,4 +987,14 @@ def marcar_todas_leidas(request):
     except Exception as e:
         messages.error(request, f"Error al marcar notificaciones: {e}")
         return JsonResponse({'success': False, 'error': str(e)})
+    
+################################################################################################################
+# --- OTRAS VISTAS ---
+################################################################################################################
 
+# para cargar las ciudades en el formulario de registro
+def cargar_ciudades(request):
+    provincia_id = request.GET.get('provincia')
+    ciudades = Ciudad.objects.filter(provincia_id=provincia_id).order_by('nombre')
+    ciudades_list = [{'id': ciudad.id, 'nombre': ciudad.nombre} for ciudad in ciudades]
+    return JsonResponse({'ciudades': ciudades_list})

@@ -52,12 +52,8 @@ urlpatterns = [
     path('crear-reserva-cochera/<int:id_cochera>/', views.crear_reserva_cochera, name='crear_reserva_cochera'),
     path('panel/reserva/<int:id_reserva>/cambiar-estado/', views.cambiar_estado_reserva, name='cambiar_estado_reserva'),
 
-    # registrar empleado y cliente
-    path("registrar-cliente/", views.registrar_cliente, name="registrar_cliente"),
-
     # URL para cargar ciudades cuando se selecciona una provincia
     path('ajax/cargar-ciudades/', views.cargar_ciudades, name='ajax_cargar_ciudades'),
-
 
     # Notificaciones
     path('notificaciones/marcar/<int:id_notificacion>/', views.marcar_notificacion, name='marcar_notificacion'),
