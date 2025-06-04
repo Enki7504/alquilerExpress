@@ -29,17 +29,34 @@ class RegistroUsuarioForm(UserCreationForm):
 
     class Meta:
         model = User
-        fields = ("email", "first_name", "last_name", "password1", "password2", "dni")
+        fields = ("email", "first_name", "last_name", "password1", "password2")  # Quitar "dni" de aquí
+
+    def clean_email(self):
+        email = self.cleaned_data["email"]
+        if User.objects.filter(username=email).exists():
+            raise forms.ValidationError("Ya existe un usuario con este correo electrónico.")
+        return email
+
+    def clean_dni(self):
+        dni = self.cleaned_data["dni"]
+        if Perfil.objects.filter(dni=dni).exists():
+            raise forms.ValidationError("Este DNI ya está registrado.")
+        return dni
 
     def save(self, commit=True):
         user = super().save(commit=False)
         email = self.cleaned_data["email"]
-        user.username = email  # Asigna el email como username
+        user.username = email
         user.email = email
         if commit:
             user.save()
             dni = self.cleaned_data["dni"]
-            Perfil.objects.create(usuario=user, dni=dni)
+            # Solo crear el perfil si no existe
+            if not Perfil.objects.filter(usuario=user).exists():
+                Perfil.objects.create(usuario=user, dni=dni)
+            # Asignar grupo cliente
+            grupo_cliente, _ = Group.objects.get_or_create(name="cliente")
+            user.groups.add(grupo_cliente)
         return user
 
 class LoginForm(forms.Form):
@@ -179,6 +196,7 @@ class AdminLoginForm(forms.Form):
     password = forms.CharField(widget=forms.PasswordInput, label='Contraseña')
 
 # para el registro de cliente
+"""
 class ClienteCreationForm(forms.ModelForm):
     email = forms.EmailField(label="Correo electrónico")
     first_name = forms.CharField(label="Nombre")
@@ -216,6 +234,8 @@ class ClienteCreationForm(forms.ModelForm):
         if commit:
             perfil.save()
         return perfil
+
+"""
 
 #para el registro de empleado
 class ClienteCreationForm(forms.ModelForm):
