@@ -80,3 +80,17 @@
   border-color: grey;
   color: white;
 }
+
+.block {
+    display: block;
+}
+.none {
+    display: none;
+}
+
+/* Estilo adicional para el contenedor de vista previa */
+#vista-previa-imagenes {
+  display: none; /* Oculto por defecto */
+  flex-wrap: wrap;
+  gap: 15px;
+}
