@@ -48,8 +48,7 @@ from .models import (
     ReservaEstado,
     Ciudad,
     Provincia,
-    Cochera
-
+    Cochera,
 )
 
 # Importaciones de utilidades locales
@@ -562,23 +561,42 @@ def admin_inmuebles_editar(request, id_inmueble):
     Permite a los administradores editar la información de un inmueble existente.
     """
     inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
+    imagenes = InmuebleImagen.objects.filter(inmueble=inmueble)
+    
     if request.method == 'POST':
         form = InmuebleForm(request.POST, request.FILES, instance=inmueble)
         if form.is_valid():
             inmueble = form.save()
-            if form.cleaned_data.get('imagen'):
+            
+            # Manejar múltiples imágenes
+            for img in request.FILES.getlist('imagenes'):
                 InmuebleImagen.objects.create(
                     inmueble=inmueble,
-                    imagen=form.cleaned_data['imagen'],
-                    descripcion="Imagen actualizada"
+                    imagen=img,
+                    descripcion="Imagen del inmueble"
                 )
+                
             messages.success(request, 'Inmueble actualizado exitosamente.')
             return redirect('detalle_inmueble', id_inmueble=id_inmueble)
         else:
             messages.error(request, 'Por favor, corrige los errores en el formulario.')
     else:
         form = InmuebleForm(instance=inmueble)
-    return render(request, 'admin/admin_inmuebles_editar.html', {'form': form, 'inmueble': inmueble})
+    
+    return render(request, 'admin/admin_inmuebles_editar.html', {
+        'form': form, 
+        'inmueble': inmueble,
+        'imagenes': imagenes
+    })
+
+@require_POST
+@login_required
+@user_passes_test(is_admin)
+def eliminar_imagen_inmueble(request, imagen_id):
+    imagen = get_object_or_404(InmuebleImagen, id_imagen=imagen_id)
+    imagen.imagen.delete()  # Elimina el archivo físico
+    imagen.delete()         # Elimina el registro de la base de datos
+    return JsonResponse({'success': True})
 
 @login_required
 @user_passes_test(is_admin)
