@@ -324,50 +324,10 @@ class EmpleadoCreationForm(forms.Form):
         return user
 
 class EmpleadoAdminCreationForm(forms.Form):
-    first_name = forms.CharField(
-        label="Nombre",
-        max_length=30,
-        required=True,
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'id': 'nombre',
-            'name': 'nombre',
-            'required': 'required',
-        })
-    )
-    last_name = forms.CharField(
-        label="Apellido",
-        max_length=30,
-        required=True,
-        widget=forms.TextInput(attrs={
-            "class": "form-control",
-            "id": "apellido",
-            "name": "apellido",
-            "required": "required",
-        })
-    )
-    email = forms.EmailField(
-        label="Correo electrónico",
-        required=True,
-        widget=forms.EmailInput(attrs={
-            "class": "form-control",
-            "id": "email",
-            "name": "email",
-            "required": "required",
-        })
-    )
-    dni = forms.CharField(
-        label="DNI",
-        max_length=20,
-        required=True,
-        widget=forms.TextInput(attrs={
-            "class": "form-control",
-            "id": "dni",
-            "name": "dni",
-            "required": "required",
-            "pattern": r"\d+",
-        })
-    )
+    first_name = forms.CharField(label="Nombre", max_length=30)
+    last_name = forms.CharField(label="Apellido", max_length=30)
+    email = forms.EmailField(label="Correo electrónico")
+    dni = forms.CharField(label="DNI", max_length=20)
 
     def clean_email(self):
         email = self.cleaned_data["email"]
