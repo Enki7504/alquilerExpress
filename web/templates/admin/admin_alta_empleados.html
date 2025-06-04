@@ -11,13 +11,7 @@
 
 <div class="card shadow-sm">
   <div class="card-body">
-    {% if mensaje %}
-      <div class="alert alert-success text-center">{{ mensaje }}</div>
-    {% endif %}
-    {% if error %}
-      <div class="alert alert-danger text-center">{{ error }}</div>
-    {% endif %}
-    <form method="post">
+    <form method="post" id="empleadoForm" action="{% url 'admin_alta_empleados' %}">
       {% csrf_token %}
       <div class="mb-3">
         <label for="id_first_name" class="form-label">Nombre</label>
@@ -39,8 +33,92 @@
         {{ form.email|add_class:"form-control" }}
         <div class="text-danger">{{ form.email.errors }}</div>
       </div>
-      <button type="submit" class="btn btn-primary w-100 btn-azul">Registrar Empleado</button>
+      <button type="submit" class="btn btn-primary w-100 btn-azul btn-submit">Registrar Empleado</button>
     </form>
   </div>
 </div>
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+document.getElementById('empleadoForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const form = e.target;
+    const formData = new FormData(form);
+
+    // Limpiar errores previos (solo los generados por JS, no los de Django render)
+    document.querySelectorAll('.error-message').forEach(el => el.remove());
+
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Error en la respuesta del servidor');
+        }
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new TypeError("Respuesta no es JSON");
+        }
+        return response.json();
+    })
+    .then(data => {
+        // Mostrar errores de formulario debajo de los campos
+        if(data.status === 'form_errors') {
+            Object.entries(data.errors).forEach(([field, error]) => {
+                const input = document.querySelector(`[name="${field}"]`);
+                if(input) {
+                    // Evita duplicados
+                    if (!input.parentNode.querySelector('.error-message')) {
+                        const errorElement = document.createElement('div');
+                        errorElement.className = 'error-message text-danger mt-1 small';
+                        errorElement.textContent = error;
+                        input.parentNode.appendChild(errorElement);
+                    }
+                }
+            });
+        }
+
+        // Mostrar SweetAlert toast arriba a la derecha
+        if(data.message) {
+            Swal.fire({
+                position: 'top-end',
+                icon: data.icon,
+                title: data.message,
+                showConfirmButton: false,
+                timer: 3000,
+                toast: true,
+                timerProgressBar: true
+            });
+
+            // Si fue éxito, resetea el formulario y limpia errores
+            if(data.status === 'success') {
+                form.reset();
+                document.querySelectorAll('.error-message').forEach(el => el.remove());
+            }
+        }
+    })
+    .catch(error => {
+        // Si falla el AJAX, enviar el formulario normalmente
+        console.error("Error en AJAX, enviando formulario tradicionalmente:", error);
+        form.submit();
+    });
+});
+
+// Para limpiar errores al modificar un campo
+document.querySelectorAll('#empleadoForm input').forEach(input => {
+    input.addEventListener('input', function() {
+        const errorElement = this.parentNode.querySelector('.error-message');
+        if(errorElement) {
+            errorElement.remove();
+        }
+    });
+});
+</script>
+{% endblock %}
 {% endblock %}

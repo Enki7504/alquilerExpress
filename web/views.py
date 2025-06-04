@@ -358,27 +358,14 @@ def admin_panel(request):
 @login_required
 @user_passes_test(is_admin)
 def admin_alta_empleados(request):
-    mensaje = None
-    error = None
     if request.method == "POST":
         form = EmpleadoAdminCreationForm(request.POST)
         if form.is_valid():
+            data = form.cleaned_data
             try:
                 with transaction.atomic():
-                    data = form.cleaned_data
-                    # Generar contraseña segura
-                    alphabet = string.ascii_letters + string.digits + string.punctuation
-                    password = ''.join(secrets.choice(alphabet) for _ in range(12))  # Longitud 12
-                    # Asegurar que tenga al menos una mayúscula, minúscula, dígito y símbolo
-                    while not (
-                        any(c.isupper() for c in password) and
-                        any(c.islower() for c in password) and
-                        any(c.isdigit() for c in password) and
-                        any(c in string.punctuation for c in password)
-                    ):
-                        password = ''.join(secrets.choice(alphabet) for _ in range(12))
-                    
                     # Crear usuario
+                    password = generar_contraseña_segura()
                     user = User.objects.create_user(
                         username=data["email"],
                         email=data["email"],
@@ -386,46 +373,94 @@ def admin_alta_empleados(request):
                         first_name=data["first_name"].title(),
                         last_name=data["last_name"].title(),
                     )
-                    
                     # Asignar grupo "empleado"
                     grupo_empleado, _ = Group.objects.get_or_create(name="empleado")
                     user.groups.add(grupo_empleado)
-                    
-                    # Crear perfil si no existe
-                    if not Perfil.objects.filter(usuario=user).exists():
-                        Perfil.objects.create(usuario=user, dni=data["dni"])
-
-                    # Enviar correo con contraseña
-                    try:
-                        send_mail(
-                            "Bienvenido a AlquilerExpress - Acceso de Empleado",
-                            f"Hola {user.first_name},\n\n"
-                            f"Tu cuenta de empleado ha sido creada.\n"
-                            f"Usuario: {user.email}\n"
-                            f"Contraseña temporal: {password}\n\n"
-                            f"Por favor, inicia sesión y cambia tu contraseña.",
-                            settings.DEFAULT_FROM_EMAIL,
-                            [user.email],
-                            fail_silently=False,
-                        )
-                        mensaje = f"Empleado registrado y correo enviado a {user.email}."
-                    except Exception as e:
-                        error = f"Empleado creado, pero error enviando el correo: {e}"
-                        
-                    return redirect('admin_alta_empleados')
+                    # Crear perfil
+                    Perfil.objects.get_or_create(
+                        usuario=user,
+                        defaults={'dni': data["dni"]}
+                    )
             except IntegrityError as e:
-                error = f"Error al crear el empleado: {str(e)}"
+                # Error de integridad: usuario o perfil duplicado
+                return _respuesta_empleado(
+                    request,
+                    status='error',
+                    message=f'Error al crear empleado: {str(e)}. Verifica email/DNI.',
+                    icon='error',
+                    form=form
+                )
+
+            # Enviar correo fuera de la transacción
+            try:
+                send_mail(
+                    "Bienvenido a AlquilerExpress - Acceso de Empleado",
+                    f"Hola {user.first_name},\n\n"
+                    f"Tu cuenta de empleado ha sido creada.\n"
+                    f"Usuario: {user.email}\n"
+                    f"Contraseña temporal: {password}\n\n"
+                    f"Por favor, inicia sesión y cambia tu contraseña.",
+                    settings.DEFAULT_FROM_EMAIL,
+                    [user.email],
+                    fail_silently=False,
+                )
+                return _respuesta_empleado(
+                    request,
+                    status='success',
+                    message=f'Empleado registrado y correo enviado a {user.email}',
+                    icon='success'
+                )
+            except Exception as e:
+                # Usuario creado, pero error al enviar correo
+                return _respuesta_empleado(
+                    request,
+                    status='warning',
+                    message=f'Empleado creado pero error enviando correo: {e}. Contraseña: {password}',
+                    icon='warning'
+                )
         else:
-            error = "Corrige los errores del formulario."
-            print(form.errors)  # Imprimir errores para depuración
+            # Errores de formulario
+            errors = {field: error[0] for field, error in form.errors.items()}
+            return _respuesta_empleado(
+                request,
+                status='form_errors',
+                message='Corrige los errores en el formulario',
+                icon='error',
+                errors=errors,
+                form=form
+            )
+    # GET request
+    form = EmpleadoAdminCreationForm()
+    return render(request, 'admin/admin_alta_empleados.html', {'form': form})
+
+def generar_contraseña_segura():
+    alphabet = string.ascii_letters + string.digits + string.punctuation
+    while True:
+        password = ''.join(secrets.choice(alphabet) for _ in range(12))
+        if (any(c.isupper() for c in password) and
+            any(c.islower() for c in password) and
+            any(c.isdigit() for c in password) and
+            any(c in string.punctuation for c in password)):
+            return password
+
+def _respuesta_empleado(request, status, message, icon, errors=None, form=None):
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        resp = {'status': status, 'message': message, 'icon': icon}
+        if errors:
+            resp['errors'] = errors
+        return JsonResponse(resp)
     else:
-        form = EmpleadoAdminCreationForm()
-    
-    return render(request, 'admin/admin_alta_empleados.html', {
-        'form': form,
-        'mensaje': mensaje,
-        'error': error,
-    })
+        if status == 'success':
+            messages.success(request, message)
+            return redirect('admin_alta_empleados')
+        elif status == 'warning':
+            messages.warning(request, message)
+            return redirect('admin_alta_empleados')
+        elif status == 'error':
+            messages.error(request, message)
+            return redirect('admin_alta_empleados')
+        elif status == 'form_errors':
+            return render(request, 'admin/admin_alta_empleados.html', {'form': form})
 
 ################################################################################################################
 # --- Vistas del Panel de Administración --- Gestion de Propiedades  --- 

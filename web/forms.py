@@ -352,13 +352,13 @@ class EmpleadoAdminCreationForm(forms.Form):
     )
 
     def clean_email(self):
-        email = self.cleaned_data["email"].lower()  # Normalizar a minúsculas
-        if User.objects.filter(username__iexact=email).exists():
-            raise ValidationError("Ya existe un usuario con este correo electrónico.")
+        email = self.cleaned_data['email']
+        if User.objects.filter(username=email).exists():
+            raise forms.ValidationError("Ya existe un usuario con este correo electrónico.")
         return email
 
     def clean_dni(self):
-        dni = self.cleaned_data["dni"]
+        dni = self.cleaned_data['dni']
         if Perfil.objects.filter(dni=dni).exists():
-            raise ValidationError("Este DNI ya está registrado.")
+            raise forms.ValidationError("Ya existe un usuario con este DNI.")
         return dni
