@@ -321,7 +321,8 @@ def detalle_cochera(request, id_cochera):
     reservas = Reserva.objects.filter(cochera=cochera, estado__nombre__in=['Confirmada', 'Pendiente']).order_by('-fecha_inicio')
     
     # Obtener historial de estados
-    historial = InmuebleEstado.objects.filter(inmueble_cochera__cochera=cochera).order_by('-fecha_inicio') if InmuebleCochera.objects.filter(cochera=cochera).exists() else []
+    inmuebles_con_cochera = Inmueble.objects.filter(cochera=cochera)
+    historial = InmuebleEstado.objects.filter(inmueble_in=inmuebles_con_cochera).order_by('-fecha_inicio')
     
     return render(request, 'cochera.html', {
         'cochera': cochera,
@@ -791,7 +792,8 @@ def admin_cocheras_historial(request, id_cochera):
     Muestra el historial de estados de una cochera específica.
     """
     cochera = get_object_or_404(Cochera, id_cochera=id_cochera)
-    historial = InmuebleEstado.objects.filter(inmueble_cochera__cochera=cochera).order_by('-fecha_inicio') if InmuebleCochera.objects.filter(cochera=cochera).exists() else []
+    inmuebles_con_cochera = Inmueble.objects.filter(cochera=cochera)
+    historial = InmuebleEstado.objects.filter(inmueble__in=inmuebles_con_cochera).order_by('-fecha_inicio')
     return render(request, 'admin/admin_cocheras_historial.html', {'cochera': cochera, 'historial': historial})
 
 @login_required
