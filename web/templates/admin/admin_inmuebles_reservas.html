@@ -1,12 +1,12 @@
 {% extends 'admin/admin_base.html' %}
 {% load static %}
 
-{% block title %}Historial de la Cochera | Admin{% endblock %}
+{% block title %}Reservas del Inmueble | Admin{% endblock %}
 
 {% block admin_content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-  <h1 class="h2">Historial de la Cochera: {{ cochera.nombre }}</h1>
-  <a href="{% url 'admin_cocheras' %}" class="btn btn-outline-secondary">Volver</a>
+  <h1 class="h2">Reservas del Inmueble: {{ inmueble.nombre }}</h1>
+  <a href="{% url 'admin_inmuebles' %}" class="btn btn-outline-secondary">Volver</a>
 </div>
 
 <div class="card shadow-sm">
@@ -31,7 +31,7 @@
             {% endfor %}
           {% else %}
             <tr>
-              <td colspan="3" class="text-center">No hay historial de estados para esta cochera.</td>
+              <td colspan="3" class="text-center">No hay reservas activas para este inmueble.</td>
             </tr>
           {% endif %}
         </tbody>

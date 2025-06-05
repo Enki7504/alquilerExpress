@@ -741,13 +741,13 @@ def admin_inmuebles_historial(request, id_inmueble):
 
 @login_required
 @user_passes_test(is_admin_or_empleado)
-def admin_inmuebles_estado(request, id_inmueble):
+def admin_inmuebles_reservas(request, id_inmueble):
     """
     Muestra el estado actual y las reservas de un inmueble específico.
     """
     inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
     reservas = Reserva.objects.filter(inmueble=inmueble).order_by('-fecha_inicio')
-    return render(request, 'admin/admin_inmuebles_estado.html', {'inmueble': inmueble, 'reservas': reservas})
+    return render(request, 'admin/admin_inmuebles_reservas.html', {'inmueble': inmueble, 'reservas': reservas})
 
 ################################################################################################################
 # --- Vistas de Gestión de Cocheras ---
@@ -881,13 +881,13 @@ def admin_cocheras_historial(request, id_cochera):
 
 @login_required
 @user_passes_test(is_admin)
-def admin_cocheras_estado(request, id_cochera):
+def admin_cocheras_reservas(request, id_cochera):
     """
     Muestra el estado actual y las reservas de una cochera específica.
     """
     cochera = get_object_or_404(Cochera, id_cochera=id_cochera)
     reservas = Reserva.objects.filter(cochera=cochera).order_by('-fecha_inicio')
-    return render(request, 'admin/admin_cocheras_estado.html', {'cochera': cochera, 'reservas': reservas})
+    return render(request, 'admin/admin_cocheras_reservas.html', {'cochera': cochera, 'reservas': reservas})
 
 ################################################################################################################
 # --- Vistas del Panel de Administración --- Estadisticas  --- 

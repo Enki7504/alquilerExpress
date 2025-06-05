@@ -41,7 +41,7 @@
           <td>
             <a href="{% url 'detalle_cochera' cochera.id_cochera %}" class="btn btn-sm btn-info" title="Ver Detalles">Ver</a>
             <a href="{% url 'admin_cocheras_editar' cochera.id_cochera %}" class="btn btn-sm btn-warning" title="Editar">Editar</a>
-            <a href="{% url 'admin_cocheras_estado' cochera.id_cochera %}" class="btn btn-sm btn-primary" title="Ver Estado/Reservas">Estado</a>
+            <a href="{% url 'admin_cocheras_reservas' cochera.id_cochera %}" class="btn btn-sm btn-primary" title="Ver Estado/Reservas">Reservas</a>
             <a href="{% url 'admin_cocheras_historial' cochera.id_cochera %}" class="btn btn-sm btn-secondary" title="Ver Historial">Historial</a>
             <a href="#" class="btn btn-sm btn-danger eliminar-cochera" data-id="{{ cochera.id_cochera }}" title="Eliminar">Eliminar</a>
           </td>
@@ -56,7 +56,7 @@
   </div>
 </div>
 
-{% if not cocheras %}
+{% if not cocheras %}'
   <div class="alert alert-info" role="alert">
     No se encontraron cocheras.
     {% if query %}

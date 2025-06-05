@@ -41,7 +41,7 @@
           <td>
             <a href="{% url 'detalle_inmueble' inmueble.id_inmueble %}" class="btn btn-sm btn-info">Ver</a>
             <a href="{% url 'admin_inmuebles_editar' inmueble.id_inmueble %}" class="btn btn-sm btn-warning">Editar</a>
-            <a href="{% url 'admin_inmuebles_estado' inmueble.id_inmueble %}" class="btn btn-sm btn-primary">Estado</a>
+            <a href="{% url 'admin_inmuebles_reservas' inmueble.id_inmueble %}" class="btn btn-sm btn-primary">Reservas</a>
             <a href="{% url 'admin_inmuebles_historial' inmueble.id_inmueble %}" class="btn btn-sm btn-secondary">Historial</a>
             <a href="#" class="btn btn-sm btn-danger eliminar-inmueble" data-id="{{ inmueble.id_inmueble }}">Eliminar</a>
           </td>
