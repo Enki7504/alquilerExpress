@@ -1,0 +1,122 @@
+{% extends 'admin/admin_base.html' %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}Registro de Clientes | Panel Admin{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">Registrar Cliente</h1>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    <form method="post" id="clienteForm" action="{% url 'admin_alta_cliente' %}">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label for="id_first_name" class="form-label">Nombre</label>
+        {{ form.first_name|add_class:"form-control" }}
+        <div class="text-danger">{{ form.first_name.errors }}</div>
+      </div>
+      <div class="mb-3">
+        <label for="id_last_name" class="form-label">Apellido</label>
+        {{ form.last_name|add_class:"form-control" }}
+        <div class="text-danger">{{ form.last_name.errors }}</div>
+      </div>
+      <div class="mb-3">
+        <label for="id_dni" class="form-label">DNI</label>
+        {{ form.dni|add_class:"form-control" }}
+        <div class="text-danger">{{ form.dni.errors }}</div>
+      </div>
+      <div class="mb-3">
+        <label for="id_email" class="form-label">Email</label>
+        {{ form.email|add_class:"form-control" }}
+        <div class="text-danger">{{ form.email.errors }}</div>
+      </div>
+      <div class="mb-3">
+        <label for="id_password" class="form-label">Contraseña</label>
+        {{ form.password|add_class:"form-control" }}
+        <div class="text-danger">{{ form.password.errors }}</div>
+      </div>
+      <button type="submit" class="btn btn-primary w-100 btn-azul btn-submit">Registrar Cliente</button>
+    </form>
+  </div>
+</div>
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+document.getElementById('clienteForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const form = e.target;
+    const formData = new FormData(form);
+
+    document.querySelectorAll('.error-message').forEach(el => el.remove());
+
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Error en la respuesta del servidor');
+        }
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new TypeError("Respuesta no es JSON");
+        }
+        return response.json();
+    })
+    .then(data => {
+        if(data.status === 'form_errors') {
+            Object.entries(data.errors).forEach(([field, error]) => {
+                const input = document.querySelector(`[name="${field}"]`);
+                if(input) {
+                    if (!input.parentNode.querySelector('.error-message')) {
+                        const errorElement = document.createElement('div');
+                        errorElement.className = 'error-message text-danger mt-1 small';
+                        errorElement.textContent = error;
+                        input.parentNode.appendChild(errorElement);
+                    }
+                }
+            });
+        }
+
+        if(data.message) {
+            Swal.fire({
+                position: 'top-end',
+                icon: data.icon,
+                title: data.message,
+                showConfirmButton: false,
+                timer: 3000,
+                toast: true,
+                timerProgressBar: true
+            });
+
+            if(data.status === 'success') {
+                form.reset();
+                document.querySelectorAll('.error-message').forEach(el => el.remove());
+            }
+        }
+    })
+    .catch(error => {
+        console.error("Error en AJAX, enviando formulario tradicionalmente:", error);
+        form.submit();
+    });
+});
+
+document.querySelectorAll('#clienteForm input').forEach(input => {
+    input.addEventListener('input', function() {
+        const errorElement = this.parentNode.querySelector('.error-message');
+        if(errorElement) {
+            errorElement.remove();
+        }
+    });
+});
+</script>
+{% endblock %}
+{% endblock %}

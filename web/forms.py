@@ -196,71 +196,62 @@ class AdminLoginForm(forms.Form):
     email = forms.EmailField(label='Email')
     password = forms.CharField(widget=forms.PasswordInput, label='Contraseña')
 
-# para el registro de cliente
-"""
-class ClienteCreationForm(forms.ModelForm):
+class ClienteCreationForm(forms.Form):
+    first_name = forms.CharField(
+        label="Nombre",
+        max_length=30,
+        validators=[
+            RegexValidator(
+                regex=r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$',
+                message="El nombre solo puede contener letras y espacios."
+            )
+        ]
+    )
+    last_name = forms.CharField(
+        label="Apellido",
+        max_length=30,
+        validators=[
+            RegexValidator(
+                regex=r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$',
+                message="El apellido solo puede contener letras y espacios."
+            )
+        ]
+    )
     email = forms.EmailField(label="Correo electrónico")
-    first_name = forms.CharField(label="Nombre")
-    last_name = forms.CharField(label="Apellido")
-    password = forms.CharField(widget=forms.PasswordInput, label="Contraseña")
-    dni = forms.CharField(label="DNI")
+    password = forms.CharField(
+        widget=forms.PasswordInput,
+        label="Contraseña",
+        min_length=9,
+        help_text="La contraseña debe tener al menos 9 caracteres."
+    )
+    dni = forms.CharField(
+        label="DNI",
+        max_length=20,
+        validators=[
+            RegexValidator(
+                regex=r'^\d{7,8}$',
+                message="El DNI debe contener 7 u 8 dígitos numéricos."
+            )
+        ]
+    )
 
-    class Meta:
-        model = Perfil
-        fields = ["dni"]
-
-    def save(self, commit=True):
+    def clean_email(self):
         email = self.cleaned_data["email"]
-        password = self.cleaned_data["password"]
-        first_name = self.cleaned_data["first_name"]
-        last_name = self.cleaned_data["last_name"]
+        if User.objects.filter(username=email).exists():
+            raise forms.ValidationError("Ya existe un usuario con este correo electrónico.")
+        return email
 
-        # Crear el usuario
-        user = User.objects.create_user(
-            username=email,
-            email=email,
-            password=password,
-            first_name=first_name,
-            last_name=last_name,
-        )
-
-        # Agregar al grupo "cliente"
-        from django.contrib.auth.models import Group
-        grupo_cliente, _ = Group.objects.get_or_create(name="cliente")
-        user.groups.add(grupo_cliente)
-
-        # Crear el perfil
-        perfil = super().save(commit=False)
-        perfil.usuario = user
-        if commit:
-            perfil.save()
-        return perfil
-
-"""
-
-#para el registro de empleado
-class ClienteCreationForm(forms.ModelForm):
-    email = forms.EmailField(label="Correo electrónico")
-    password = forms.CharField(widget=forms.PasswordInput, label="Contraseña")
-    first_name = forms.CharField(label="Nombre")
-    last_name = forms.CharField(label="Apellido")
-    dni = forms.CharField(label="DNI")
-
-    class Meta:
-        model = User
-        fields = ["email", "password", "first_name", "last_name"]
+    def clean_dni(self):
+        dni = self.cleaned_data["dni"]
+        if Perfil.objects.filter(dni=dni).exists():
+            raise forms.ValidationError("Ya existe un usuario con este DNI.")
+        return dni
 
     def clean_password(self):
         password = self.cleaned_data.get("password")
         if len(password) < 9:
-            raise forms.ValidationError("La contraseña debe tener más de 8 caracteres.")
+            raise forms.ValidationError("La contraseña debe tener al menos 9 caracteres.")
         return password
-
-    def clean_dni(self):
-        dni = self.cleaned_data.get("dni")
-        if Perfil.objects.filter(dni=dni).exists():
-            raise forms.ValidationError("Este DNI ya está registrado.")
-        return dni
 
     def save(self, commit=True):
         user = User(
@@ -272,18 +263,14 @@ class ClienteCreationForm(forms.ModelForm):
         user.set_password(self.cleaned_data["password"])
         if commit:
             user.save()
-
-            # Asignar grupo cliente
             grupo_cliente, _ = Group.objects.get_or_create(name="cliente")
             user.groups.add(grupo_cliente)
-
-            # Crear perfil
             Perfil.objects.create(
                 usuario=user,
                 dni=self.cleaned_data["dni"]
             )
         return user
-
+    
 class EmpleadoCreationForm(forms.Form):
     first_name = forms.CharField(max_length=30)
     last_name = forms.CharField(max_length=30)

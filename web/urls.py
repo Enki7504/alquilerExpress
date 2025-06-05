@@ -23,6 +23,7 @@ urlpatterns = [
     path('panel/', views.admin_panel, name='admin_panel'),
     # Gestión de usuarios
     path('panel/alta-empleados/', views.admin_alta_empleados, name='admin_alta_empleados'),
+    path('panel/alta-cliente/', views.admin_alta_cliente, name='admin_alta_cliente'),
     
     # Gestión de inmuebles
     path('panel/inmuebles/', views.admin_inmuebles, name='admin_inmuebles'),

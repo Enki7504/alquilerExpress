@@ -33,7 +33,7 @@
             </li>
             <li class="nav-item">
               <a class="nav-link {% if request.resolver_match.url_name == 'admin_alta_cliente' %}active{% endif %}" 
-                  href="#">
+                  href="{% url 'admin_alta_cliente' %}">
                 <i class="bi bi-person-plus"></i> Registrar Clientes
               </a>
             </li>

@@ -430,15 +430,75 @@ def admin_alta_empleados(request):
     form = EmpleadoAdminCreationForm()
     return render(request, 'admin/admin_alta_empleados.html', {'form': form})
 
-def generar_contraseña_segura():
-    alphabet = string.ascii_letters + string.digits + string.punctuation
-    while True:
-        password = ''.join(secrets.choice(alphabet) for _ in range(12))
-        if (any(c.isupper() for c in password) and
-            any(c.islower() for c in password) and
-            any(c.isdigit() for c in password) and
-            any(c in string.punctuation for c in password)):
-            return password
+@login_required
+@user_passes_test(is_admin)
+def admin_alta_cliente(request):
+    if request.method == "POST":
+        form = ClienteCreationForm(request.POST)
+        if form.is_valid():
+            data = form.cleaned_data
+            try:
+                with transaction.atomic():
+                    password = data.get("password") or generar_contraseña_segura()
+                    user = User.objects.create_user(
+                        username=data["email"],
+                        email=data["email"],
+                        password=password,
+                        first_name=data["first_name"].title(),
+                        last_name=data["last_name"].title(),
+                    )
+                    grupo_cliente, _ = Group.objects.get_or_create(name="cliente")
+                    user.groups.add(grupo_cliente)
+                    Perfil.objects.create(usuario=user, dni=data["dni"])
+            except IntegrityError as e:
+                return _respuesta_cliente(
+                    request,
+                    status='error',
+                    message=f'Error al crear cliente: {str(e)}. Verifica email/DNI.',
+                    icon='error',
+                    form=form
+                )
+            try:
+                send_mail(
+                    "Bienvenido a AlquilerExpress",
+                    f"Hola {user.first_name},\n\n"
+                    f"Tu cuenta de cliente ha sido creada.\n"
+                    f"Usuario: {user.email}\n"
+                    f"Contraseña: {password}\n\n"
+                    f"Por favor, inicia sesión y cambia tu contraseña.",
+                    settings.DEFAULT_FROM_EMAIL,
+                    [user.email],
+                    fail_silently=False,
+                )
+                return _respuesta_cliente(
+                    request,
+                    status='success',
+                    message=f'Cliente registrado y correo enviado a {user.email}',
+                    icon='success'
+                )
+            except Exception as e:
+                return _respuesta_cliente(
+                    request,
+                    status='warning',
+                    message=f'Cliente creado pero error enviando correo: {e}. Contraseña: {password}',
+                    icon='warning'
+                )
+        else:
+            errors = {field: error[0] for field, error in form.errors.items()}
+            return _respuesta_cliente(
+                request,
+                status='form_errors',
+                message='Corrige los errores en el formulario',
+                icon='error',
+                errors=errors,
+                form=form
+            )
+    form = ClienteCreationForm()
+    return render(request, 'admin/admin_alta_cliente.html', {'form': form})
+
+##################
+# Complementarias
+##################
 
 def _respuesta_empleado(request, status, message, icon, errors=None, form=None):
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -458,6 +518,35 @@ def _respuesta_empleado(request, status, message, icon, errors=None, form=None):
             return redirect('admin_alta_empleados')
         elif status == 'form_errors':
             return render(request, 'admin/admin_alta_empleados.html', {'form': form})
+
+def _respuesta_cliente(request, status, message, icon, errors=None, form=None):
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        resp = {'status': status, 'message': message, 'icon': icon}
+        if errors:
+            resp['errors'] = errors
+        return JsonResponse(resp)
+    else:
+        if status == 'success':
+            messages.success(request, message)
+            return redirect('admin_alta_cliente')
+        elif status == 'warning':
+            messages.warning(request, message)
+            return redirect('admin_alta_cliente')
+        elif status == 'error':
+            messages.error(request, message)
+            return redirect('admin_alta_cliente')
+        elif status == 'form_errors':
+            return render(request, 'admin/admin_alta_cliente.html', {'form': form})
+
+def generar_contraseña_segura():
+    alphabet = string.ascii_letters + string.digits + string.punctuation
+    while True:
+        password = ''.join(secrets.choice(alphabet) for _ in range(12))
+        if (any(c.isupper() for c in password) and
+            any(c.islower() for c in password) and
+            any(c.isdigit() for c in password) and
+            any(c in string.punctuation for c in password)):
+            return password
 
 ################################################################################################################
 # --- Vistas del Panel de Administración --- Gestion de Propiedades  --- 
