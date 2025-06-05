@@ -560,14 +560,13 @@ def admin_inmuebles(request):
     Incluye botones para acciones rápidas (ver, editar, eliminar, estado, historial).
     """
     query = request.GET.get('q', '').strip()
-    inmuebles = Inmueble.objects.all().order_by('nombre') # Ordenar para una mejor visualización
-
+    inmuebles = Inmueble.objects.exclude(estado__nombre='Eliminado').order_by('nombre')
+    
     if query:
-        # Búsqueda por nombre o descripción
         inmuebles = inmuebles.filter(
             Q(nombre__icontains=query) | Q(descripcion__icontains=query)
-        ).distinct() # Usar distinct por si hay duplicados en el join de Q
-
+        )
+    
     return render(request, 'admin/admin_inmuebles.html', {
         'inmuebles': inmuebles,
         'query': query
@@ -581,14 +580,12 @@ def admin_cocheras(request):
     Incluye botones para acciones rápidas (ver, editar, eliminar, estado, historial).
     """
     query = request.GET.get('q', '').strip()
-    cocheras = Cochera.objects.all().order_by('nombre') # Ordenar para una mejor visualización
-
+    cocheras = Cochera.objects.exclude(estado__nombre='Eliminado').order_by('nombre')
+    
     if query:
-        # Búsqueda por nombre o descripción
         cocheras = cocheras.filter(
-            Q(nombre__icontains=query) | Q(descripcion__icontains=query)
-        ).distinct()
-
+            Q(nombre__icontains=query) | Q(descripcion__icontains=query))
+    
     return render(request, 'admin/admin_cocheras.html', {
         'cocheras': cocheras,
         'query': query
@@ -687,15 +684,34 @@ def eliminar_imagen_inmueble(request, imagen_id):
 @user_passes_test(is_admin)
 def admin_inmuebles_eliminar(request, id_inmueble):
     """
-    Permite a los administradores eliminar un inmueble existente.
+    Cambia el estado de un inmueble a "Eliminado" en lugar de borrarlo.
     """
+    # Verificar autenticación para solicitudes AJAX
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' and not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'message': 'No estás autenticado.'}, status=401)
+
+    # Verificar permisos para solicitudes AJAX
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' and not is_admin(request.user):
+        return JsonResponse({'success': False, 'message': 'No tienes permisos para realizar esta acción.'}, status=403)
+
     inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
+    
     if request.method == 'POST':
-        inmueble.delete()
-        messages.success(request, 'Inmueble eliminado exitosamente.')
-        return redirect('buscar_inmuebles')
-    messages.info(request, "Confirmación de eliminación de inmueble.")
-    return redirect('detalle_inmueble', id_inmueble=id_inmueble)
+        estado_eliminado, _ = Estado.objects.get_or_create(nombre='Eliminado')
+        inmueble.estado = estado_eliminado
+        inmueble.save()
+        
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': True, 'message': 'Inmueble marcado como eliminado.'})
+        
+        messages.success(request, 'Inmueble marcado como eliminado.')
+        return redirect('admin_inmuebles')
+    
+    # Si es GET, muestra la confirmación
+    return render(request, 'admin/confirmar_eliminacion.html', {
+        'objeto': inmueble,
+        'tipo': 'inmueble'
+    })
 
 @login_required
 @user_passes_test(is_admin_or_empleado)
@@ -808,15 +824,34 @@ def eliminar_imagen_cochera(request, id_imagen):
 @user_passes_test(is_admin)
 def admin_cocheras_eliminar(request, id_cochera):
     """
-    Permite a los administradores eliminar una cochera existente.
+    Cambia el estado de una cochera a "Eliminado" en lugar de borrarla.
     """
+    # Verificar autenticación para solicitudes AJAX
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' and not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'message': 'No estás autenticado.'}, status=401)
+
+    # Verificar permisos para solicitudes AJAX
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' and not is_admin(request.user):
+        return JsonResponse({'success': False, 'message': 'No tienes permisos para realizar esta acción.'}, status=403)
+
     cochera = get_object_or_404(Cochera, id_cochera=id_cochera)
+    
     if request.method == 'POST':
-        cochera.delete()
-        messages.success(request, 'Cochera eliminada exitosamente.')
-        return redirect('buscar_cocheras')
-    messages.info(request, "Confirmación de eliminación de cochera.")
-    return redirect('detalle_cochera', id_cochera=id_cochera)
+        estado_eliminado, _ = Estado.objects.get_or_create(nombre='Eliminado')
+        cochera.estado = estado_eliminado
+        cochera.save()
+        
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': True, 'message': 'Cochera marcada como eliminada.'})
+        
+        messages.success(request, 'Cochera marcada como eliminada.')
+        return redirect('admin_cocheras')
+    
+    # Si es GET, muestra la confirmación
+    return render(request, 'admin/confirmar_eliminacion.html', {
+        'objeto': cochera,
+        'tipo': 'cochera'
+    })
 
 @login_required
 @user_passes_test(is_admin)

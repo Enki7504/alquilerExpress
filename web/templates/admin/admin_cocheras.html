@@ -15,91 +15,113 @@
     <button class="btn btn-outline-primary" type="submit">Buscar</button>
 </form>
 
-{% if cocheras %}
-<div class="table-responsive">
-    <table class="table table-striped table-hover">
-        <thead class="table-dark">
-            <tr>
-                <th scope="col">ID</th>
-                <th scope="col">Nombre</th>
-                <th scope="col">Ubicación</th>
-                <th scope="col">Precio Día</th>
-                <th scope="col">Estado</th>
-                <th scope="col">Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for cochera in cocheras %}
-            <tr>
-                <th scope="row">{{ cochera.id_cochera }}</th>
-                <td>{{ cochera.nombre }}</td>
-                <td>{{ cochera.ubicacion }}</td>
-                <td>${{ cochera.precio_por_dia|floatformat:2 }}</td>
-                <td>
-                    {% if cochera.estado %}
-                        <span class="badge 
-                            {% if cochera.estado.nombre == 'Disponible' %}bg-success
-                            {% elif cochera.estado.nombre == 'Reservado' %}bg-warning text-dark
-                            {% elif cochera.estado.nombre == 'Ocupado' %}bg-danger
-                            {% else %}bg-secondary{% endif %}">
-                            {{ cochera.estado.nombre }}
-                        </span>
-                    {% else %}
-                        <span class="badge bg-secondary">Sin Estado</span>
-                    {% endif %}
-                </td>
-                <td>
-                    <div class="btn-group" role="group" aria-label="Acciones de Cochera">
-                        <a href="{% url 'detalle_cochera' cochera.id_cochera %}" class="btn btn-info btn-sm" title="Ver Detalles">
-                            <i class="bi bi-eye"></i>
-                        </a>
-                        <a href="{% url 'admin_cocheras_editar' cochera.id_cochera %}" class="btn btn-warning btn-sm" title="Editar">
-                            <i class="bi bi-pencil"></i>
-                        </a>
-                        <a href="{% url 'admin_cocheras_estado' cochera.id_cochera %}" class="btn btn-primary btn-sm" title="Ver Estado/Reservas">
-                            <i class="bi bi-calendar-check"></i>
-                        </a>
-                        <a href="{% url 'admin_cocheras_historial' cochera.id_cochera %}" class="btn btn-secondary btn-sm" title="Ver Historial">
-                            <i class="bi bi-clock-history"></i>
-                        </a>
-                        {# Botón de eliminar con confirmación (opcional, pero recomendado) #}
-                        <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal{{ cochera.id_cochera }}" title="Eliminar">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </div>
+<form style="display: none;">
+  {% csrf_token %}
+</form>
 
-                    <div class="modal fade" id="confirmDeleteModal{{ cochera.id_cochera }}" tabindex="-1" aria-labelledby="confirmDeleteModalLabel{{ cochera.id_cochera }}" aria-hidden="true">
-                        <div class="modal-dialog">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title" id="confirmDeleteModalLabel{{ cochera.id_cochera }}">Confirmar Eliminación</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                </div>
-                                <div class="modal-body">
-                                    ¿Estás seguro de que quieres eliminar la cochera "{{ cochera.nombre }}"? Esta acción no se puede deshacer.
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                    <form action="{% url 'admin_cocheras_eliminar' cochera.id_cochera %}" method="post" style="display: inline;">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn btn-danger">Eliminar</button>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
+<div class="shadow-sm">
+  <div class="card-body">
+    <table class="table table-hover">
+      <thead class="table-dark">
+        <tr>
+          <th scope="col">Nombre</th>
+          <th scope="col">Ubicación</th>
+          <th scope="col">Precio Día</th>
+          <th scope="col">Estado</th>
+          <th scope="col">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for cochera in cocheras %}
+        <tr>
+          <td>{{ cochera.nombre }}</td>
+          <td>{{ cochera.ubicacion }}</td>
+          <td>${{ cochera.precio_por_dia|floatformat:2 }}</td>
+          <td>{{ cochera.estado.nombre }}</td>
+          <td>
+            <a href="{% url 'detalle_cochera' cochera.id_cochera %}" class="btn btn-sm btn-info" title="Ver Detalles">Ver</a>
+            <a href="{% url 'admin_cocheras_editar' cochera.id_cochera %}" class="btn btn-sm btn-warning" title="Editar">Editar</a>
+            <a href="{% url 'admin_cocheras_estado' cochera.id_cochera %}" class="btn btn-sm btn-primary" title="Ver Estado/Reservas">Estado</a>
+            <a href="{% url 'admin_cocheras_historial' cochera.id_cochera %}" class="btn btn-sm btn-secondary" title="Ver Historial">Historial</a>
+            <a href="#" class="btn btn-sm btn-danger eliminar-cochera" data-id="{{ cochera.id_cochera }}" title="Eliminar">Eliminar</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6">No se encontraron cocheras.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
     </table>
+  </div>
 </div>
-{% else %}
-    <div class="alert alert-info" role="alert">
-        No se encontraron cocheras.
-        {% if query %}
-            <a href="{% url 'admin_gestion_cocheras' %}" class="alert-link">Ver todas las cocheras</a>
-        {% endif %}
-    </div>
+
+{% if not cocheras %}
+  <div class="alert alert-info" role="alert">
+    No se encontraron cocheras.
+    {% if query %}
+      <a href="{% url 'admin_cocheras' %}" class="alert-link">Ver todas las cocheras</a>
+    {% endif %}
+  </div>
 {% endif %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.eliminar-cochera').forEach(btn => {
+    btn.addEventListener('click', async function(e) {
+      e.preventDefault();
+      const id = this.getAttribute('data-id');
+      
+      const result = await Swal.fire({
+        title: '¿Eliminar cochera?',
+        text: "¿Está seguro que desea eliminar esta cochera?.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+      });
+
+      if (!result.isConfirmed) return;
+
+      try {
+        const csrftoken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+        const response = await fetch(`/panel/cocheras/eliminar/${id}/`, {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': csrftoken,
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        });
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            throw new Error('No estás autenticado. Por favor, inicia sesión.');
+          } else if (response.status === 403) {
+            throw new Error('No tienes permisos para realizar esta acción.');
+          }
+          throw new Error('Error en la respuesta del servidor');
+        }
+
+        const data = await response.json();
+
+        if (data.success) {
+          await Swal.fire('Eliminado!', 'La cochera ha sido eliminada.', 'success');
+          btn.closest('tr').remove();
+        } else {
+          throw new Error(data.message || 'Error al eliminar la cochera');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        Swal.fire('Error', error.message || 'Ocurrió un error al eliminar la cochera', 'error');
+      }
+    });
+  });
+});
+</script>
+{% endblock %}
 {% endblock %}
