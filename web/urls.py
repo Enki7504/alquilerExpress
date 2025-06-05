@@ -41,7 +41,8 @@ urlpatterns = [
     path('panel/cocheras/eliminar/<int:id_cochera>/', views.admin_cocheras_eliminar, name='admin_cocheras_eliminar'),
     path('panel/cocheras/estado/<int:id_cochera>/', views.admin_cocheras_estado, name='admin_cocheras_estado'),
     path('panel/cocheras/historial/<int:id_cochera>/', views.admin_cocheras_historial, name='admin_cocheras_historial'),
-    
+    path('eliminar-imagen-cochera/<int:id_imagen>/', views.eliminar_imagen_cochera, name='eliminar_imagen_cochera'),
+
     # Estadísiticas
     path('panel/estadisticas-empleados/', views.admin_estadisticas_empleados, name='admin_estadisticas_empleados'),
     path('panel/estadisticas-usuarios/', views.admin_estadisticas_usuarios, name='admin_estadisticas_usuarios'),

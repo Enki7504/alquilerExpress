@@ -634,36 +634,44 @@ def admin_inmuebles_alta(request):
 @login_required
 @user_passes_test(is_admin)
 def admin_inmuebles_editar(request, id_inmueble):
-    """
-    Permite a los administradores editar la información de un inmueble existente.
-    """
     inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
-    imagenes = InmuebleImagen.objects.filter(inmueble=inmueble)
     
-    if request.method == 'POST':
+    if request.method == "POST":
         form = InmuebleForm(request.POST, request.FILES, instance=inmueble)
         if form.is_valid():
             inmueble = form.save()
+            # Guardar nuevas imágenes
+            imagenes = request.FILES.getlist('imagenes')
+            for img in imagenes:
+                InmuebleImagen.objects.create(inmueble=inmueble, imagen=img)
             
-            # Manejar múltiples imágenes
-            for img in request.FILES.getlist('imagenes'):
-                InmuebleImagen.objects.create(
-                    inmueble=inmueble,
-                    imagen=img,
-                    descripcion="Imagen del inmueble"
-                )
+            # Verificar si es una petición AJAX
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Inmueble actualizado correctamente.'
+                })
                 
-            messages.success(request, 'Inmueble actualizado exitosamente.')
-            return redirect('detalle_inmueble', id_inmueble=id_inmueble)
+            messages.success(request, "Inmueble actualizado correctamente.")
+            return redirect('admin_inmuebles_editar', id_inmueble=inmueble.id_inmueble)
         else:
-            messages.error(request, 'Por favor, corrige los errores en el formulario.')
+            # Manejo de errores para AJAX
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Corrige los errores en el formulario.',
+                    'errors': form.errors.get_json_data()
+                }, status=400)
+                
+            messages.error(request, "Corrige los errores en el formulario.")
     else:
         form = InmuebleForm(instance=inmueble)
     
+    imagenes = inmueble.imagenes.all()
     return render(request, 'admin/admin_inmuebles_editar.html', {
-        'form': form, 
+        'form': form,
         'inmueble': inmueble,
-        'imagenes': imagenes
+        'imagenes': imagenes,
     })
 
 @require_POST
@@ -748,27 +756,54 @@ def admin_cocheras_alta(request):
 @login_required
 @user_passes_test(is_admin)
 def admin_cocheras_editar(request, id_cochera):
-    """
-    Permite a los administradores editar la información de una cochera existente.
-    """
     cochera = get_object_or_404(Cochera, id_cochera=id_cochera)
-    if request.method == 'POST':
+    
+    if request.method == "POST":
         form = CocheraForm(request.POST, request.FILES, instance=cochera)
         if form.is_valid():
             cochera = form.save()
-            if form.cleaned_data.get('imagen'):
-                CocheraImagen.objects.create(
-                    cochera=cochera,
-                    imagen=form.cleaned_data['imagen'],
-                    descripcion="Imagen actualizada"
-                )
-            messages.success(request, 'Cochera actualizada exitosamente.')
-            return redirect('detalle_cochera', id_cochera=id_cochera)
+            # Guardar nuevas imágenes
+            imagenes = request.FILES.getlist('imagenes')
+            for img in imagenes:
+                CocheraImagen.objects.create(cochera=cochera, imagen=img)
+            
+            # Verificar si es una petición AJAX
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Cochera actualizada correctamente.'
+                })
+                
+            messages.success(request, "Cochera actualizada correctamente.")
+            return redirect('admin_cocheras_editar', id_cochera=cochera.id_cochera)
         else:
-            messages.error(request, 'Por favor, corrige los errores en el formulario.')
+            # Manejo de errores para AJAX
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Corrige los errores en el formulario.',
+                    'errors': form.errors.get_json_data()
+                }, status=400)
+                
+            messages.error(request, "Corrige los errores en el formulario.")
     else:
         form = CocheraForm(instance=cochera)
-    return render(request, 'admin/admin_cocheras_editar.html', {'form': form, 'cochera': cochera})
+    
+    return render(request, 'admin/admin_cocheras_editar.html', {
+        'form': form,
+        'cochera': cochera,
+    })
+
+@require_POST
+@login_required
+@user_passes_test(is_admin)
+def eliminar_imagen_cochera(request, id_imagen):
+    try:
+        imagen = get_object_or_404(CocheraImagen, id_imagen=id_imagen)
+        imagen.delete()
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)})
 
 @login_required
 @user_passes_test(is_admin)
