@@ -280,9 +280,7 @@ def detalle_inmueble(request, id_inmueble):
     )
     resenias = Resenia.objects.filter(inmueble=inmueble)
     comentarios = Comentario.objects.filter(inmueble=inmueble).order_by('-fecha_creacion')
-    # Obtener reservas activas
     reservas = Reserva.objects.filter(inmueble=inmueble, estado__nombre__in=['Confirmada', 'Pendiente']).order_by('-fecha_inicio')
-    # Eliminar referencia a InmuebleCochera
     historial = InmuebleEstado.objects.filter(inmueble=inmueble).order_by('-fecha_inicio')
 
     if request.method == 'POST' and request.user.is_authenticated:
@@ -310,21 +308,39 @@ def detalle_inmueble(request, id_inmueble):
 
 def detalle_cochera(request, id_cochera):
     """
-    Muestra los detalles de una cochera específica, incluyendo reservas activas
-    e historial de estados.
+    Muestra los detalles de una cochera específica, incluyendo reseñas, comentarios,
+    reservas activas e historial de estados. Permite añadir comentarios.
     """
     cochera = get_object_or_404(
         Cochera.objects.select_related('estado'),
         id_cochera=id_cochera
     )
-    # Obtener reservas activas
+    
+    resenias = Resenia.objects.filter(cochera=cochera)
+    comentarios = Comentario.objects.filter(cochera=cochera).order_by('-fecha_creacion')
     reservas = Reserva.objects.filter(cochera=cochera, estado__nombre__in=['Confirmada', 'Pendiente']).order_by('-fecha_inicio')
-    
-    # Obtener historial de estados
-    historial = InmuebleEstado.objects.filter(inmueble_cochera__cochera=cochera).order_by('-fecha_inicio') if InmuebleCochera.objects.filter(cochera=cochera).exists() else []
-    
+    historial = CocheraEstado.objects.filter(cochera=cochera).order_by('-fecha_inicio')
+
+    if request.method == 'POST' and request.user.is_authenticated:
+        comentario_form = ComentarioForm(request.POST)
+        if comentario_form.is_valid():
+            comentario = comentario_form.save(commit=False)
+            comentario.usuario = request.user.perfil
+            comentario.cochera = cochera
+            comentario.inmueble = None  # Asegurarse que no está asociado a un inmueble
+            comentario.save()
+            messages.success(request, "Comentario añadido exitosamente.")
+            return redirect('detalle_cochera', id_cochera=id_cochera)
+        else:
+            messages.error(request, "Error al añadir el comentario.")
+    else:
+        comentario_form = ComentarioForm()
+
     return render(request, 'cochera.html', {
         'cochera': cochera,
+        'resenias': resenias,
+        'comentarios': comentarios,
+        'comentario_form': comentario_form,
         'reservas': reservas,
         'historial': historial,
     })
