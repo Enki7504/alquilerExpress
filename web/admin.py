@@ -7,7 +7,6 @@ from .models import (
     Estado,
     Inmueble,
     Cochera,
-    InmuebleCochera,
     Reserva,
     ReservaEstado,
     InmuebleEstado,
@@ -17,7 +16,8 @@ from .models import (
     InmuebleImagen,
     CocheraImagen,
     Provincia,
-    Ciudad
+    Ciudad,
+    Notificacion
 )
 
 # --- Inlines para mostrar imágenes asociadas ---
@@ -68,11 +68,6 @@ class CocheraAdmin(admin.ModelAdmin):
     list_filter = ('estado', 'con_techo')
     inlines = [CocheraImagenInline]
 
-@admin.register(InmuebleCochera)
-class InmuebleCocheraAdmin(admin.ModelAdmin):
-    list_display = ('inmueble', 'cochera')
-    search_fields = ('inmueble__nombre', 'cochera__nombre')
-
 @admin.register(Reserva)
 class ReservaAdmin(admin.ModelAdmin):
     list_display = ('id_reserva', 'fecha_inicio', 'fecha_fin', 'precio_total', 'estado')
@@ -86,7 +81,7 @@ class ReservaEstadoAdmin(admin.ModelAdmin):
 
 @admin.register(InmuebleEstado)
 class InmuebleEstadoAdmin(admin.ModelAdmin):
-    list_display = ('inmueble_cochera', 'estado', 'fecha_inicio', 'fecha_fin')
+    list_display = ('inmueble', 'estado', 'fecha_inicio', 'fecha_fin')
     list_filter = ('estado',)
 
 @admin.register(ClienteInmueble)
@@ -112,3 +107,19 @@ class ProvinciaAdmin(admin.ModelAdmin):
 class CiudadAdmin(admin.ModelAdmin):
     list_display = ('nombre', 'provincia')
     list_filter = ('provincia',)
+
+@admin.register(Notificacion)
+class NotificacionAdmin(admin.ModelAdmin):
+    list_display = ('usuario', 'mensaje', 'leido', 'fecha_creacion')
+    list_filter = ('leido', 'fecha_creacion')
+    search_fields = ('mensaje', 'usuario__usuario__username')
+    ordering = ('-fecha_creacion',)
+
+    # Opcional: Para mostrar mejor el nombre en el admin
+    def get_model_perms(self, request):
+        return {
+            'add': self.has_add_permission(request),
+            'change': self.has_change_permission(request),
+            'delete': self.has_delete_permission(request),
+            'view': self.has_view_permission(request),
+        }

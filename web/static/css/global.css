@@ -32,7 +32,6 @@
   border-color: lightgrey;
 }
 
-
 /* =========== navegación =========== */
 
 .navbar {
@@ -80,4 +79,39 @@
   background-color: var(--color-naranja-alquiler);
   border-color: grey;
   color: white;
+}
+
+/* =========== cosas =========== */
+
+.block {
+    display: block;
+}
+.none {
+    display: none;
+}
+
+/* Estilo adicional para el contenedor de vista previa */
+#vista-previa-imagenes {
+  display: none; /* Oculto por defecto */
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.alert-auto-close {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    min-width: 300px;
+    text-align: center;
+    animation: fadeOut 5s forwards;
+    animation-delay: 3s;
+}
+
+@keyframes fadeOut {
+    to {
+        opacity: 0;
+        visibility: hidden;
+    }
 }

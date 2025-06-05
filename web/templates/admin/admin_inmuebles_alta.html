@@ -1,0 +1,141 @@
+{% extends 'admin/admin_base.html' %}
+{% load static %}
+
+{% block title %}Alta de Inmuebles | Panel Admin{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">Dar de Alta de Inmueble</h1>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    {% if messages %}
+      <div class="mt-4">
+        {% for message in messages %}
+          <div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-danger{% endif %}">
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <div class="row g-3">
+        <!-- Renderizar campos individualmente -->
+        <div class="col-md-4">
+          {{ form.nombre.label_tag }}
+          {{ form.nombre }}
+          {{ form.nombre.errors }}
+        </div>
+        <div class="col-md-4">
+          {{ form.provincia.label_tag }}
+          {{ form.provincia }}
+          {{ form.provincia.errors }}
+        </div>
+        <div class="col-md-4">
+          {{ form.ciudad.label_tag }}
+          {{ form.ciudad }}
+          {{ form.ciudad.errors }}
+        </div>
+        <div class="col-md-6">
+          {{ form.ubicacion.label_tag }}
+          {{ form.ubicacion }}
+          {{ form.ubicacion.errors }}
+        </div>
+        <div class="col-md-6">
+          {{ form.precio_por_dia.label_tag }}
+          {{ form.precio_por_dia }}
+          {{ form.precio_por_dia.errors }}
+        </div>
+        <div class="col-12">
+          {{ form.descripcion.label_tag }}
+          {{ form.descripcion }}
+          {{ form.descripcion.errors }}
+        </div>
+        <div class="col-md-3">
+          {{ form.cantidad_ambientes.label_tag }}
+          {{ form.cantidad_ambientes }}
+          {{ form.cantidad_ambientes.errors }}
+        </div>
+        <div class="col-md-3">
+          {{ form.cantidad_banios.label_tag }}
+          {{ form.cantidad_banios }}
+          {{ form.cantidad_banios.errors }}
+        </div>
+        <div class="col-md-3">
+          {{ form.cantidad_camas.label_tag }}
+          {{ form.cantidad_camas }}
+          {{ form.cantidad_camas.errors }}
+        </div>
+        <div class="col-md-3">
+          {{ form.cantidad_huespedes.label_tag }}
+          {{ form.cantidad_huespedes }}
+          {{ form.cantidad_huespedes.errors }}
+        </div>
+        <div class="col-12">
+          {{ form.politica_cancelacion.label_tag }}
+          {{ form.politica_cancelacion }}
+          {{ form.politica_cancelacion.errors }}
+        </div>
+        <div class="col-md-4">
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" id="toggleCochera">
+            <label class="form-check-label" for="toggleCochera">¿Agregar cochera?</label>
+          </div>
+          <div id="cocheraSelectDiv" style="display: none;">
+            {{ form.cochera.label_tag }}
+            {{ form.cochera }}
+            {{ form.cochera.errors }}
+          </div>
+        </div>
+        <div class="col-md-4">
+          {{ form.estado.label_tag }}
+          {{ form.estado }}
+          {{ form.estado.errors }}
+        </div>
+        <div class="col-md-4">
+          <label for="id_imagenes" class="form-label">Fotos del inmueble</label>
+          <input type="file" name="imagenes" id="id_imagenes" class="form-control" multiple accept="image/*">
+        </div>
+        <div class="col-12">
+          <button type="submit" class="btn btn-primary btn-azul">Cargar Inmueble</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const checkbox = document.getElementById('toggleCochera');
+  const selectDiv = document.getElementById('cocheraSelectDiv');
+  checkbox.addEventListener('change', function() {
+    selectDiv.style.display = this.checked ? 'block' : 'none';
+    if (!this.checked) {
+      document.getElementById('id_cochera').value = "";
+    }
+  });
+
+  // Provincia y ciudad dependientes
+  const provinciaSelect = document.getElementById('id_provincia');
+  const ciudadSelect = document.getElementById('id_ciudad');
+
+  provinciaSelect.addEventListener('change', function() {
+    const provinciaId = this.value;
+    fetch(`/ajax/cargar-ciudades/?provincia=${provinciaId}`)
+      .then(response => response.json())
+      .then(data => {
+        ciudadSelect.innerHTML = '<option value="">---------</option>';
+        data.ciudades.forEach(function(ciudad) {
+          const option = document.createElement('option');
+          option.value = ciudad.id;
+          option.textContent = ciudad.nombre;
+          ciudadSelect.appendChild(option);
+        });
+      });
+  });
+});
+</script>
+{% endblock %}

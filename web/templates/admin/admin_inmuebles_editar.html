@@ -1,0 +1,287 @@
+{% extends 'admin/admin_base.html' %}
+{% load static %}
+
+{% block title %}Editar Inmueble | Panel Admin{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">Editar Inmueble: {{ inmueble.nombre }}</h1>
+  <a href="{% url 'detalle_inmueble' id_inmueble=inmueble.id_inmueble %}" class="btn btn-outline-secondary">Volver</a>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <div class="row g-3">
+        <div class="col-md-4">
+          {{ form.nombre.label_tag }}
+          {{ form.nombre }}
+          {{ form.nombre.errors }}
+        </div>
+        <div class="col-md-4">
+          {{ form.provincia.label_tag }}
+          {{ form.provincia }}
+          {{ form.provincia.errors }}
+        </div>
+        <div class="col-md-4">
+          {{ form.ciudad.label_tag }}
+          {{ form.ciudad }}
+          {{ form.ciudad.errors }}
+        </div>
+        <div class="col-md-6">
+          {{ form.ubicacion.label_tag }}
+          {{ form.ubicacion }}
+          {{ form.ubicacion.errors }}
+        </div>
+        <div class="col-md-6">
+          {{ form.precio_por_dia.label_tag }}
+          {{ form.precio_por_dia }}
+          {{ form.precio_por_dia.errors }}
+        </div>
+        <div class="col-12">
+          {{ form.descripcion.label_tag }}
+          {{ form.descripcion }}
+          {{ form.descripcion.errors }}
+        </div>
+        <div class="col-md-3">
+          {{ form.cantidad_ambientes.label_tag }}
+          {{ form.cantidad_ambientes }}
+          {{ form.cantidad_ambientes.errors }}
+        </div>
+        <div class="col-md-3">
+          {{ form.cantidad_banios.label_tag }}
+          {{ form.cantidad_banios }}
+          {{ form.cantidad_banios.errors }}
+        </div>
+        <div class="col-md-3">
+          {{ form.cantidad_camas.label_tag }}
+          {{ form.cantidad_camas }}
+          {{ form.cantidad_camas.errors }}
+        </div>
+        <div class="col-md-3">
+          {{ form.cantidad_huespedes.label_tag }}
+          {{ form.cantidad_huespedes }}
+          {{ form.cantidad_huespedes.errors }}
+        </div>
+        <div class="col-12">
+          {{ form.politica_cancelacion.label_tag }}
+          {{ form.politica_cancelacion }}
+          {{ form.politica_cancelacion.errors }}
+        </div>
+        <div class="col-md-4">
+          <div id="cocheraSelectDiv" class="{% if form.cochera.value %}block{% else %}none{% endif %}">
+            {{ form.cochera.label_tag }}
+            {{ form.cochera }}
+            {{ form.cochera.errors }}
+          </div>
+        </div>
+        <div class="col-md-4">
+          {{ form.estado.label_tag }}
+          {{ form.estado }}
+          {{ form.estado.errors }}
+        </div>
+        <div class="col-md-4">
+          <label for="id_imagenes" class="form-label">Añadir más fotos</label>
+          <input type="file" name="imagenes" id="id_imagenes" class="form-control" multiple accept="image/*">
+        </div>
+        
+        <!-- Mostrar imágenes existentes -->
+        <div class="col-12">
+          <h5>Imágenes actuales</h5>
+          <div class="row" id="imagenes-actuales">
+            {% for imagen in imagenes %}
+            <div class="col-md-3 mb-3">
+              <img src="{{ imagen.imagen.url }}" class="img-thumbnail" style="max-height: 150px;">
+              <div class="mt-2">
+                <a href="#" class="btn btn-sm btn-danger eliminar-imagen" data-id="{{ imagen.id_imagen }}">Eliminar</a>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Contenedor para vista previa de nuevas imágenes -->
+        <div class="col-12 mt-4">
+          <h5>Nuevas imágenes a agregar</h5>
+          <div class="row" id="vista-previa-imagenes"></div>
+        </div>
+        
+        <div class="col-12">
+          <button type="submit" class="btn btn-primary btn-azul">Guardar Cambios</button>
+          <a href="{% url 'detalle_inmueble' id_inmueble=inmueble.id_inmueble %}" class="btn btn-secondary">Cancelar</a>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% block extra_js %}
+<script>
+// Variables globales para control
+let fileInputListener = null;
+let previewContainerListener = null;
+
+// Función para mostrar/ocultar la sección de nuevas imágenes
+function toggleNewImagesSection(show) {
+  const sectionTitle = document.querySelector('#vista-previa-imagenes').previousElementSibling;
+  if (sectionTitle) {
+    sectionTitle.style.display = show ? 'block' : 'none';
+  }
+  document.getElementById('vista-previa-imagenes').style.display = show ? 'flex' : 'none';
+}
+
+// Función para limpiar eventos previos
+function cleanUpEventListeners() {
+  const fileInput = document.getElementById('id_imagenes');
+  const previewContainer = document.getElementById('vista-previa-imagenes');
+  
+  if (fileInputListener) {
+    fileInput.removeEventListener('change', fileInputListener);
+  }
+  if (previewContainerListener) {
+    previewContainer.removeEventListener('click', previewContainerListener);
+  }
+}
+
+// Función principal para inicializar
+function initializeImagePreview() {
+  cleanUpEventListeners();
+  
+  const fileInput = document.getElementById('id_imagenes');
+  const previewContainer = document.getElementById('vista-previa-imagenes');
+  
+  // Ocultar sección inicialmente
+  toggleNewImagesSection(false);
+  
+  // Función para mostrar vista previa
+  const handleFileSelect = (event) => {
+    const files = event.target.files;
+    previewContainer.innerHTML = ''; // Limpieza garantizada
+    
+    if (!files || files.length === 0) {
+      toggleNewImagesSection(false);
+      return;
+    }
+    
+    // Mostrar sección solo si hay imágenes
+    toggleNewImagesSection(true);
+    
+    Array.from(files).forEach((file, index) => {
+      if (!file.type.match('image.*')) return;
+      
+      const reader = new FileReader();
+      
+      reader.onload = (loadEvent) => {
+        const div = document.createElement('div');
+        div.className = 'col-md-3 mb-3';
+        div.innerHTML = `
+          <img src="${loadEvent.target.result}" class="img-thumbnail" style="max-height:150px;">
+          <div class="mt-2">
+            <button class="btn btn-sm btn-danger quitar-imagen" data-index="${index}">Quitar</button>
+          </div>
+        `;
+        previewContainer.appendChild(div);
+      };
+      
+      reader.readAsDataURL(file);
+    });
+  };
+  
+  // Función para quitar imágenes con confirmación
+  const handleRemoveImage = async (event) => {
+    if (!event.target.classList.contains('quitar-imagen')) return;
+    
+    event.preventDefault();
+    const index = parseInt(event.target.getAttribute('data-index'));
+    
+    // Confirmación con SweetAlert
+    const result = await Swal.fire({
+      title: '¿Quitar esta imagen?',
+      text: "La imagen no se subirá al servidor",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Sí, quitar',
+      cancelButtonText: 'Cancelar'
+    });
+    
+    if (!result.isConfirmed) return;
+    
+    const files = Array.from(fileInput.files);
+    const newFiles = files.filter((_, i) => i !== index);
+    const dataTransfer = new DataTransfer();
+    
+    newFiles.forEach(file => dataTransfer.items.add(file));
+    fileInput.files = dataTransfer.files;
+    
+    // Actualizar vista
+    const changeEvent = new Event('change');
+    fileInput.dispatchEvent(changeEvent);
+  };
+  
+  // Registrar los eventos una sola vez
+  fileInputListener = handleFileSelect;
+  previewContainerListener = handleRemoveImage;
+  
+  fileInput.addEventListener('change', fileInputListener);
+  previewContainer.addEventListener('click', previewContainerListener);
+}
+
+// Inicialización cuando el DOM está listo
+document.addEventListener('DOMContentLoaded', function() {
+  initializeImagePreview();
+  
+  // Resto de tus event listeners
+  document.querySelectorAll('.eliminar-imagen').forEach(btn => {
+    btn.addEventListener('click', eliminarImagen);
+  });
+});
+
+async function eliminarImagen(e) {
+  e.preventDefault();
+  const btn = e.currentTarget;
+  const imagenId = btn.getAttribute('data-id');
+
+  const result = await Swal.fire({
+    title: '¿Eliminar imagen?',
+    text: "Esta acción no se puede deshacer",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#3085d6',
+    confirmButtonText: 'Sí, eliminar',
+    cancelButtonText: 'Cancelar'
+  });
+
+  if (!result.isConfirmed) return;
+
+  try {
+    const response = await fetch(`/eliminar-imagen-inmueble/${imagenId}/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': '{{ csrf_token }}',
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) throw new Error('Error en la respuesta del servidor');
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      btn.closest('.col-md-3').remove();
+      await Swal.fire('Eliminada!', 'La imagen ha sido eliminada.', 'success');
+    } else {
+      throw new Error(data.message || 'Error al eliminar la imagen');
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    Swal.fire('Error', error.message || 'Ocurrió un error al eliminar la imagen', 'error');
+  }
+}
+
+</script>
+{% endblock %}
+{% endblock %}

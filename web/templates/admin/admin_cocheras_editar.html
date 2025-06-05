@@ -1,11 +1,12 @@
 {% extends 'admin/admin_base.html' %}
 {% load static %}
 
-{% block title %}Alta de Inmuebles | Panel Admin{% endblock %}
+{% block title %}Editar Cochera | Panel Admin{% endblock %}
 
 {% block admin_content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-  <h1 class="h2">Dar de Alta de Inmueble</h1>
+  <h1 class="h2">Editar Cochera: {{ cochera.nombre }}</h1>
+  <a href="{% url 'detalle_cochera' id_cochera=cochera.id_cochera %}" class="btn btn-outline-secondary">Volver</a>
 </div>
 
 <div class="card shadow-sm">
@@ -23,18 +24,27 @@
     <form method="post" enctype="multipart/form-data">
       {% csrf_token %}
       <div class="row g-3">
-        <!-- Renderizar campos individualmente -->
         <div class="col-md-4">
           {{ form.nombre.label_tag }}
           {{ form.nombre }}
           {{ form.nombre.errors }}
         </div>
         <div class="col-md-4">
+          {{ form.provincia.label_tag }}
+          {{ form.provincia }}
+          {{ form.provincia.errors }}
+        </div>
+        <div class="col-md-4">
+          {{ form.ciudad.label_tag }}
+          {{ form.ciudad }}
+          {{ form.ciudad.errors }}
+        </div>
+        <div class="col-md-6">
           {{ form.ubicacion.label_tag }}
           {{ form.ubicacion }}
           {{ form.ubicacion.errors }}
         </div>
-        <div class="col-md-4">
+        <div class="col-md-6">
           {{ form.precio_por_dia.label_tag }}
           {{ form.precio_por_dia }}
           {{ form.precio_por_dia.errors }}
@@ -45,34 +55,34 @@
           {{ form.descripcion.errors }}
         </div>
         <div class="col-md-3">
-          {{ form.cantidad_ambientes.label_tag }}
-          {{ form.cantidad_ambientes }}
-          {{ form.cantidad_ambientes.errors }}
+          {{ form.alto.label_tag }}
+          {{ form.alto }}
+          {{ form.alto.errors }}
         </div>
         <div class="col-md-3">
-          {{ form.cantidad_banios.label_tag }}
-          {{ form.cantidad_banios }}
-          {{ form.cantidad_banios.errors }}
+          {{ form.ancho.label_tag }}
+          {{ form.ancho }}
+          {{ form.ancho.errors }}
         </div>
         <div class="col-md-3">
-          {{ form.cantidad_camas.label_tag }}
-          {{ form.cantidad_camas }}
-          {{ form.cantidad_camas.errors }}
+          {{ form.largo.label_tag }}
+          {{ form.largo }}
+          {{ form.largo.errors }}
         </div>
         <div class="col-md-3">
-          {{ form.cantidad_huespedes.label_tag }}
-          {{ form.cantidad_huespedes }}
-          {{ form.cantidad_huespedes.errors }}
+          {{ form.cantidad_vehiculos.label_tag }}
+          {{ form.cantidad_vehiculos }}
+          {{ form.cantidad_vehiculos.errors }}
         </div>
         <div class="col-12">
           {{ form.politica_cancelacion.label_tag }}
           {{ form.politica_cancelacion }}
           {{ form.politica_cancelacion.errors }}
         </div>
-        <div class="col-md-4">
-          {{ form.cochera.label_tag }}
-          {{ form.cochera }}
-          {{ form.cochera.errors }}
+        <div class="col-md-4 form-check">
+          {{ form.con_techo.label_tag }}
+          {{ form.con_techo }}
+          {{ form.con_techo.errors }}
         </div>
         <div class="col-md-4">
           {{ form.estado.label_tag }}
@@ -86,10 +96,24 @@
           <img id="preview" class="img-fluid mt-3" style="max-height: 100px; display: none;">
         </div>
         <div class="col-12">
-          <button type="submit" class="btn btn-primary btn-azul">Cargar Inmueble</button>
+          <button type="submit" class="btn btn-primary btn-azul">Guardar Cambios</button>
+          <a href="{% url 'detalle_cochera' id_cochera=cochera.id_cochera %}" class="btn btn-secondary">Cancelar</a>
         </div>
       </div>
     </form>
   </div>
 </div>
+
+{% block extra_js %}
+<script>
+  document.getElementById('id_imagen')?.addEventListener('change', function(e) {
+  const preview = document.getElementById('preview');
+  const file = e.target.files[0];
+  if (file && preview) {
+    preview.src = URL.createObjectURL(file);
+    preview.style.display = 'block';
+  }
+});
+</script>
+{% endblock %}
 {% endblock %}

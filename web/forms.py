@@ -3,9 +3,10 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 
 from .models import Cochera, Comentario, Estado, Inmueble, Perfil
-from .models import Perfil, Comentario, Inmueble, Estado, Cochera
+from .models import Perfil, Comentario, Inmueble, Estado, Cochera, Ciudad, Provincia
 from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator
 
 class ComentarioForm(forms.ModelForm):
     class Meta:
@@ -29,17 +30,34 @@ class RegistroUsuarioForm(UserCreationForm):
 
     class Meta:
         model = User
-        fields = ("email", "first_name", "last_name", "password1", "password2", "dni")
+        fields = ("email", "first_name", "last_name", "password1", "password2")  # Quitar "dni" de aquí
+
+    def clean_email(self):
+        email = self.cleaned_data["email"]
+        if User.objects.filter(username=email).exists():
+            raise forms.ValidationError("Ya existe un usuario con este correo electrónico.")
+        return email
+
+    def clean_dni(self):
+        dni = self.cleaned_data["dni"]
+        if Perfil.objects.filter(dni=dni).exists():
+            raise forms.ValidationError("Este DNI ya está registrado.")
+        return dni
 
     def save(self, commit=True):
         user = super().save(commit=False)
         email = self.cleaned_data["email"]
-        user.username = email  # Asigna el email como username
+        user.username = email
         user.email = email
         if commit:
             user.save()
             dni = self.cleaned_data["dni"]
-            Perfil.objects.create(usuario=user, dni=dni)
+            # Solo crear el perfil si no existe
+            if not Perfil.objects.filter(usuario=user).exists():
+                Perfil.objects.create(usuario=user, dni=dni)
+            # Asignar grupo cliente
+            grupo_cliente, _ = Group.objects.get_or_create(name="cliente")
+            user.groups.add(grupo_cliente)
         return user
 
 class LoginForm(forms.Form):
@@ -48,15 +66,49 @@ class LoginForm(forms.Form):
 
 
 class InmuebleForm(forms.ModelForm):
-    imagen = forms.ImageField(required=False, label="Foto del inmueble")
-    estado = forms.ModelChoiceField(queryset=Estado.objects.all(), required=True, label="Estado")
+    provincia = forms.ModelChoiceField(
+        queryset=Provincia.objects.all(),
+        required=True,
+        label="Provincia",
+        widget=forms.Select(attrs={'class': 'form-select', 'id': 'id_provincia'})
+    )
+    ciudad = forms.ModelChoiceField(
+        queryset=Ciudad.objects.none(),
+        required=True,
+        label="Ciudad",
+        widget=forms.Select(attrs={'class': 'form-select', 'id': 'id_ciudad'})
+    )
+    estado = forms.ModelChoiceField(
+        queryset=Estado.objects.filter(nombre__in=["Disponible", "Ocupado", "Oculto", "En Mantenimiento"]),
+        required=True,
+        label="Estado"
+    )
+    cochera = forms.ModelChoiceField(
+        queryset=Cochera.objects.filter(estado__nombre="Disponible"),
+        required=False,
+        label="Cochera",
+        widget=forms.Select(attrs={'class': 'form-select', 'id': 'cocheraSelect'})
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if 'provincia' in self.data:
+            try:
+                provincia_id = int(self.data.get('provincia'))
+                self.fields['ciudad'].queryset = Ciudad.objects.filter(provincia_id=provincia_id).order_by('nombre')
+            except (ValueError, TypeError):
+                self.fields['ciudad'].queryset = Ciudad.objects.none()
+        elif self.instance.pk and self.instance.provincia:
+            self.fields['ciudad'].queryset = Ciudad.objects.filter(provincia=self.instance.provincia).order_by('nombre')
+        else:
+            self.fields['ciudad'].queryset = Ciudad.objects.none()
 
     class Meta:
         model = Inmueble
         fields = [
             'nombre', 'ubicacion', 'descripcion', 'cantidad_banios', 'cantidad_ambientes',
             'cantidad_camas', 'cantidad_huespedes', 'precio_por_dia', 'politica_cancelacion',
-            'cochera', 'estado'
+            'provincia', 'ciudad', 'cochera', 'estado'
         ]
         widgets = {
             'descripcion': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
@@ -72,16 +124,58 @@ class InmuebleForm(forms.ModelForm):
             'estado': forms.Select(attrs={'class': 'form-select'}),
         }
 
+    # Esto pone el estado de la cochera a "Oculto" cuando se guarda el inmueble
+    def save(self, commit=True):
+        inmueble = super().save(commit=False)
+        cochera = self.cleaned_data.get('cochera')
+        if cochera:
+            # Cambiar el estado de la cochera a "Oculto"
+            estado_oculto = Estado.objects.get(nombre="Oculto")
+            cochera.estado = estado_oculto
+            cochera.save()
+        if commit:
+            inmueble.save()
+            self.save_m2m()
+        return inmueble
+
 class CocheraForm(forms.ModelForm):
-    imagen = forms.ImageField(required=False, label="Foto de la cochera")
-    estado = forms.ModelChoiceField(queryset=Estado.objects.all(), required=True, label="Estado")
+    provincia = forms.ModelChoiceField(
+        queryset=Provincia.objects.all(),
+        required=True,
+        label="Provincia",
+        widget=forms.Select(attrs={'class': 'form-select', 'id': 'id_provincia'})
+    )
+    ciudad = forms.ModelChoiceField(
+        queryset=Ciudad.objects.none(),
+        required=True,
+        label="Ciudad",
+        widget=forms.Select(attrs={'class': 'form-select', 'id': 'id_ciudad'})
+    )
+    estado = forms.ModelChoiceField(
+        queryset=Estado.objects.filter(nombre__in=["Disponible", "Ocupado", "Oculto", "En Mantenimiento"]),
+        required=True,
+        label="Estado"
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if 'provincia' in self.data:
+            try:
+                provincia_id = int(self.data.get('provincia'))
+                self.fields['ciudad'].queryset = Ciudad.objects.filter(provincia_id=provincia_id).order_by('nombre')
+            except (ValueError, TypeError):
+                self.fields['ciudad'].queryset = Ciudad.objects.none()
+        elif self.instance.pk and self.instance.provincia:
+            self.fields['ciudad'].queryset = Ciudad.objects.filter(provincia=self.instance.provincia).order_by('nombre')
+        else:
+            self.fields['ciudad'].queryset = Ciudad.objects.none()
 
     class Meta:
         model = Cochera
         fields = [
             'nombre', 'ubicacion', 'descripcion', 'alto', 'ancho', 'largo',
             'cantidad_vehiculos', 'con_techo', 'precio_por_dia', 'politica_cancelacion',
-            'estado'
+            'provincia', 'ciudad', 'estado'
         ]
         widgets = {
             'nombre': forms.TextInput(attrs={'class': 'form-control'}),
@@ -102,68 +196,62 @@ class AdminLoginForm(forms.Form):
     email = forms.EmailField(label='Email')
     password = forms.CharField(widget=forms.PasswordInput, label='Contraseña')
 
-# para el registro de cliente
-class ClienteCreationForm(forms.ModelForm):
+class ClienteCreationForm(forms.Form):
+    first_name = forms.CharField(
+        label="Nombre",
+        max_length=30,
+        validators=[
+            RegexValidator(
+                regex=r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$',
+                message="El nombre solo puede contener letras y espacios."
+            )
+        ]
+    )
+    last_name = forms.CharField(
+        label="Apellido",
+        max_length=30,
+        validators=[
+            RegexValidator(
+                regex=r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$',
+                message="El apellido solo puede contener letras y espacios."
+            )
+        ]
+    )
     email = forms.EmailField(label="Correo electrónico")
-    first_name = forms.CharField(label="Nombre")
-    last_name = forms.CharField(label="Apellido")
-    password = forms.CharField(widget=forms.PasswordInput, label="Contraseña")
-    dni = forms.CharField(label="DNI")
+    password = forms.CharField(
+        widget=forms.PasswordInput,
+        label="Contraseña",
+        min_length=9,
+        help_text="La contraseña debe tener al menos 9 caracteres."
+    )
+    dni = forms.CharField(
+        label="DNI",
+        max_length=20,
+        validators=[
+            RegexValidator(
+                regex=r'^\d{7,8}$',
+                message="El DNI debe contener 7 u 8 dígitos numéricos."
+            )
+        ]
+    )
 
-    class Meta:
-        model = Perfil
-        fields = ["dni"]
-
-    def save(self, commit=True):
+    def clean_email(self):
         email = self.cleaned_data["email"]
-        password = self.cleaned_data["password"]
-        first_name = self.cleaned_data["first_name"]
-        last_name = self.cleaned_data["last_name"]
+        if User.objects.filter(username=email).exists():
+            raise forms.ValidationError("Ya existe un usuario con este correo electrónico.")
+        return email
 
-        # Crear el usuario
-        user = User.objects.create_user(
-            username=email,
-            email=email,
-            password=password,
-            first_name=first_name,
-            last_name=last_name,
-        )
-
-        # Agregar al grupo "cliente"
-        from django.contrib.auth.models import Group
-        grupo_cliente, _ = Group.objects.get_or_create(name="cliente")
-        user.groups.add(grupo_cliente)
-
-        # Crear el perfil
-        perfil = super().save(commit=False)
-        perfil.usuario = user
-        if commit:
-            perfil.save()
-        return perfil
-
-#para el registro de empleado
-class ClienteCreationForm(forms.ModelForm):
-    email = forms.EmailField(label="Correo electrónico")
-    password = forms.CharField(widget=forms.PasswordInput, label="Contraseña")
-    first_name = forms.CharField(label="Nombre")
-    last_name = forms.CharField(label="Apellido")
-    dni = forms.CharField(label="DNI")
-
-    class Meta:
-        model = User
-        fields = ["email", "password", "first_name", "last_name"]
+    def clean_dni(self):
+        dni = self.cleaned_data["dni"]
+        if Perfil.objects.filter(dni=dni).exists():
+            raise forms.ValidationError("Ya existe un usuario con este DNI.")
+        return dni
 
     def clean_password(self):
         password = self.cleaned_data.get("password")
         if len(password) < 9:
-            raise forms.ValidationError("La contraseña debe tener más de 8 caracteres.")
+            raise forms.ValidationError("La contraseña debe tener al menos 9 caracteres.")
         return password
-
-    def clean_dni(self):
-        dni = self.cleaned_data.get("dni")
-        if Perfil.objects.filter(dni=dni).exists():
-            raise forms.ValidationError("Este DNI ya está registrado.")
-        return dni
 
     def save(self, commit=True):
         user = User(
@@ -175,18 +263,14 @@ class ClienteCreationForm(forms.ModelForm):
         user.set_password(self.cleaned_data["password"])
         if commit:
             user.save()
-
-            # Asignar grupo cliente
             grupo_cliente, _ = Group.objects.get_or_create(name="cliente")
             user.groups.add(grupo_cliente)
-
-            # Crear perfil
             Perfil.objects.create(
                 usuario=user,
                 dni=self.cleaned_data["dni"]
             )
         return user
-
+    
 class EmpleadoCreationForm(forms.Form):
     first_name = forms.CharField(max_length=30)
     last_name = forms.CharField(max_length=30)
@@ -199,12 +283,6 @@ class EmpleadoCreationForm(forms.Form):
         if User.objects.filter(username=email).exists():
             raise ValidationError("Ya existe un usuario con este email.")
         return email
-
-    def clean_password(self):
-        password = self.cleaned_data.get("password")
-        if len(password) < 9:
-            raise forms.ValidationError("La contraseña debe tener más de 8 caracteres.")
-        return password
 
     def clean_dni(self):
         dni = self.cleaned_data["dni"]
@@ -228,21 +306,46 @@ class EmpleadoCreationForm(forms.Form):
         return user
 
 class EmpleadoAdminCreationForm(forms.Form):
-    first_name = forms.CharField(label="Nombre", max_length=30)
-    last_name = forms.CharField(label="Apellido", max_length=30)
+    first_name = forms.CharField(
+        label="Nombre",
+        max_length=30,
+        validators=[
+            RegexValidator(
+                regex=r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$',
+                message="El nombre solo puede contener letras y espacios."
+            )
+        ]
+    )
+    last_name = forms.CharField(
+        label="Apellido",
+        max_length=30,
+        validators=[
+            RegexValidator(
+                regex=r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$',
+                message="El apellido solo puede contener letras y espacios."
+            )
+        ]
+    )
     email = forms.EmailField(label="Correo electrónico")
-    dni = forms.CharField(label="DNI", max_length=20)
+    dni = forms.CharField(
+        label="DNI",
+        max_length=20,
+        validators=[
+            RegexValidator(
+                regex=r'^\d{7,8}$',  # Para DNI argentino; ajusta según el formato de tu país
+                message="El DNI debe contener 7 u 8 dígitos numéricos."
+            )
+        ]
+    )
 
     def clean_email(self):
-        email = self.cleaned_data["email"]
-        from django.contrib.auth.models import User
+        email = self.cleaned_data['email']
         if User.objects.filter(username=email).exists():
-            raise forms.ValidationError("Ya existe un usuario con este email.")
+            raise forms.ValidationError("Ya existe un usuario con este correo electrónico.")
         return email
 
     def clean_dni(self):
-        dni = self.cleaned_data["dni"]
-        from .models import Perfil
+        dni = self.cleaned_data['dni']
         if Perfil.objects.filter(dni=dni).exists():
-            raise forms.ValidationError("Este DNI ya está registrado.")
+            raise forms.ValidationError("Ya existe un usuario con este DNI.")
         return dni

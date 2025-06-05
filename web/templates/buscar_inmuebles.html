@@ -12,7 +12,7 @@
 <main class="container-fluid">
   <div class="container-wrapper row">
     <!-- Filtros -->
-    <aside class="filtros col-md-2 sidebar bg-light p-3 sticky-top">
+    <aside class="filtros col-md-2 sidebar bg-light sticky-top">
         <form>
           <div class="mb-3">
             <label class="form-label">Precio por dia</label>
@@ -73,40 +73,34 @@
     </aside>
 
     <!-- Lista de Inmuebles -->
-    <section class="inmuebles col-md-6 p-3">
+    <section class="lista-resultados col-md-6 p-3">
       <div id="lista-inmuebles" class="row">
         {% for inmueble in inmuebles %}
         <div class="col-12 col-md-6 col-lg-3 mb-4">
-          <!-- Card del inmueble -->
           <a href="{% url 'detalle_inmueble' inmueble.id_inmueble %}" class="text-decoration-none">
-            <div class="inmueble card property-card border-0 shadow-sm hover-shadow transition-all">
-              <!-- Imagen-->
+            <div class="propiedad-card card border-0 shadow-sm">
               {% if inmueble.imagen %}
-                  <img src="{{ inmueble.imagen.url }}" class="inmueble__image card-img-top rounded-top" alt="{{ inmueble.nombre }}">
+                <img src="{{ inmueble.imagen.url }}" class="propiedad-imagen card-img-top" alt="{{ inmueble.nombre }}">
               {% else %}
-                  <img src="{% static 'img/default-property.jpg' %}" class="inmueble__image card-img-top rounded-top" alt="Imagen por defecto">
+                <img src="{% static 'img/default-property.jpg' %}" class="propiedad-imagen card-img-top" alt="Imagen por defecto">
               {% endif %}
-              <!-- Información -->
-              <div class="inmueble__body card-body d-flex flex-column">
-                  <div class="d-flex justify-content-between align-items-start mb-2">
-                      <h5 class="inmueble__nombre card-title mb-0 text-truncate">{{ inmueble.nombre }}</h5>
-                  </div>
-                  <div class="inmueble__info">
-                      <p class="inmueble__precio card-text mb-1">
-                          <i class="bi bi-cash-coin"></i> ${{ inmueble.precio_por_dia|floatformat:"0" }}/día
-                      </p>
-                      <p class="inmueble__ubicacion card-text">
-                          <i class="bi bi-geo-alt-fill"></i> {{ inmueble.ubicacion }}
-                      </p>
-                  </div>   
+              <div class="propiedad-body card-body">
+                <h5 class="propiedad-nombre card-title">{{ inmueble.nombre }}</h5>
+                <div class="propiedad-info">
+                  <p class="propiedad-precio card-text">
+                    <i class="bi bi-cash-coin"></i> ${{ inmueble.precio_por_dia|floatformat:"0" }}/día
+                  </p>
+                  <p class="propiedad-ubicacion card-text">
+                    <i class="bi bi-geo-alt-fill"></i> {{ inmueble.ubicacion }}
+                  </p>
+                </div>
               </div>
             </div>
           </a>
-
         </div>
         {% empty %}
         <div class="col-12">
-          <div class="alert alert-info inmueble__empty" role="alert">
+          <div class="mensaje-vacio alert alert-info" role="alert">
             <i class="bi bi-info-circle"></i> No se encontraron inmuebles disponibles.
           </div>
         </div>
@@ -115,8 +109,8 @@
     </section>
 
     <!-- Mapa -->
-    <aside class="mapa col-md-4 sticky-top">
-      <div class="mapa__content" id="map" role="region" aria-label="Mapa de Inmuebles disponibles"></div>
+    <aside class="mapa-contenedor col-md-4">
+      <div class="mapa-content" id="map" role="region" aria-label="Mapa de Inmuebles disponibles"></div>
     </aside>
   </div>
 </main>

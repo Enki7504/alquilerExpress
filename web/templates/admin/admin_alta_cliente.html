@@ -2,16 +2,16 @@
 {% load static %}
 {% load widget_tweaks %}
 
-{% block title %}Registro de Empleados | Panel Admin{% endblock %}
+{% block title %}Registro de Clientes | Panel Admin{% endblock %}
 
 {% block admin_content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-  <h1 class="h2">Registrar Empleado</h1>
+  <h1 class="h2">Registrar Cliente</h1>
 </div>
 
 <div class="card shadow-sm">
   <div class="card-body">
-    <form method="post" id="empleadoForm" action="{% url 'admin_alta_empleados' %}">
+    <form method="post" id="clienteForm" action="{% url 'admin_alta_cliente' %}">
       {% csrf_token %}
       <div class="mb-3">
         <label for="id_first_name" class="form-label">Nombre</label>
@@ -33,7 +33,12 @@
         {{ form.email|add_class:"form-control" }}
         <div class="text-danger">{{ form.email.errors }}</div>
       </div>
-      <button type="submit" class="btn btn-primary w-100 btn-azul btn-submit">Registrar Empleado</button>
+      <div class="mb-3">
+        <label for="id_password" class="form-label">Contraseña</label>
+        {{ form.password|add_class:"form-control" }}
+        <div class="text-danger">{{ form.password.errors }}</div>
+      </div>
+      <button type="submit" class="btn btn-primary w-100 btn-azul btn-submit">Registrar Cliente</button>
     </form>
   </div>
 </div>
@@ -41,12 +46,11 @@
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-document.getElementById('empleadoForm').addEventListener('submit', function(e) {
+document.getElementById('clienteForm').addEventListener('submit', function(e) {
     e.preventDefault();
     const form = e.target;
     const formData = new FormData(form);
 
-    // Limpiar errores previos (solo los generados por JS, no los de Django render)
     document.querySelectorAll('.error-message').forEach(el => el.remove());
 
     fetch(form.action, {
@@ -68,12 +72,10 @@ document.getElementById('empleadoForm').addEventListener('submit', function(e) {
         return response.json();
     })
     .then(data => {
-        // Mostrar errores de formulario debajo de los campos
         if(data.status === 'form_errors') {
             Object.entries(data.errors).forEach(([field, error]) => {
                 const input = document.querySelector(`[name="${field}"]`);
                 if(input) {
-                    // Evita duplicados
                     if (!input.parentNode.querySelector('.error-message')) {
                         const errorElement = document.createElement('div');
                         errorElement.className = 'error-message text-danger mt-1 small';
@@ -84,7 +86,6 @@ document.getElementById('empleadoForm').addEventListener('submit', function(e) {
             });
         }
 
-        // Mostrar SweetAlert toast arriba a la derecha
         if(data.message) {
             Swal.fire({
                 position: 'top-end',
@@ -96,7 +97,6 @@ document.getElementById('empleadoForm').addEventListener('submit', function(e) {
                 timerProgressBar: true
             });
 
-            // Si fue éxito, resetea el formulario y limpia errores
             if(data.status === 'success') {
                 form.reset();
                 document.querySelectorAll('.error-message').forEach(el => el.remove());
@@ -104,14 +104,12 @@ document.getElementById('empleadoForm').addEventListener('submit', function(e) {
         }
     })
     .catch(error => {
-        // Si falla el AJAX, enviar el formulario normalmente
         console.error("Error en AJAX, enviando formulario tradicionalmente:", error);
         form.submit();
     });
 });
 
-// Para limpiar errores al modificar un campo
-document.querySelectorAll('#empleadoForm input').forEach(input => {
+document.querySelectorAll('#clienteForm input').forEach(input => {
     input.addEventListener('input', function() {
         const errorElement = this.parentNode.querySelector('.error-message');
         if(errorElement) {
