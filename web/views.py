@@ -36,6 +36,7 @@ from .models import (
     Inmueble,
     InmuebleImagen,
     InmuebleEstado,
+    CocheraEstado,
     CocheraImagen,
     Notificacion,
     Resenia,
@@ -221,7 +222,6 @@ def verify_admin_link(request, uidb64, token):
     else:
         messages.error(request, "El enlace de verificación es inválido o ha expirado.")
         return render(request, 'link_invalid.html')
-
 
 ################################################################################################################
 # --- Vistas de Búsqueda y Detalle de Inmuebles/Cocheras ---
@@ -704,9 +704,8 @@ def admin_inmuebles_historial(request, id_inmueble):
     Muestra el historial de estados de un inmueble específico.
     """
     inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
-    # Eliminar referencia a InmuebleCochera
     historial = InmuebleEstado.objects.filter(inmueble=inmueble).order_by('-fecha_inicio')
-    return render(request, 'admin/admin_inmueble_historial.html', {'inmueble': inmueble, 'historial': historial})
+    return render(request, 'admin/admin_inmuebles_historial.html', {'inmueble': inmueble, 'historial': historial})
 
 @login_required
 @user_passes_test(is_admin_or_empleado)
@@ -826,7 +825,7 @@ def admin_cocheras_historial(request, id_cochera):
     Muestra el historial de estados de una cochera específica.
     """
     cochera = get_object_or_404(Cochera, id_cochera=id_cochera)
-    historial = InmuebleEstado.objects.filter(inmueble_cochera__cochera=cochera).order_by('-fecha_inicio') if InmuebleCochera.objects.filter(cochera=cochera).exists() else []
+    historial = CocheraEstado.objects.filter(cochera=cochera).order_by('-fecha_inicio')
     return render(request, 'admin/admin_cocheras_historial.html', {'cochera': cochera, 'historial': historial})
 
 @login_required
