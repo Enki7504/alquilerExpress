@@ -929,6 +929,7 @@ def admin_estadisticas_inmuebles(request):
 # --- Vistas de Gestión de Reservas ---
 ################################################################################################################
 
+@login_required
 def crear_reserva(request, id_inmueble):
     """
     Permite a los usuarios crear una reserva para un inmueble.
@@ -984,6 +985,7 @@ def crear_reserva(request, id_inmueble):
     # Si no es POST, redirigir al detalle del inmueble
     return redirect('detalle_inmueble', id_inmueble=id_inmueble)
 
+@login_required
 def crear_reserva_cochera(request, id_cochera):
     """
     Permite a los usuarios crear una reserva para una cochera.
@@ -1074,6 +1076,13 @@ def cambiar_estado_reserva(request, id_reserva):
             
             reserva.estado = estado
             reserva.save()
+
+            # Registrar en el historial (reservaEstado)
+            ReservaEstado.objects.create(
+                reserva=reserva,
+                estado=estado,
+                fecha=timezone.now()
+            )            
             
             # Opcional: Registrar en historial (si tienes un modelo para ello)
             # HistorialEstadoReserva.objects.create(
