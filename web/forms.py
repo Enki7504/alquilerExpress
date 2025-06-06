@@ -406,3 +406,47 @@ class ClienteAdminCreationForm(forms.Form):
         if Perfil.objects.filter(dni=dni).exists():
             raise forms.ValidationError("Ya existe un usuario con este DNI.")
         return dni
+
+class ChangePasswordForm(forms.Form):
+    current_password = forms.CharField(
+        label="Contraseña actual",
+        widget=forms.PasswordInput(attrs={'class': 'form-control'}),
+        required=True
+    )
+    new_password1 = forms.CharField(
+        label="Nueva contraseña",
+        widget=forms.PasswordInput(attrs={'class': 'form-control'}),
+        required=True,
+        min_length=8
+    )
+    new_password2 = forms.CharField(
+        label="Repetir nueva contraseña",
+        widget=forms.PasswordInput(attrs={'class': 'form-control'}),
+        required=True,
+        min_length=8
+    )
+
+    def __init__(self, user, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+
+    def clean_current_password(self):
+        current_password = self.cleaned_data.get("current_password")
+        if not self.user.check_password(current_password):
+            raise forms.ValidationError("La contraseña actual es incorrecta.")
+        return current_password
+
+    def clean(self):
+        cleaned_data = super().clean()
+        new_password1 = cleaned_data.get("new_password1")
+        new_password2 = cleaned_data.get("new_password2")
+        current_password = cleaned_data.get("current_password")
+
+        if new_password1 and new_password2:
+            if new_password1 != new_password2:
+                raise forms.ValidationError("Las contraseñas no coinciden.")
+            if len(new_password1) < 8:
+                raise forms.ValidationError("La contraseña tiene menos de 8 caracteres.")
+            if current_password and new_password1 == current_password:
+                raise forms.ValidationError("La contraseña debe ser diferente a la actual.")
+        return cleaned_data

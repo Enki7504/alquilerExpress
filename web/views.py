@@ -31,6 +31,7 @@ from .forms import (
     EmpleadoCreationForm,
     EmpleadoAdminCreationForm,
     ClienteAdminCreationForm,
+    ChangePasswordForm,
 )
 
 # Importaciones de modelos locales
@@ -1304,3 +1305,20 @@ def cargar_ciudades(request):
     ciudades = Ciudad.objects.filter(provincia_id=provincia_id).order_by('nombre')
     ciudades_list = [{'id': ciudad.id, 'nombre': ciudad.nombre} for ciudad in ciudades]
     return JsonResponse({'ciudades': ciudades_list})
+
+@login_required
+def cambiar_contrasena(request):
+    if request.method == "POST":
+        form = ChangePasswordForm(request.user, request.POST)
+        if form.is_valid():
+            new_password = form.cleaned_data["new_password1"]
+            request.user.set_password(new_password)
+            request.user.save()
+            messages.success(request, "La contraseña se cambió exitosamente. Vuelve a iniciar sesión.")
+            return redirect('login')
+        else:
+            # Los errores se mostrarán en el template
+            pass
+    else:
+        form = ChangePasswordForm(request.user)
+    return render(request, "cambiar_contrasena.html", {"form": form})

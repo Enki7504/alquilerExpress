@@ -30,7 +30,7 @@
       <!-- Botoncitos -->
       <div class="navbar__buttons d-flex align-items-center ms-3">
         {% if user.is_authenticated %}
-          <!-- Notificaciones -->
+          <!-- Notificaciones (puede estar vacío para clientes) -->
           <div class="dropdown me-2">
             <button class="btn btn-outline-secondary position-relative dropdown-toggle" 
                     type="button" 
@@ -70,12 +70,12 @@
                 {% endif %}
             </ul>
           </div>
-          
           {% if user.is_staff or user|has_group:"empleado" %}
             <a href="{% url 'admin_panel' %}" class="btn btn-outline-primary me-2">
                 <i class="bi bi-speedometer2"></i> Panel
             </a>
           {% endif %}
+          <a href="{% url 'cambiar_contrasena' %}" class="btn btn-outline-secondary me-2">Cambiar contraseña</a>
           <form action="{% url 'logout' %}" method="post" class="d-inline">
             {% csrf_token %}
             <button type="submit" class="btn btn-outline-secondary me-2">Cerrar sesión</button>

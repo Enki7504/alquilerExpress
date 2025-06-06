@@ -64,6 +64,9 @@ urlpatterns = [
     path('notificaciones/eliminar/<int:notificacion_id>/', views.eliminar_notificacion, name='eliminar_notificacion'),
     path('notificaciones/marcar-todas-leidas/', views.marcar_todas_leidas, name='marcar_todas_leidas'),
 
+    # Cambiar contraseña
+    path('cambiar-contrasena/', views.cambiar_contrasena, name='cambiar_contrasena'),
+
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 
