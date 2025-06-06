@@ -1078,11 +1078,13 @@ def cambiar_estado_reserva(request, id_reserva):
             reserva.save()
 
             # Registrar en el historial (reservaEstado)
+            """
             ReservaEstado.objects.create(
                 reserva=reserva,
                 estado=estado,
                 fecha=timezone.now()
-            )            
+            )         
+            """
             
             # Opcional: Registrar en historial (si tienes un modelo para ello)
             # HistorialEstadoReserva.objects.create(
