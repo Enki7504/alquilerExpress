@@ -44,6 +44,18 @@
             <a href="{% url 'admin_inmuebles_reservas' inmueble.id_inmueble %}" class="btn btn-sm btn-primary">Reservas</a>
             <a href="{% url 'admin_inmuebles_historial' inmueble.id_inmueble %}" class="btn btn-sm btn-secondary">Historial</a>
             <a href="#" class="btn btn-sm btn-danger eliminar-inmueble" data-id="{{ inmueble.id_inmueble }}">Eliminar</a>
+            <!-- Select de empleado asignado -->
+            <form method="post" action="{% url 'cambiar_empleado_inmueble' inmueble.id_inmueble %}" style="display:inline;">
+              {% csrf_token %}
+              <select name="empleado" class="form-select form-select-sm d-inline w-auto align-middle" onchange="this.form.submit()">
+                <option value="">Sin asignar</option>
+                {% for empleado in empleados %}
+                  <option value="{{ empleado.id_perfil }}" {% if inmueble.empleado and inmueble.empleado.id_perfil == empleado.id_perfil %}selected{% endif %}>
+                    {{ empleado.usuario.get_full_name|default:empleado.usuario.username }}
+                  </option>
+                {% endfor %}
+              </select>
+            </form>
           </td>
         </tr>
         {% empty %}

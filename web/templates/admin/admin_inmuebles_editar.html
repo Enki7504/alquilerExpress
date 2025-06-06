@@ -81,6 +81,11 @@
           {{ form.estado.errors }}
         </div>
         <div class="col-md-4">
+            {{ form.empleado.label_tag }}
+            {{ form.empleado }}
+            {{ form.empleado.errors }}
+        </div>
+        <div class="col-md-12">
           <label for="id_imagenes" class="form-label">Añadir más fotos</label>
           <input type="file" name="imagenes" id="id_imagenes" class="form-control" multiple accept="image/*">
         </div>

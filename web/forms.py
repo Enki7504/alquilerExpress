@@ -89,6 +89,12 @@ class InmuebleForm(forms.ModelForm):
         label="Cochera",
         widget=forms.Select(attrs={'class': 'form-select', 'id': 'cocheraSelect'})
     )
+    empleado = forms.ModelChoiceField(
+        queryset=Perfil.objects.filter(usuario__groups__name="empleado"),
+        required=False,
+        label="Empleado asignado",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -108,7 +114,7 @@ class InmuebleForm(forms.ModelForm):
         fields = [
             'nombre', 'ubicacion', 'descripcion', 'cantidad_banios', 'cantidad_ambientes',
             'cantidad_camas', 'cantidad_huespedes', 'precio_por_dia', 'politica_cancelacion',
-            'provincia', 'ciudad', 'cochera', 'estado'
+            'provincia', 'ciudad', 'cochera', 'estado', 'empleado'  # <-- AGREGADO AQUÍ
         ]
         widgets = {
             'descripcion': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
@@ -156,6 +162,12 @@ class CocheraForm(forms.ModelForm):
         required=True,
         label="Estado"
     )
+    empleado = forms.ModelChoiceField(
+        queryset=Perfil.objects.filter(usuario__groups__name="empleado"),
+        required=False,
+        label="Empleado asignado",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -175,7 +187,7 @@ class CocheraForm(forms.ModelForm):
         fields = [
             'nombre', 'ubicacion', 'descripcion', 'alto', 'ancho', 'largo',
             'cantidad_vehiculos', 'con_techo', 'precio_por_dia', 'politica_cancelacion',
-            'provincia', 'ciudad', 'estado'
+            'provincia', 'ciudad', 'estado', 'empleado'  # <-- AGREGADO AQUÍ
         ]
         widgets = {
             'nombre': forms.TextInput(attrs={'class': 'form-control'}),
