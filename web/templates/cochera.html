@@ -107,7 +107,7 @@
               <span class="h3 text-primary">${{ cochera.precio_por_dia|floatformat:"0" }}</span>
               <span class="text-muted ms-1">/ noche</span>
             </div>
-            <form method="post" action="{% url 'crear_reserva' id_inmueble=inmueble.id_inmueble %}">
+            <form method="post" action="{% url 'crear_reserva_cochera' id_cochera=cochera.id_cochera %}">
               {% csrf_token %}
               <div class="mb-3">
                 <label for="fecha_inicio" class="form-label">Fecha de llegada</label>
