@@ -363,33 +363,20 @@ def admin_alta_empleados(request):
         form = EmpleadoAdminCreationForm(request.POST)
         if form.is_valid():
             data = form.cleaned_data
-            try:
-                with transaction.atomic():
-                    # Crear usuario
-                    password = generar_contraseña_segura()
-                    user = User.objects.create_user(
-                        username=data["email"],
-                        email=data["email"],
-                        password=password,
-                        first_name=data["first_name"].title(),
-                        last_name=data["last_name"].title(),
-                    )
-                    # Asignar grupo "empleado"
-                    grupo_empleado, _ = Group.objects.get_or_create(name="empleado")
-                    user.groups.add(grupo_empleado)
-                    # Crear perfil
-                    Perfil.objects.create(usuario=user, dni=data["dni"])
-            except IntegrityError as e:
-                # Error de integridad: usuario o perfil duplicado
-                return _respuesta_empleado(
-                    request,
-                    status='error',
-                    message=f'Error al crear empleado: {str(e)}. Verifica email/DNI.',
-                    icon='error',
-                    form=form
-                )
-
-            # Enviar correo fuera de la transacción
+            # Generar contraseña aleatoria segura
+            import secrets, string
+            password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(10))
+            user = User.objects.create_user(
+                username=data["email"],
+                email=data["email"],
+                password=password,
+                first_name=data["first_name"].title(),
+                last_name=data["last_name"].title(),
+            )
+            grupo_empleado, _ = Group.objects.get_or_create(name="empleado")
+            user.groups.add(grupo_empleado)
+            Perfil.objects.create(usuario=user, dni=data["dni"])
+            # Enviar mail con la contraseña
             try:
                 send_mail(
                     "Bienvenido a AlquilerExpress - Acceso de Empleado",
@@ -402,33 +389,36 @@ def admin_alta_empleados(request):
                     [user.email],
                     fail_silently=False,
                 )
-                return _respuesta_empleado(
-                    request,
-                    status='success',
-                    message=f'Empleado registrado y correo enviado a {user.email}',
-                    icon='success'
-                )
+                message = f"Empleado registrado y correo enviado a {user.email}."
+                icon = "success"
+                status = "success"
             except Exception as e:
-                # Usuario creado, pero error al enviar correo
-                return _respuesta_empleado(
-                    request,
-                    status='warning',
-                    message=f'Empleado creado pero error enviando correo: {e}. Contraseña: {password}',
-                    icon='warning'
-                )
+                message = f"Empleado creado, pero error enviando el correo: {e}"
+                icon = "warning"
+                status = "success"
+            # AJAX
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    "status": status,
+                    "message": message,
+                    "icon": icon,
+                })
+            # Tradicional
+            messages.success(request, message)
+            return redirect('admin_alta_empleados')
         else:
             # Errores de formulario
             errors = {field: error[0] for field, error in form.errors.items()}
-            return _respuesta_empleado(
-                request,
-                status='form_errors',
-                message='Corrige los errores en el formulario',
-                icon='error',
-                errors=errors,
-                form=form
-            )
-    # GET request
-    form = EmpleadoAdminCreationForm()
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    "status": "form_errors",
+                    "errors": errors,
+                    "icon": "error",
+                    "message": "Corrige los errores del formulario."
+                })
+            messages.error(request, "Corrige los errores del formulario.")
+    else:
+        form = EmpleadoAdminCreationForm()
     return render(request, 'admin/admin_alta_empleados.html', {'form': form})
 
 @login_required
