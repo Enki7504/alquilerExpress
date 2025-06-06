@@ -52,6 +52,8 @@ class Cochera(models.Model):
     politica_cancelacion = models.TextField()
     fecha_publicacion = models.DateField()
     estado = models.ForeignKey(Estado, on_delete=models.SET_NULL, null=True)
+    # se le asigna un perfil de empleado que lo administre, puede ser null si no hay
+    empleado = models.ForeignKey(Perfil, null=True, blank=True, on_delete=models.SET_NULL)
 
     def __str__(self):
         return self.nombre
@@ -72,6 +74,8 @@ class Inmueble(models.Model):
     fecha_publicacion = models.DateField()
     cochera = models.ForeignKey(Cochera, null=True, blank=True, on_delete=models.SET_NULL)
     estado = models.ForeignKey(Estado, on_delete=models.SET_NULL, null=True)
+    # se le asigna un perfil de empleado que lo administre, puede ser null si no hay
+    empleado = models.ForeignKey(Perfil, null=True, blank=True, on_delete=models.SET_NULL)
 
     def __str__(self):
         return self.nombre
@@ -85,6 +89,7 @@ class Reserva(models.Model):
     inmueble = models.ForeignKey(Inmueble, null=True, blank=True, on_delete=models.SET_NULL)
     cochera = models.ForeignKey(Cochera, null=True, blank=True, on_delete=models.SET_NULL)
     descripcion = models.TextField()
+    
 
     def __str__(self):
         return f"Reserva #{self.id_reserva} - Estado: {self.estado.nombre if self.estado else 'Sin estado'}"

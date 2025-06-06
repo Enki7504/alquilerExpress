@@ -601,10 +601,27 @@ def admin_inmuebles(request):
             Q(nombre__icontains=query) | Q(descripcion__icontains=query)
         )
     
+    empleados = Perfil.objects.filter(usuario__groups__name="empleado")
     return render(request, 'admin/admin_inmuebles.html', {
         'inmuebles': inmuebles,
-        'query': query
+        'query': query,
+        'empleados': empleados,
     })
+
+@login_required
+@user_passes_test(is_admin)
+def cambiar_empleado_inmueble(request, id_inmueble):
+    if request.method == "POST":
+        inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
+        empleado_id = request.POST.get("empleado")
+        if empleado_id:
+            empleado = Perfil.objects.get(id_perfil=empleado_id)
+            inmueble.empleado = empleado
+        else:
+            inmueble.empleado = None
+        inmueble.save()
+        messages.success(request, "Empleado asignado actualizado.")
+    return redirect('admin_inmuebles')
 
 @login_required
 @user_passes_test(is_admin_or_empleado)
@@ -620,10 +637,27 @@ def admin_cocheras(request):
         cocheras = cocheras.filter(
             Q(nombre__icontains=query) | Q(descripcion__icontains=query))
     
+    empleados = Perfil.objects.filter(usuario__groups__name="empleado")
     return render(request, 'admin/admin_cocheras.html', {
         'cocheras': cocheras,
-        'query': query
+        'query': query,
+        'empleados': empleados,
     })
+
+@login_required
+@user_passes_test(is_admin)
+def cambiar_empleado_cochera(request, id_cochera):
+    if request.method == "POST":
+        cochera = get_object_or_404(Cochera, id_cochera=id_cochera)
+        empleado_id = request.POST.get("empleado")
+        if empleado_id:
+            empleado = Perfil.objects.get(id_perfil=empleado_id)
+            cochera.empleado = empleado
+        else:
+            cochera.empleado = None
+        cochera.save()
+        messages.success(request, "Empleado asignado actualizado.")
+    return redirect('admin_cocheras')
 
 ################################################################################################################
 # --- Vistas de Gestión de Inmuebles ---
