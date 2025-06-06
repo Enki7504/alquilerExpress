@@ -133,6 +133,16 @@
                 <button type="submit" class="btn btn-primary btn-azul w-100 py-2">
                   <i class="bi bi-calendar-check me-2"></i> Reservar ahora
                 </button>
+                {% if messages %}
+                  <div class="container mt-3">
+                    {% for message in messages %}
+                      <div class="alert alert-{% if message.tags == 'error' %}warning{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+                      </div>
+                    {% endfor %}
+                  </div>
+                {% endif %}
               </form>
             {% endif %}
           </div>
