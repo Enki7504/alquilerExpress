@@ -1,9 +1,12 @@
 {% extends 'admin/admin_base.html' %}
 {% load static %}
 
+{% block title %}Reservas del Inmueble | Admin{% endblock %}
+
 {% block admin_content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-  <h1 class="h2">Reservas de: {{ inmueble.nombre }}</h1>
+  <h1 class="h2">Reservas del Inmueble: {{ inmueble.nombre }}</h1>
+  <a href="{% url 'admin_inmuebles' %}" class="btn btn-outline-secondary">Volver</a>
 </div>
 
 <div class="card shadow-sm mb-4">
@@ -25,8 +28,12 @@
           <tr>
             <td>{{ reserva.id_reserva }}</td>
             <td>
-              {% with cliente=reserva.clienteinmueble_set.first.cliente %}
-                {{ cliente.usuario.get_full_name|default:cliente.usuario.username }}
+              {% with relacion=reserva.clienteinmueble_set.first %}
+                {% if relacion and relacion.cliente %}
+                  {{ relacion.cliente.usuario.get_full_name|default:relacion.cliente.usuario.username }}
+                {% else %}
+                  Cliente no disponible
+                {% endif %}
               {% endwith %}
             </td>
             <td>{{ reserva.fecha_inicio|date:"d/m/Y" }} - {{ reserva.fecha_fin|date:"d/m/Y" }}</td>
@@ -106,7 +113,6 @@
   </div>
 </div>
 
-
 <script>
 let currentReservaId;
 let currentNuevoEstado;
@@ -129,7 +135,7 @@ function hideConfirmModal() {
 }
 
 function showInputModal() {
-  document.getElementById('commentInput').value = ''; // Clear previous input
+  document.getElementById('commentInput').value = '';
   document.getElementById('inputModal').style.display = 'block';
   document.getElementById('inputModal').classList.add('show');
   document.getElementById('inputSubmitButton').onclick = function() {
@@ -145,7 +151,7 @@ function hideInputModal() {
 }
 
 function cambiarEstado(reservaId, nuevoEstado, comentario) {
-  fetch(`/panel/reserva/${reservaId}/cambiar-estado/`, {
+  fetch(`/panel/reserva-inmueble/${reservaId}/cambiar-estado/`, {
     method: 'POST',
     headers: {
       'X-CSRFToken': '{{ csrf_token }}',
@@ -161,7 +167,6 @@ function cambiarEstado(reservaId, nuevoEstado, comentario) {
       location.reload();
     } else {
       response.json().then(data => {
-        // Use a custom alert for error messages
         showCustomAlert(data.error || 'Error al actualizar el estado');
       }).catch(() => {
         showCustomAlert('Error al actualizar el estado');
@@ -174,7 +179,6 @@ function cambiarEstado(reservaId, nuevoEstado, comentario) {
   });
 }
 
-// Custom Alert Modal (instead of alert())
 function showCustomAlert(message) {
   const alertModal = document.createElement('div');
   alertModal.className = 'modal';
@@ -202,7 +206,6 @@ function showCustomAlert(message) {
   document.body.appendChild(alertModal);
 }
 
-// Basic modal styling (add this to your CSS or a style block)
 const style = document.createElement('style');
 style.innerHTML = `
   .modal {
@@ -254,6 +257,5 @@ style.innerHTML = `
   }
 `;
 document.head.appendChild(style);
-
 </script>
 {% endblock %}

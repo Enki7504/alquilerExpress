@@ -1,9 +1,12 @@
 {% extends 'admin/admin_base.html' %}
 {% load static %}
 
+{% block title %}Reservas de la Cochera | Admin{% endblock %}
+
 {% block admin_content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-  <h1 class="h2">Reservas de: {{ cochera.nombre }}</h1>
+  <h1 class="h2">Reservas de la Cochera: {{ cochera.nombre }}</h1>
+  <a href="{% url 'admin_cocheras' %}" class="btn btn-outline-secondary">Volver</a>
 </div>
 
 <div class="card shadow-sm mb-4">
@@ -25,8 +28,12 @@
           <tr>
             <td>{{ reserva.id_reserva }}</td>
             <td>
-              {% with cliente=reserva.clientecochera_set.first.cliente %}
-                {{ cliente.usuario.get_full_name|default:cliente.usuario.username }}
+              {% with relacion=reserva.clientecochera_set.first %}
+                {% if relacion and relacion.cliente %}
+                  {{ relacion.cliente.usuario.get_full_name|default:relacion.cliente.usuario.username }}
+                {% else %}
+                  Cliente no disponible
+                {% endif %}
               {% endwith %}
             </td>
             <td>{{ reserva.fecha_inicio|date:"d/m/Y" }} - {{ reserva.fecha_fin|date:"d/m/Y" }}</td>
