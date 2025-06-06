@@ -30,6 +30,7 @@ from .forms import (
     ClienteCreationForm,
     EmpleadoCreationForm,
     EmpleadoAdminCreationForm,
+    ClienteAdminCreationForm,
 )
 
 # Importaciones de modelos locales
@@ -130,7 +131,7 @@ def login_view(request):
 
             user_auth = authenticate(request, username=user.username, password=password)
             if user_auth is not None:
-                if user_auth.is_staff or user_auth.groups.filter(name="empleado").exists():
+                if user_auth.is_staff:
                     # Si es admin o empleado, inicia 2FA
                     codigo = f"{random.randint(0, 999999):06d}"
                     LoginOTP.objects.update_or_create(
@@ -457,23 +458,24 @@ def admin_alta_empleados(request):
 @user_passes_test(is_admin)
 def admin_alta_cliente(request):
     if request.method == "POST":
-        form = ClienteCreationForm(request.POST)
+        form = ClienteAdminCreationForm(request.POST)
         if form.is_valid():
             data = form.cleaned_data
-            try:
-                with transaction.atomic():
-                    password = data.get("password") or generar_contraseña_segura()
-                    user = User.objects.create_user(
-                        username=data["email"],
-                        email=data["email"],
+            #try:
+            with transaction.atomic():
+                password = generar_contraseña_segura()
+                user = User.objects.create_user(
+                    username=data["email"],
+                    email=data["email"],
                         password=password,
                         first_name=data["first_name"].title(),
                         last_name=data["last_name"].title(),
                     )
-                    grupo_cliente, _ = Group.objects.get_or_create(name="cliente")
-                    user.groups.add(grupo_cliente)
-                    Perfil.objects.create(usuario=user, dni=data["dni"])
-            except IntegrityError as e:
+                grupo_cliente, _ = Group.objects.get_or_create(name="cliente")
+                user.groups.add(grupo_cliente)
+                Perfil.objects.create(usuario=user, dni=data["dni"])
+            """except IntegrityError as e:
+                # ¡IMPORTANTE! Retornar inmediatamente para cortar el flujo
                 return _respuesta_cliente(
                     request,
                     status='error',
@@ -481,6 +483,15 @@ def admin_alta_cliente(request):
                     icon='error',
                     form=form
                 )
+            except Exception as e:
+                return _respuesta_cliente(
+                    request,
+                    status='error',
+                    message=f'Error inesperado: {str(e)}',
+                    icon='error',
+                    form=form
+                )"""
+            # Solo si no hubo error, sigue con el envío de mail y el success
             try:
                 send_mail(
                     "Bienvenido a AlquilerExpress",
@@ -516,7 +527,7 @@ def admin_alta_cliente(request):
                 errors=errors,
                 form=form
             )
-    form = ClienteCreationForm()
+    form = ClienteAdminCreationForm()
     return render(request, 'admin/admin_alta_cliente.html', {'form': form})
 
 ##################
@@ -1247,7 +1258,7 @@ def marcar_todas_leidas(request):
         return JsonResponse({'success': True})
     except Exception as e:
         messages.error(request, f"Error al marcar notificaciones: {e}")
-        return JsonResponse({'success': False, 'error': str(e)})
+        return JsonResponse({'success': False, 'error': str(e)}) 
     
 ################################################################################################################
 # --- OTRAS VISTAS ---

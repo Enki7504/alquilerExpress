@@ -349,3 +349,48 @@ class EmpleadoAdminCreationForm(forms.Form):
         if Perfil.objects.filter(dni=dni).exists():
             raise forms.ValidationError("Ya existe un usuario con este DNI.")
         return dni
+
+class ClienteAdminCreationForm(forms.Form):
+    first_name = forms.CharField(
+        label="Nombre",
+        max_length=30,
+        validators=[
+            RegexValidator(
+                regex=r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$',
+                message="El nombre solo puede contener letras y espacios."
+            )
+        ]
+    )
+    last_name = forms.CharField(
+        label="Apellido",
+        max_length=30,
+        validators=[
+            RegexValidator(
+                regex=r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$',
+                message="El apellido solo puede contener letras y espacios."
+            )
+        ]
+    )
+    email = forms.EmailField(label="Correo electrónico")
+    dni = forms.CharField(
+        label="DNI",
+        max_length=20,
+        validators=[
+            RegexValidator(
+                regex=r'^\d{7,8}$',
+                message="El DNI debe contener 7 u 8 dígitos numéricos."
+            )
+        ]
+    )
+
+    def clean_email(self):
+        email = self.cleaned_data["email"]
+        if User.objects.filter(username=email).exists():
+            raise forms.ValidationError("Ya existe un usuario con este correo electrónico.")
+        return email
+
+    def clean_dni(self):
+        dni = self.cleaned_data["dni"]
+        if Perfil.objects.filter(dni=dni).exists():
+            raise forms.ValidationError("Ya existe un usuario con este DNI.")
+        return dni
