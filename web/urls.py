@@ -30,7 +30,7 @@ urlpatterns = [
     path('panel/inmuebles/alta/', views.admin_inmuebles_alta, name='admin_inmuebles_alta'), # Mantener la alta separada o como parte del CRUD
     path('panel/inmuebles/editar/<int:id_inmueble>/', views.admin_inmuebles_editar, name='admin_inmuebles_editar'),
     path('panel/inmuebles/eliminar/<int:id_inmueble>/', views.admin_inmuebles_eliminar, name='admin_inmuebles_eliminar'),
-    path('panel/inmuebles/estado/<int:id_inmueble>/', views.admin_inmuebles_estado, name='admin_inmuebles_estado'),
+    path('panel/inmuebles/reservas/<int:id_inmueble>/', views.admin_inmuebles_reservas, name='admin_inmuebles_reservas'),
     path('panel/inmuebles/historial/<int:id_inmueble>/', views.admin_inmuebles_historial, name='admin_inmuebles_historial'),
     path('eliminar-imagen-inmueble/<int:imagen_id>/', views.eliminar_imagen_inmueble, name='eliminar_imagen_inmueble'),
 
@@ -39,9 +39,10 @@ urlpatterns = [
     path('panel/cocheras/alta/', views.admin_cocheras_alta, name='admin_cocheras_alta'), # Mantener la alta separada o como parte del CRUD
     path('panel/cocheras/editar/<int:id_cochera>/', views.admin_cocheras_editar, name='admin_cocheras_editar'),
     path('panel/cocheras/eliminar/<int:id_cochera>/', views.admin_cocheras_eliminar, name='admin_cocheras_eliminar'),
-    path('panel/cocheras/estado/<int:id_cochera>/', views.admin_cocheras_estado, name='admin_cocheras_estado'),
+    path('panel/cocheras/reservas/<int:id_cochera>/', views.admin_cocheras_reservas, name='admin_cocheras_reservas'),
     path('panel/cocheras/historial/<int:id_cochera>/', views.admin_cocheras_historial, name='admin_cocheras_historial'),
-    
+    path('eliminar-imagen-cochera/<int:id_imagen>/', views.eliminar_imagen_cochera, name='eliminar_imagen_cochera'),
+
     # Estadísiticas
     path('panel/estadisticas-empleados/', views.admin_estadisticas_empleados, name='admin_estadisticas_empleados'),
     path('panel/estadisticas-usuarios/', views.admin_estadisticas_usuarios, name='admin_estadisticas_usuarios'),
@@ -51,7 +52,8 @@ urlpatterns = [
     # Reservas
     path('crear-reserva/<int:id_inmueble>/', views.crear_reserva, name='crear_reserva'),
     path('crear-reserva-cochera/<int:id_cochera>/', views.crear_reserva_cochera, name='crear_reserva_cochera'),
-    path('panel/reserva/<int:id_reserva>/cambiar-estado/', views.cambiar_estado_reserva, name='cambiar_estado_reserva'),
+    path('panel/reserva-inmueble/<int:id_reserva>/cambiar-estado/', views.cambiar_estado_reserva, name='cambiar_estado_reserva_inmueble'),
+    path('panel/reserva-cochera/<int:id_reserva>/cambiar-estado/', views.cambiar_estado_reserva, name='cambiar_estado_reserva'),
 
     # URL para cargar ciudades cuando se selecciona una provincia
     path('ajax/cargar-ciudades/', views.cargar_ciudades, name='ajax_cargar_ciudades'),

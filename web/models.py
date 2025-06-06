@@ -104,6 +104,12 @@ class InmuebleEstado(models.Model):
     fecha_inicio = models.DateField()
     fecha_fin = models.DateField(null=True, blank=True)
 
+class CocheraEstado(models.Model):
+    id_cochera_estado = models.AutoField(primary_key=True)
+    cochera = models.ForeignKey(Cochera, null=True, blank=True, on_delete=models.SET_NULL)
+    estado = models.ForeignKey(Estado, on_delete=models.CASCADE)
+    fecha_inicio = models.DateField()
+    fecha_fin = models.DateField(null=True, blank=True)
 
 class ClienteInmueble(models.Model):
     id_cliente_inmueble = models.AutoField(primary_key=True)
