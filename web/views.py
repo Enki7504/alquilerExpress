@@ -1043,13 +1043,11 @@ def crear_reserva_cochera(request, id_cochera):
 @user_passes_test(is_admin)
 def cambiar_estado_reserva(request, id_reserva):
     """
-    Permite a los administradores cambiar el estado de una reserva de inmueble.
-    Valida las transiciones de estado permitidas.
+    Maneja el cambio de estado para reservas de INMUEBLES y COCHERAS.
     """
     reserva = get_object_or_404(Reserva, id_reserva=id_reserva)
     
     try:
-        # Parsear el cuerpo JSON de la solicitud
         data = json.loads(request.body)
         nuevo_estado = data.get('estado')
         comentario = data.get('comentario', '')
@@ -1062,7 +1060,7 @@ def cambiar_estado_reserva(request, id_reserva):
     try:
         estado = Estado.objects.get(nombre=nuevo_estado)
         
-        # Validar transición de estados permitida
+        # Validar transiciones de estado permitidas
         transiciones_permitidas = {
             'Pendiente': ['Aprobada', 'Rechazada', 'Cancelada'],
             'Aprobada': ['Pagada', 'Cancelada', 'Rechazada'],
@@ -1070,22 +1068,26 @@ def cambiar_estado_reserva(request, id_reserva):
             'Confirmada': ['Finalizada', 'Cancelada']
         }
         
-        if (reserva.estado and # Asegurarse de que reserva.estado no sea None
+        if (reserva.estado and 
             reserva.estado.nombre in transiciones_permitidas and 
             nuevo_estado in transiciones_permitidas[reserva.estado.nombre]):
             
             reserva.estado = estado
             reserva.save()
             
-            # Registrar en historial (descomentar si la funcionalidad está activa)
+            # Opcional: Registrar en historial (si tienes un modelo para ello)
             # HistorialEstadoReserva.objects.create(
             #     reserva=reserva,
             #     estado=estado,
             #     usuario=request.user,
-            #     comentario=comentario
+            #     comentario=comentario,
+            #     tipo='COCHERA' if reserva.cochera else 'INMUEBLE'
             # )
             
-            return JsonResponse({'success': True})
+            return JsonResponse({
+                'success': True,
+                'tipo': 'COCHERA' if reserva.cochera else 'INMUEBLE'  # Para debug/frontend
+            })
         else:
             return JsonResponse(
                 {'success': False, 'error': 'Transición no permitida'}, 
@@ -1097,59 +1099,7 @@ def cambiar_estado_reserva(request, id_reserva):
             {'success': False, 'error': 'Estado no válido'}, 
             status=400
         )
-        
-
-@require_POST
-@login_required
-@user_passes_test(is_admin)
-def cambiar_estado_reserva_cochera(request, id_reserva):
-    """
-    Permite a los administradores cambiar el estado de una reserva de cochera.
-    Valida las transiciones de estado permitidas.
-    """
-    reserva = get_object_or_404(Reserva, id_reserva=id_reserva)
     
-    try:
-        data = json.loads(request.body)
-        nuevo_estado = data.get('estado')
-        comentario = data.get('comentario', '')
-    except json.JSONDecodeError:
-        return JsonResponse(
-            {'success': False, 'error': 'Formato JSON inválido'}, 
-            status=400
-        )
-    
-    try:
-        estado = Estado.objects.get(nombre=nuevo_estado)
-        
-        # Validar transición de estados permitida (misma lógica que para inmuebles)
-        transiciones_permitidas = {
-            'Pendiente': ['Aprobada', 'Rechazada', 'Cancelada'],
-            'Aprobada': ['Pagada', 'Cancelada', 'Rechazada'],
-            'Pagada': ['Confirmada', 'Cancelada'],
-            'Confirmada': ['Finalizada', 'Cancelada']
-        }
-        
-        if (reserva.estado and # Asegurarse de que reserva.estado no sea None
-            reserva.estado.nombre in transiciones_permitidas and 
-            nuevo_estado in transiciones_permitidas[reserva.estado.nombre]):
-            
-            reserva.estado = estado
-            reserva.save()
-            
-            return JsonResponse({'success': True})
-        else:
-            return JsonResponse(
-                {'success': False, 'error': 'Transición no permitida'}, 
-                status=400
-            )
-            
-    except Estado.DoesNotExist:
-        return JsonResponse(
-            {'success': False, 'error': 'Estado no válido'}, 
-            status=400
-        )
-
 ################################################################################################################
 # --- Vistas de Notificaciones ---
 ################################################################################################################
