@@ -28,16 +28,23 @@ def enviar_mail_a_empleados_sobre_reserva(id_reserva):
         perfil = cliente_reserva.cliente
         nombre_cliente = f"{perfil.usuario.first_name} {perfil.usuario.last_name}"
 
-        # Obtener datos del inmueble o cochera
-        if reserva.inmueble:
+        # Obtener datos del inmueble o cochera y el empleado asignado
+        empleado_email = None
+        if reserva.inmueble and reserva.inmueble.empleado:
             nombre_obj = f"inmueble #{reserva.inmueble.id_inmueble} - {reserva.inmueble.nombre}"
             precio_por_dia = reserva.inmueble.precio_por_dia
-        elif reserva.cochera:
+            empleado_email = reserva.inmueble.empleado.usuario.email
+        elif reserva.cochera and reserva.cochera.empleado:
             nombre_obj = f"cochera #{reserva.cochera.id_cochera} - {reserva.cochera.nombre}"
             precio_por_dia = reserva.cochera.precio_por_dia
+            empleado_email = reserva.cochera.empleado.usuario.email
         else:
             nombre_obj = "reserva"
             precio_por_dia = 0
+
+        if not empleado_email:
+            print("No hay empleado asignado al inmueble o cochera, o no tiene email.")
+            return False
 
         # Calcular cantidad de días y total
         cantidad_dias = (reserva.fecha_fin - reserva.fecha_inicio).days
@@ -60,34 +67,20 @@ def enviar_mail_a_empleados_sobre_reserva(id_reserva):
                 f"http://localhost:8000/panel/cocheras/reservas/{reserva.cochera.id_cochera}/"
             )
 
-        # Obtener todos los mails de empleados (grupo "empleado")
-        try:
-            empleados_group = Group.objects.get(name="empleado")
-        except Group.DoesNotExist:
-            print("No existe el grupo 'empleado'.")
-            return False
-
-        empleados = empleados_group.user_set.all()
-        lista_mails = [emp.email for emp in empleados if emp.email]
-
-        if not lista_mails:
-            print("No hay empleados con mail definido.")
-            return False
-
-        # Enviar el mail
+        # Enviar el mail solo al empleado asignado
         send_mail(
             subject="Nueva solicitud de reserva",
             message=cuerpo,
             from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=lista_mails,
+            recipient_list=[empleado_email],
             fail_silently=False,
         )
 
-        print("Mail enviado a empleados:", lista_mails)
+        print("Mail enviado a empleado:", empleado_email)
         return True
 
     except Exception as e:
-        print("Error al enviar mail a empleados:", e)
+        print("Error al enviar mail a empleado:", e)
         return False
 
 #si borro esto da error, no se porque

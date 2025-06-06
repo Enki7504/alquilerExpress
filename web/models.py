@@ -72,6 +72,8 @@ class Inmueble(models.Model):
     fecha_publicacion = models.DateField()
     cochera = models.ForeignKey(Cochera, null=True, blank=True, on_delete=models.SET_NULL)
     estado = models.ForeignKey(Estado, on_delete=models.SET_NULL, null=True)
+    # se le asigna un perfil de empleado que lo administre, puede ser null si no hay
+    empleado = models.ForeignKey(Perfil, null=True, blank=True, on_delete=models.SET_NULL)
 
     def __str__(self):
         return self.nombre

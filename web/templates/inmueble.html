@@ -8,6 +8,27 @@
 <link rel="stylesheet" href="{% static 'css/inmueble.css' %}">
 {% endblock %}
 
+<style>
+  .img-carrusel-inmueble {
+    width: 100% !important;
+    height: 50vh !important;
+    min-height: 400px !important;
+    max-height: 400px !important;
+    object-fit: cover !important;
+    border-radius: 1rem !important;
+    background: #eee !important;
+    display: block !important;
+  }
+
+  .carousel-inner,
+  .carousel-item {
+    border-radius: 1rem !important;
+    overflow: hidden !important;
+    height: 50vh !important;
+    min-height: 400px !important;
+    max-height: 400px !important;
+  }
+</style>
 {% block content %}
 
   <!-- Contenido principal -->
@@ -23,11 +44,11 @@
           <div class="carousel-inner rounded">
             {% for imagen in inmueble.imagenes.all %}
               <div class="carousel-item {% if forloop.first %}active{% endif %}">
-                <img src="{{ imagen.imagen.url }}" class="d-block w-100 inmueble-hero-img" alt="{{ inmueble.nombre }}">
+                <img src="{{ imagen.imagen.url }}" class="d-block w-100 img-carrusel-inmueble" alt="{{ inmueble.nombre }}">
               </div>
             {% empty %}
               <div class="carousel-item active">
-                <img src="{% static 'img/default-property-large.jpg' %}" class="d-block w-100 inmueble-hero-img" alt="Imagen por defecto">
+                <img src="{% static 'img/default-property-large.jpg' %}" class="d-block w-100 img-carrusel-inmueble" alt="Imagen por defecto">
               </div>
             {% endfor %}
           </div>
