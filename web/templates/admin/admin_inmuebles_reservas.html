@@ -58,7 +58,7 @@
               {% elif reserva.estado.nombre == 'Confirmada' %}
                 <button class="btn btn-sm btn-danger" onclick="showConfirmModal('{{ reserva.id_reserva }}', 'Cancelada')">Cancelar Alquiler</button>
               {% endif %}
-              <a href="#" class="btn btn-sm btn-info">Detalles</a>
+              <a href="{% url 'detalle_inmueble' inmueble.id_inmueble %}" class="btn btn-sm btn-info">Ver Inmueble</a>
             </td>
           </tr>
           {% empty %}
