@@ -1078,6 +1078,13 @@ def cambiar_estado_reserva(request, id_reserva):
             
             reserva.estado = estado
             reserva.save()
+
+            # Registrar en el historial (reservaEstado)
+            ReservaEstado.objects.create(
+                reserva=reserva,
+                estado=estado,
+                fecha=timezone.now()
+            )            
             
             # Registrar en historial (descomentar si la funcionalidad está activa)
             # HistorialEstadoReserva.objects.create(
@@ -1138,6 +1145,13 @@ def cambiar_estado_reserva_cochera(request, id_reserva):
             
             reserva.estado = estado
             reserva.save()
+
+            # Registrar en el historial (reservaEstado)
+            ReservaEstado.objects.create(
+                reserva=reserva,
+                estado=estado,
+                fecha=timezone.now()
+            )    
             
             return JsonResponse({'success': True})
         else:
