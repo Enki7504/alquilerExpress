@@ -19,6 +19,7 @@ from django.views.decorators.http import require_POST
 from django.db import IntegrityError, transaction
 from django.db.models import Q
 
+
 # Importaciones de formularios locales
 from .forms import (
     RegistroUsuarioForm,
@@ -55,6 +56,9 @@ from .models import (
 
 # Importaciones de utilidades locales
 from .utils import email_link_token
+
+# para enviar correos a empleados sobre reservas
+from .utils import enviar_mail_a_empleados_sobre_reserva
 
 
 ################################################################################################################
@@ -929,6 +933,7 @@ def admin_estadisticas_inmuebles(request):
 # --- Vistas de Gestión de Reservas ---
 ################################################################################################################
 
+# crear reserva para inmuebles y cocheras
 @login_required
 def crear_reserva(request, id_inmueble):
     """
@@ -974,6 +979,10 @@ def crear_reserva(request, id_inmueble):
                     inmueble=inmueble,
                     reserva=reserva
                 )
+
+            # Enviar notificación a todos los empleados
+            # usando enviar_mail_a_empleados_sobre_reserva(id_reserva) de utils.py
+            enviar_mail_a_empleados_sobre_reserva(reserva.id_reserva)            
             
             messages.success(request, 'Reserva creada exitosamente!')
             return redirect('detalle_inmueble', id_inmueble=id_inmueble)
@@ -1030,6 +1039,10 @@ def crear_reserva_cochera(request, id_cochera):
                     cochera=cochera,
                     reserva=reserva
                 )
+
+            # Enviar notificación a todos los empleados
+            # usando enviar_mail_a_empleados_sobre_reserva(id_reserva) de utils.py
+            enviar_mail_a_empleados_sobre_reserva(reserva.id_reserva)    
             
             messages.success(request, 'Reserva creada exitosamente!')
             return redirect('detalle_cochera', id_cochera=id_cochera)
