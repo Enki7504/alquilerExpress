@@ -51,10 +51,11 @@
                 <button class="btn btn-sm btn-success" onclick="showConfirmModal('{{ reserva.id_reserva }}', 'Aprobada')">Aprobar Solicitud</button>
                 <button class="btn btn-sm btn-danger" onclick="showConfirmModal('{{ reserva.id_reserva }}', 'Rechazada')">Rechazar Solicitud</button>
               {% elif reserva.estado.nombre == 'Aprobada' %}
-                <button class="btn btn-sm btn-success">Esperando Pago...</button>
-              {% elif reserva.estado.nombre == 'Pagada' %}
-                <button class="btn btn-sm btn-success" onclick="showConfirmModal('{{ reserva.id_reserva }}', 'Confirmada')">Confirmar Pago</button>
+                <button class="btn btn-sm btn-success" onclick="showConfirmModal('{{ reserva.id_reserva }}', 'Pagada')">Confirmar Pago</button>
                 <button class="btn btn-sm btn-danger" onclick="showConfirmModal('{{ reserva.id_reserva }}', 'Cancelada')">Rechazar Pago</button>
+              {% elif reserva.estado.nombre == 'Pagada' %}
+                <button class="btn btn-sm btn-success" onclick="showConfirmModal('{{ reserva.id_reserva }}', 'Confirmada')">Confirmar Totalmente</button>
+                <button class="btn btn-sm btn-danger" onclick="showConfirmModal('{{ reserva.id_reserva }}', 'Cancelada')">Cancelar Alquiler</button>
               {% elif reserva.estado.nombre == 'Confirmada' %}
                 <button class="btn btn-sm btn-danger" onclick="showConfirmModal('{{ reserva.id_reserva }}', 'Cancelada')">Cancelar Alquiler</button>
               {% endif %}

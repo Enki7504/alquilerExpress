@@ -4,10 +4,50 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.core.mail import send_mail
-
+from django.conf import settings
 from .models import ClienteInmueble, Reserva
-from datetime import timedelta
-from django.contrib.auth.models import Group
+
+def notificar_cambio_estado_reserva(reserva, nuevo_estado, comentario=None):
+    """
+    Envía un mail al cliente asociado a la reserva notificando el nuevo estado.
+    """
+    try:
+        # Buscar el cliente asociado a la reserva
+        cliente_rel = ClienteInmueble.objects.filter(reserva=reserva).first()
+        if not cliente_rel or not cliente_rel.cliente.usuario.email:
+            print("No se encontró cliente asociado o no tiene email.")
+            return False
+
+        email_cliente = cliente_rel.cliente.usuario.email
+        nombre_cliente = cliente_rel.cliente.usuario.get_full_name() or cliente_rel.cliente.usuario.username
+
+        asunto = f"Actualización de tu reserva #{reserva.id_reserva}"
+        cuerpo = (
+            f"Hola {nombre_cliente},\n\n"
+            f"El estado de tu reserva #{reserva.id_reserva} ha cambiado a: {nuevo_estado}.\n"
+        )
+        if comentario:
+            cuerpo += f"\nComentario del administrador: {comentario}\n"
+        cuerpo += (
+            f"\nDetalles de la reserva:\n"
+            f"- Inmueble: {reserva.inmueble or reserva.cochera}\n"
+            f"- Fechas: {reserva.fecha_inicio} a {reserva.fecha_fin}\n"
+            f"- Estado actual: {nuevo_estado}\n"
+            f"\nGracias por usar Alquiler Express."
+        )
+
+        send_mail(
+            subject=asunto,
+            message=cuerpo,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[email_cliente],
+            fail_silently=False,
+        )
+        print(f"Notificación enviada a {email_cliente}")
+        return True
+    except Exception as e:
+        print("Error al notificar al cliente:", e)
+        return False
 
 
 #comando para ejecutar el script en consola
@@ -87,3 +127,5 @@ class EmailLinkTokenGenerator(PasswordResetTokenGenerator):
 
 # instanciamos un generador
 email_link_token = EmailLinkTokenGenerator()
+
+# Enviar mail al cliente sobre la reserva

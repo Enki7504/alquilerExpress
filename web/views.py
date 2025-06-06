@@ -1078,13 +1078,91 @@ def cambiar_estado_reserva(request, id_reserva):
             reserva.save()
 
             # Registrar en el historial (reservaEstado)
-            """
+
             ReservaEstado.objects.create(
                 reserva=reserva,
                 estado=estado,
                 fecha=timezone.now()
-            )         
+            )
+
             """
+            Envía un mail al cliente asociado a la reserva del inmueble notificando el nuevo estado.
+            """
+            if reserva.inmueble:
+                cliente_rel = ClienteInmueble.objects.filter(reserva=reserva).first()
+                if cliente_rel and cliente_rel.cliente.usuario.email:
+                    email_cliente = cliente_rel.cliente.usuario.email
+                    nombre_cliente = cliente_rel.cliente.usuario.get_full_name() or cliente_rel.cliente.usuario.username
+                    
+                    asunto = f"Actualización de tu reserva #{reserva.id_reserva}"
+                    cuerpo = (
+                        f"Hola {nombre_cliente},\n\n"
+                        f"El estado de tu reserva #{reserva.id_reserva} para el inmueble {reserva.inmueble.nombre} ha cambiado a: {estado.nombre}.\n"
+                    )
+                    if comentario:
+                        cuerpo += f"\nComentario del administrador: {comentario}\n"
+                    cuerpo += (
+                        f"\nDetalles de la reserva:\n"
+                        f"- Inmueble: {reserva.inmueble}\n"
+                        f"- Fechas: {reserva.fecha_inicio} a {reserva.fecha_fin}\n"
+                        f"- Estado actual: {estado.nombre}\n"
+                    )
+                    if nuevo_estado == "Aprobada":
+                        cuerpo += f"\nAhora debe abonar la reserva, el total es de ${reserva.precio_total}.\n"
+                    elif nuevo_estado == "Pagada":
+                        cuerpo += f"\nLa reserva ha sido pagada. Por favor, espere a que un empleado se comunique con usted.\n"
+                    elif nuevo_estado == "Confirmada":
+                        cuerpo += f"\nLa reserva ha sido confirmada. ¡Disfrute de su inmueble!\n"
+
+
+                    cuerpo += f"\nGracias por usar Alquiler Express."
+                    
+                    send_mail(
+                        subject=asunto,
+                        message=cuerpo,
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        recipient_list=[email_cliente],
+                        fail_silently=False,
+                    )
+            elif reserva.cochera:
+                cliente_rel = ClienteInmueble.objects.filter(reserva=reserva).first()
+                if cliente_rel and cliente_rel.cliente.usuario.email:
+                    email_cliente = cliente_rel.cliente.usuario.email
+                    nombre_cliente = cliente_rel.cliente.usuario.get_full_name() or cliente_rel.cliente.usuario.username
+                    
+                    asunto = f"Actualización de tu reserva #{reserva.id_reserva}"
+                    cuerpo = (
+                        f"Hola {nombre_cliente},\n\n"
+                        f"El estado de tu reserva #{reserva.id_reserva} para la cochera {reserva.cochera.nombre} ha cambiado a: {estado.nombre}.\n"
+                    )
+                    if comentario:
+                        cuerpo += f"\nComentario del administrador: {comentario}\n"
+                    cuerpo += (
+                        f"\nDetalles de la reserva:\n"
+                        f"- Cochera: {reserva.cochera}\n"
+                        f"- Fechas: {reserva.fecha_inicio} a {reserva.fecha_fin}\n"
+                        f"- Estado actual: {estado.nombre}\n"
+                    )
+                    if nuevo_estado == "Aprobada":
+                        cuerpo += f"\nAhora debe abonar la reserva, el total es de ${reserva.precio_total}.\n"
+                    elif nuevo_estado == "Pagada":
+                        cuerpo += f"\nLa reserva ha sido pagada. Por favor, espere a que un empleado se comunique con usted.\n"
+                    elif nuevo_estado == "Confirmada":
+                        cuerpo += f"\nLa reserva ha sido confirmada. ¡Disfrute de su cochera!\n"
+
+                    cuerpo += f"\nGracias por usar Alquiler Express."
+                    
+                    send_mail(
+                        subject=asunto,
+                        message=cuerpo,
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        recipient_list=[email_cliente],
+                        fail_silently=False,
+                    )
+
+            
+
+            
             
             # Opcional: Registrar en historial (si tienes un modelo para ello)
             # HistorialEstadoReserva.objects.create(
