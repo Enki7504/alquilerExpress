@@ -16,27 +16,32 @@
       <div class="mb-3">
         <label for="id_first_name" class="form-label">Nombre</label>
         {{ form.first_name|add_class:"form-control" }}
-        <div class="text-danger">{{ form.first_name.errors }}</div>
+        <!-- No mostrar errores de Django aquí -->
       </div>
       <div class="mb-3">
         <label for="id_last_name" class="form-label">Apellido</label>
         {{ form.last_name|add_class:"form-control" }}
-        <div class="text-danger">{{ form.last_name.errors }}</div>
       </div>
       <div class="mb-3">
         <label for="id_dni" class="form-label">DNI</label>
         {{ form.dni|add_class:"form-control" }}
-        <div class="text-danger">{{ form.dni.errors }}</div>
       </div>
       <div class="mb-3">
         <label for="id_email" class="form-label">Email</label>
         {{ form.email|add_class:"form-control" }}
-        <div class="text-danger">{{ form.email.errors }}</div>
       </div>
       <button type="submit" class="btn btn-primary w-100 btn-azul btn-submit">Registrar Empleado</button>
     </form>
   </div>
 </div>
+
+{% if messages %}
+  {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} text-center" role="alert">
+      {{ message }}
+    </div>
+  {% endfor %}
+{% endif %}
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -46,8 +51,18 @@ document.getElementById('empleadoForm').addEventListener('submit', function(e) {
     const form = e.target;
     const formData = new FormData(form);
 
-    // Limpiar errores previos (solo los generados por JS, no los de Django render)
+    // Limpiar errores previos
     document.querySelectorAll('.error-message').forEach(el => el.remove());
+
+    // Mostrar popup de carga
+    Swal.fire({
+        title: 'Creando empleado...',
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
 
     fetch(form.action, {
         method: 'POST',
@@ -58,28 +73,23 @@ document.getElementById('empleadoForm').addEventListener('submit', function(e) {
         }
     })
     .then(response => {
-        if (!response.ok) {
-            throw new Error('Error en la respuesta del servidor');
-        }
+        if (!response.ok) throw new Error('Error en la respuesta del servidor');
         const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-            throw new TypeError("Respuesta no es JSON");
-        }
+        if (!contentType || !contentType.includes('application/json')) throw new TypeError("Respuesta no es JSON");
         return response.json();
     })
     .then(data => {
-        // Mostrar errores de formulario debajo de los campos
+        Swal.close(); // Cierra el popup de carga
+
+        // Mostrar errores de formulario debajo de los campos SOLO tras submit
         if(data.status === 'form_errors') {
             Object.entries(data.errors).forEach(([field, error]) => {
                 const input = document.querySelector(`[name="${field}"]`);
-                if(input) {
-                    // Evita duplicados
-                    if (!input.parentNode.querySelector('.error-message')) {
-                        const errorElement = document.createElement('div');
-                        errorElement.className = 'error-message text-danger mt-1 small';
-                        errorElement.textContent = error;
-                        input.parentNode.appendChild(errorElement);
-                    }
+                if(input && !input.parentNode.querySelector('.error-message')) {
+                    const errorElement = document.createElement('div');
+                    errorElement.className = 'error-message text-danger mt-1 small';
+                    errorElement.textContent = error;
+                    input.parentNode.appendChild(errorElement);
                 }
             });
         }
@@ -104,9 +114,13 @@ document.getElementById('empleadoForm').addEventListener('submit', function(e) {
         }
     })
     .catch(error => {
-        // Si falla el AJAX, enviar el formulario normalmente
-        console.error("Error en AJAX, enviando formulario tradicionalmente:", error);
-        form.submit();
+       // Swal.close(); // Cierra el popup de carga si hay error
+        console.error("Error en AJAX:", error);
+        /*Swal.fire({
+            icon: 'error',
+            title: 'Error de red',
+            text: 'No se pudo crear el empleado. Intenta nuevamente.',
+        })*/;
     });
 });
 

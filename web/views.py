@@ -19,6 +19,7 @@ from django.views.decorators.http import require_POST
 from django.db import IntegrityError, transaction
 from django.db.models import Q
 
+
 # Importaciones de formularios locales
 from .forms import (
     RegistroUsuarioForm,
@@ -29,6 +30,7 @@ from .forms import (
     ClienteCreationForm,
     EmpleadoCreationForm,
     EmpleadoAdminCreationForm,
+    ClienteAdminCreationForm,
 )
 
 # Importaciones de modelos locales
@@ -36,6 +38,7 @@ from .models import (
     Inmueble,
     InmuebleImagen,
     InmuebleEstado,
+    CocheraEstado,
     CocheraImagen,
     Notificacion,
     Resenia,
@@ -55,6 +58,9 @@ from .models import (
 # Importaciones de utilidades locales
 from .utils import email_link_token
 
+# para enviar correos a empleados sobre reservas
+from .utils import enviar_mail_a_empleados_sobre_reserva
+
 
 ################################################################################################################
 # --- Vistas Públicas Generales ---
@@ -64,7 +70,20 @@ def index(request):
     """
     Renderiza la página de inicio de la aplicación.
     """
-    return render(request, 'index.html')
+    # Tomar las primeras 5 imágenes de inmuebles
+    hero_imgs = [img.imagen.url for img in InmuebleImagen.objects.all()[:5] if img.imagen]
+    # Si se quiere sumar cocheras, descomentar la línea:
+    # hero_imgs += [img.imagen.url for img in CocheraImagen.objects.all()[:5] if img.imagen]
+
+    # Si no hay imágenes en la BD, usar imágenes por defecto
+    if not hero_imgs:
+        hero_imgs = [
+            "https://images.unsplash.com/photo-1560184897-292b8d0a21d6?auto=format&fit=crop&w=1350&q=80",
+            "https://images.unsplash.com/photo-1590080877777-9b9b28d24d7d?auto=format&fit=crop&w=600&q=80",
+            "https://images.unsplash.com/photo-1600585154197-3c2f1d93d9e0?auto=format&fit=crop&w=600&q=80"
+        ]
+
+    return render(request, 'index.html', {'hero_imgs': hero_imgs})
 
 def logout_view(request):
     """
@@ -112,7 +131,7 @@ def login_view(request):
 
             user_auth = authenticate(request, username=user.username, password=password)
             if user_auth is not None:
-                if user_auth.is_staff or user_auth.groups.filter(name="empleado").exists():
+                if user_auth.is_staff:
                     # Si es admin o empleado, inicia 2FA
                     codigo = f"{random.randint(0, 999999):06d}"
                     LoginOTP.objects.update_or_create(
@@ -222,7 +241,6 @@ def verify_admin_link(request, uidb64, token):
         messages.error(request, "El enlace de verificación es inválido o ha expirado.")
         return render(request, 'link_invalid.html')
 
-
 ################################################################################################################
 # --- Vistas de Búsqueda y Detalle de Inmuebles/Cocheras ---
 ################################################################################################################
@@ -280,9 +298,7 @@ def detalle_inmueble(request, id_inmueble):
     )
     resenias = Resenia.objects.filter(inmueble=inmueble)
     comentarios = Comentario.objects.filter(inmueble=inmueble).order_by('-fecha_creacion')
-    # Obtener reservas activas
     reservas = Reserva.objects.filter(inmueble=inmueble, estado__nombre__in=['Confirmada', 'Pendiente']).order_by('-fecha_inicio')
-    # Eliminar referencia a InmuebleCochera
     historial = InmuebleEstado.objects.filter(inmueble=inmueble).order_by('-fecha_inicio')
 
     if request.method == 'POST' and request.user.is_authenticated:
@@ -310,21 +326,39 @@ def detalle_inmueble(request, id_inmueble):
 
 def detalle_cochera(request, id_cochera):
     """
-    Muestra los detalles de una cochera específica, incluyendo reservas activas
-    e historial de estados.
+    Muestra los detalles de una cochera específica, incluyendo reseñas, comentarios,
+    reservas activas e historial de estados. Permite añadir comentarios.
     """
     cochera = get_object_or_404(
         Cochera.objects.select_related('estado'),
         id_cochera=id_cochera
     )
-    # Obtener reservas activas
+    
+    resenias = Resenia.objects.filter(cochera=cochera)
+    comentarios = Comentario.objects.filter(cochera=cochera).order_by('-fecha_creacion')
     reservas = Reserva.objects.filter(cochera=cochera, estado__nombre__in=['Confirmada', 'Pendiente']).order_by('-fecha_inicio')
-    
-    # Obtener historial de estados
-    historial = InmuebleEstado.objects.filter(inmueble_cochera__cochera=cochera).order_by('-fecha_inicio') if InmuebleCochera.objects.filter(cochera=cochera).exists() else []
-    
+    historial = CocheraEstado.objects.filter(cochera=cochera).order_by('-fecha_inicio')
+
+    if request.method == 'POST' and request.user.is_authenticated:
+        comentario_form = ComentarioForm(request.POST)
+        if comentario_form.is_valid():
+            comentario = comentario_form.save(commit=False)
+            comentario.usuario = request.user.perfil
+            comentario.cochera = cochera
+            comentario.inmueble = None  # Asegurarse que no está asociado a un inmueble
+            comentario.save()
+            messages.success(request, "Comentario añadido exitosamente.")
+            return redirect('detalle_cochera', id_cochera=id_cochera)
+        else:
+            messages.error(request, "Error al añadir el comentario.")
+    else:
+        comentario_form = ComentarioForm()
+
     return render(request, 'cochera.html', {
         'cochera': cochera,
+        'resenias': resenias,
+        'comentarios': comentarios,
+        'comentario_form': comentario_form,
         'reservas': reservas,
         'historial': historial,
     })
@@ -362,33 +396,20 @@ def admin_alta_empleados(request):
         form = EmpleadoAdminCreationForm(request.POST)
         if form.is_valid():
             data = form.cleaned_data
-            try:
-                with transaction.atomic():
-                    # Crear usuario
-                    password = generar_contraseña_segura()
-                    user = User.objects.create_user(
-                        username=data["email"],
-                        email=data["email"],
-                        password=password,
-                        first_name=data["first_name"].title(),
-                        last_name=data["last_name"].title(),
-                    )
-                    # Asignar grupo "empleado"
-                    grupo_empleado, _ = Group.objects.get_or_create(name="empleado")
-                    user.groups.add(grupo_empleado)
-                    # Crear perfil
-                    Perfil.objects.create(usuario=user, dni=data["dni"])
-            except IntegrityError as e:
-                # Error de integridad: usuario o perfil duplicado
-                return _respuesta_empleado(
-                    request,
-                    status='error',
-                    message=f'Error al crear empleado: {str(e)}. Verifica email/DNI.',
-                    icon='error',
-                    form=form
-                )
-
-            # Enviar correo fuera de la transacción
+            # Generar contraseña aleatoria segura
+            import secrets, string
+            password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(10))
+            user = User.objects.create_user(
+                username=data["email"],
+                email=data["email"],
+                password=password,
+                first_name=data["first_name"].title(),
+                last_name=data["last_name"].title(),
+            )
+            grupo_empleado, _ = Group.objects.get_or_create(name="empleado")
+            user.groups.add(grupo_empleado)
+            Perfil.objects.create(usuario=user, dni=data["dni"])
+            # Enviar mail con la contraseña
             try:
                 send_mail(
                     "Bienvenido a AlquilerExpress - Acceso de Empleado",
@@ -401,56 +422,60 @@ def admin_alta_empleados(request):
                     [user.email],
                     fail_silently=False,
                 )
-                return _respuesta_empleado(
-                    request,
-                    status='success',
-                    message=f'Empleado registrado y correo enviado a {user.email}',
-                    icon='success'
-                )
+                message = f"Empleado registrado y correo enviado a {user.email}."
+                icon = "success"
+                status = "success"
             except Exception as e:
-                # Usuario creado, pero error al enviar correo
-                return _respuesta_empleado(
-                    request,
-                    status='warning',
-                    message=f'Empleado creado pero error enviando correo: {e}. Contraseña: {password}',
-                    icon='warning'
-                )
+                message = f"Empleado creado, pero error enviando el correo: {e}"
+                icon = "warning"
+                status = "success"
+            # AJAX
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    "status": status,
+                    "message": message,
+                    "icon": icon,
+                })
+            # Tradicional
+            messages.success(request, message)
+            return redirect('admin_alta_empleados')
         else:
             # Errores de formulario
             errors = {field: error[0] for field, error in form.errors.items()}
-            return _respuesta_empleado(
-                request,
-                status='form_errors',
-                message='Corrige los errores en el formulario',
-                icon='error',
-                errors=errors,
-                form=form
-            )
-    # GET request
-    form = EmpleadoAdminCreationForm()
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    "status": "form_errors",
+                    "errors": errors,
+                    "icon": "error",
+                    "message": "Corrige los errores del formulario."
+                })
+            messages.error(request, "Corrige los errores del formulario.")
+    else:
+        form = EmpleadoAdminCreationForm()
     return render(request, 'admin/admin_alta_empleados.html', {'form': form})
 
 @login_required
 @user_passes_test(is_admin)
 def admin_alta_cliente(request):
     if request.method == "POST":
-        form = ClienteCreationForm(request.POST)
+        form = ClienteAdminCreationForm(request.POST)
         if form.is_valid():
             data = form.cleaned_data
-            try:
-                with transaction.atomic():
-                    password = data.get("password") or generar_contraseña_segura()
-                    user = User.objects.create_user(
-                        username=data["email"],
-                        email=data["email"],
+            #try:
+            with transaction.atomic():
+                password = generar_contraseña_segura()
+                user = User.objects.create_user(
+                    username=data["email"],
+                    email=data["email"],
                         password=password,
                         first_name=data["first_name"].title(),
                         last_name=data["last_name"].title(),
                     )
-                    grupo_cliente, _ = Group.objects.get_or_create(name="cliente")
-                    user.groups.add(grupo_cliente)
-                    Perfil.objects.create(usuario=user, dni=data["dni"])
-            except IntegrityError as e:
+                grupo_cliente, _ = Group.objects.get_or_create(name="cliente")
+                user.groups.add(grupo_cliente)
+                Perfil.objects.create(usuario=user, dni=data["dni"])
+            """except IntegrityError as e:
+                # ¡IMPORTANTE! Retornar inmediatamente para cortar el flujo
                 return _respuesta_cliente(
                     request,
                     status='error',
@@ -458,6 +483,15 @@ def admin_alta_cliente(request):
                     icon='error',
                     form=form
                 )
+            except Exception as e:
+                return _respuesta_cliente(
+                    request,
+                    status='error',
+                    message=f'Error inesperado: {str(e)}',
+                    icon='error',
+                    form=form
+                )"""
+            # Solo si no hubo error, sigue con el envío de mail y el success
             try:
                 send_mail(
                     "Bienvenido a AlquilerExpress",
@@ -493,7 +527,7 @@ def admin_alta_cliente(request):
                 errors=errors,
                 form=form
             )
-    form = ClienteCreationForm()
+    form = ClienteAdminCreationForm()
     return render(request, 'admin/admin_alta_cliente.html', {'form': form})
 
 ##################
@@ -560,18 +594,34 @@ def admin_inmuebles(request):
     Incluye botones para acciones rápidas (ver, editar, eliminar, estado, historial).
     """
     query = request.GET.get('q', '').strip()
-    inmuebles = Inmueble.objects.all().order_by('nombre') # Ordenar para una mejor visualización
-
+    inmuebles = Inmueble.objects.exclude(estado__nombre='Eliminado').order_by('nombre')
+    
     if query:
-        # Búsqueda por nombre o descripción
         inmuebles = inmuebles.filter(
             Q(nombre__icontains=query) | Q(descripcion__icontains=query)
-        ).distinct() # Usar distinct por si hay duplicados en el join de Q
-
+        )
+    
+    empleados = Perfil.objects.filter(usuario__groups__name="empleado")
     return render(request, 'admin/admin_inmuebles.html', {
         'inmuebles': inmuebles,
-        'query': query
+        'query': query,
+        'empleados': empleados,
     })
+
+@login_required
+@user_passes_test(is_admin)
+def cambiar_empleado_inmueble(request, id_inmueble):
+    if request.method == "POST":
+        inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
+        empleado_id = request.POST.get("empleado")
+        if empleado_id:
+            empleado = Perfil.objects.get(id_perfil=empleado_id)
+            inmueble.empleado = empleado
+        else:
+            inmueble.empleado = None
+        inmueble.save()
+        messages.success(request, "Empleado asignado actualizado.")
+    return redirect('admin_inmuebles')
 
 @login_required
 @user_passes_test(is_admin_or_empleado)
@@ -581,18 +631,33 @@ def admin_cocheras(request):
     Incluye botones para acciones rápidas (ver, editar, eliminar, estado, historial).
     """
     query = request.GET.get('q', '').strip()
-    cocheras = Cochera.objects.all().order_by('nombre') # Ordenar para una mejor visualización
-
+    cocheras = Cochera.objects.exclude(estado__nombre='Eliminado').order_by('nombre')
+    
     if query:
-        # Búsqueda por nombre o descripción
         cocheras = cocheras.filter(
-            Q(nombre__icontains=query) | Q(descripcion__icontains=query)
-        ).distinct()
-
+            Q(nombre__icontains=query) | Q(descripcion__icontains=query))
+    
+    empleados = Perfil.objects.filter(usuario__groups__name="empleado")
     return render(request, 'admin/admin_cocheras.html', {
         'cocheras': cocheras,
-        'query': query
+        'query': query,
+        'empleados': empleados,
     })
+
+@login_required
+@user_passes_test(is_admin)
+def cambiar_empleado_cochera(request, id_cochera):
+    if request.method == "POST":
+        cochera = get_object_or_404(Cochera, id_cochera=id_cochera)
+        empleado_id = request.POST.get("empleado")
+        if empleado_id:
+            empleado = Perfil.objects.get(id_perfil=empleado_id)
+            cochera.empleado = empleado
+        else:
+            cochera.empleado = None
+        cochera.save()
+        messages.success(request, "Empleado asignado actualizado.")
+    return redirect('admin_cocheras')
 
 ################################################################################################################
 # --- Vistas de Gestión de Inmuebles ---
@@ -634,36 +699,44 @@ def admin_inmuebles_alta(request):
 @login_required
 @user_passes_test(is_admin)
 def admin_inmuebles_editar(request, id_inmueble):
-    """
-    Permite a los administradores editar la información de un inmueble existente.
-    """
     inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
-    imagenes = InmuebleImagen.objects.filter(inmueble=inmueble)
     
-    if request.method == 'POST':
+    if request.method == "POST":
         form = InmuebleForm(request.POST, request.FILES, instance=inmueble)
         if form.is_valid():
             inmueble = form.save()
+            # Guardar nuevas imágenes
+            imagenes = request.FILES.getlist('imagenes')
+            for img in imagenes:
+                InmuebleImagen.objects.create(inmueble=inmueble, imagen=img)
             
-            # Manejar múltiples imágenes
-            for img in request.FILES.getlist('imagenes'):
-                InmuebleImagen.objects.create(
-                    inmueble=inmueble,
-                    imagen=img,
-                    descripcion="Imagen del inmueble"
-                )
+            # Verificar si es una petición AJAX
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Inmueble actualizado correctamente.'
+                })
                 
-            messages.success(request, 'Inmueble actualizado exitosamente.')
-            return redirect('detalle_inmueble', id_inmueble=id_inmueble)
+            messages.success(request, "Inmueble actualizado correctamente.")
+            return redirect('admin_inmuebles_editar', id_inmueble=inmueble.id_inmueble)
         else:
-            messages.error(request, 'Por favor, corrige los errores en el formulario.')
+            # Manejo de errores para AJAX
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Corrige los errores en el formulario.',
+                    'errors': form.errors.get_json_data()
+                }, status=400)
+                
+            messages.error(request, "Corrige los errores en el formulario.")
     else:
         form = InmuebleForm(instance=inmueble)
     
+    imagenes = inmueble.imagenes.all()
     return render(request, 'admin/admin_inmuebles_editar.html', {
-        'form': form, 
+        'form': form,
         'inmueble': inmueble,
-        'imagenes': imagenes
+        'imagenes': imagenes,
     })
 
 @require_POST
@@ -679,15 +752,34 @@ def eliminar_imagen_inmueble(request, imagen_id):
 @user_passes_test(is_admin)
 def admin_inmuebles_eliminar(request, id_inmueble):
     """
-    Permite a los administradores eliminar un inmueble existente.
+    Cambia el estado de un inmueble a "Eliminado" en lugar de borrarlo.
     """
+    # Verificar autenticación para solicitudes AJAX
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' and not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'message': 'No estás autenticado.'}, status=401)
+
+    # Verificar permisos para solicitudes AJAX
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' and not is_admin(request.user):
+        return JsonResponse({'success': False, 'message': 'No tienes permisos para realizar esta acción.'}, status=403)
+
     inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
+    
     if request.method == 'POST':
-        inmueble.delete()
-        messages.success(request, 'Inmueble eliminado exitosamente.')
-        return redirect('buscar_inmuebles')
-    messages.info(request, "Confirmación de eliminación de inmueble.")
-    return redirect('detalle_inmueble', id_inmueble=id_inmueble)
+        estado_eliminado, _ = Estado.objects.get_or_create(nombre='Eliminado')
+        inmueble.estado = estado_eliminado
+        inmueble.save()
+        
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': True, 'message': 'Inmueble marcado como eliminado.'})
+        
+        messages.success(request, 'Inmueble marcado como eliminado.')
+        return redirect('admin_inmuebles')
+    
+    # Si es GET, muestra la confirmación
+    return render(request, 'admin/confirmar_eliminacion.html', {
+        'objeto': inmueble,
+        'tipo': 'inmueble'
+    })
 
 @login_required
 @user_passes_test(is_admin_or_empleado)
@@ -696,19 +788,18 @@ def admin_inmuebles_historial(request, id_inmueble):
     Muestra el historial de estados de un inmueble específico.
     """
     inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
-    # Eliminar referencia a InmuebleCochera
     historial = InmuebleEstado.objects.filter(inmueble=inmueble).order_by('-fecha_inicio')
-    return render(request, 'admin/admin_inmueble_historial.html', {'inmueble': inmueble, 'historial': historial})
+    return render(request, 'admin/admin_inmuebles_historial.html', {'inmueble': inmueble, 'historial': historial})
 
 @login_required
 @user_passes_test(is_admin_or_empleado)
-def admin_inmuebles_estado(request, id_inmueble):
+def admin_inmuebles_reservas(request, id_inmueble):
     """
     Muestra el estado actual y las reservas de un inmueble específico.
     """
     inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
     reservas = Reserva.objects.filter(inmueble=inmueble).order_by('-fecha_inicio')
-    return render(request, 'admin/admin_inmuebles_estado.html', {'inmueble': inmueble, 'reservas': reservas})
+    return render(request, 'admin/admin_inmuebles_reservas.html', {'inmueble': inmueble, 'reservas': reservas})
 
 ################################################################################################################
 # --- Vistas de Gestión de Cocheras ---
@@ -748,41 +839,87 @@ def admin_cocheras_alta(request):
 @login_required
 @user_passes_test(is_admin)
 def admin_cocheras_editar(request, id_cochera):
-    """
-    Permite a los administradores editar la información de una cochera existente.
-    """
     cochera = get_object_or_404(Cochera, id_cochera=id_cochera)
-    if request.method == 'POST':
+    
+    if request.method == "POST":
         form = CocheraForm(request.POST, request.FILES, instance=cochera)
         if form.is_valid():
             cochera = form.save()
-            if form.cleaned_data.get('imagen'):
-                CocheraImagen.objects.create(
-                    cochera=cochera,
-                    imagen=form.cleaned_data['imagen'],
-                    descripcion="Imagen actualizada"
-                )
-            messages.success(request, 'Cochera actualizada exitosamente.')
-            return redirect('detalle_cochera', id_cochera=id_cochera)
+            # Guardar nuevas imágenes
+            imagenes = request.FILES.getlist('imagenes')
+            for img in imagenes:
+                CocheraImagen.objects.create(cochera=cochera, imagen=img)
+            
+            # Verificar si es una petición AJAX
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Cochera actualizada correctamente.'
+                })
+                
+            messages.success(request, "Cochera actualizada correctamente.")
+            return redirect('admin_cocheras_editar', id_cochera=cochera.id_cochera)
         else:
-            messages.error(request, 'Por favor, corrige los errores en el formulario.')
+            # Manejo de errores para AJAX
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Corrige los errores en el formulario.',
+                    'errors': form.errors.get_json_data()
+                }, status=400)
+                
+            messages.error(request, "Corrige los errores en el formulario.")
     else:
         form = CocheraForm(instance=cochera)
-    return render(request, 'admin/admin_cocheras_editar.html', {'form': form, 'cochera': cochera})
+    
+    return render(request, 'admin/admin_cocheras_editar.html', {
+        'form': form,
+        'cochera': cochera,
+    })
+
+@require_POST
+@login_required
+@user_passes_test(is_admin)
+def eliminar_imagen_cochera(request, id_imagen):
+    try:
+        imagen = get_object_or_404(CocheraImagen, id_imagen=id_imagen)
+        imagen.delete()
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)})
 
 @login_required
 @user_passes_test(is_admin)
 def admin_cocheras_eliminar(request, id_cochera):
     """
-    Permite a los administradores eliminar una cochera existente.
+    Cambia el estado de una cochera a "Eliminado" en lugar de borrarla.
     """
+    # Verificar autenticación para solicitudes AJAX
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' and not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'message': 'No estás autenticado.'}, status=401)
+
+    # Verificar permisos para solicitudes AJAX
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' and not is_admin(request.user):
+        return JsonResponse({'success': False, 'message': 'No tienes permisos para realizar esta acción.'}, status=403)
+
     cochera = get_object_or_404(Cochera, id_cochera=id_cochera)
+    
     if request.method == 'POST':
-        cochera.delete()
-        messages.success(request, 'Cochera eliminada exitosamente.')
-        return redirect('buscar_cocheras')
-    messages.info(request, "Confirmación de eliminación de cochera.")
-    return redirect('detalle_cochera', id_cochera=id_cochera)
+        estado_eliminado, _ = Estado.objects.get_or_create(nombre='Eliminado')
+        cochera.estado = estado_eliminado
+        cochera.save()
+        
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': True, 'message': 'Cochera marcada como eliminada.'})
+        
+        messages.success(request, 'Cochera marcada como eliminada.')
+        return redirect('admin_cocheras')
+    
+    # Si es GET, muestra la confirmación
+    return render(request, 'admin/confirmar_eliminacion.html', {
+        'objeto': cochera,
+        'tipo': 'cochera'
+    })
 
 @login_required
 @user_passes_test(is_admin)
@@ -791,18 +928,18 @@ def admin_cocheras_historial(request, id_cochera):
     Muestra el historial de estados de una cochera específica.
     """
     cochera = get_object_or_404(Cochera, id_cochera=id_cochera)
-    historial = InmuebleEstado.objects.filter(inmueble_cochera__cochera=cochera).order_by('-fecha_inicio') if InmuebleCochera.objects.filter(cochera=cochera).exists() else []
+    historial = CocheraEstado.objects.filter(cochera=cochera).order_by('-fecha_inicio')
     return render(request, 'admin/admin_cocheras_historial.html', {'cochera': cochera, 'historial': historial})
 
 @login_required
 @user_passes_test(is_admin)
-def admin_cocheras_estado(request, id_cochera):
+def admin_cocheras_reservas(request, id_cochera):
     """
     Muestra el estado actual y las reservas de una cochera específica.
     """
     cochera = get_object_or_404(Cochera, id_cochera=id_cochera)
     reservas = Reserva.objects.filter(cochera=cochera).order_by('-fecha_inicio')
-    return render(request, 'admin/admin_cocheras_estado.html', {'cochera': cochera, 'reservas': reservas})
+    return render(request, 'admin/admin_cocheras_reservas.html', {'cochera': cochera, 'reservas': reservas})
 
 ################################################################################################################
 # --- Vistas del Panel de Administración --- Estadisticas  --- 
@@ -844,6 +981,8 @@ def admin_estadisticas_inmuebles(request):
 # --- Vistas de Gestión de Reservas ---
 ################################################################################################################
 
+# crear reserva para inmuebles y cocheras
+@login_required
 def crear_reserva(request, id_inmueble):
     """
     Permite a los usuarios crear una reserva para un inmueble.
@@ -888,6 +1027,10 @@ def crear_reserva(request, id_inmueble):
                     inmueble=inmueble,
                     reserva=reserva
                 )
+
+            # Enviar notificación a todos los empleados
+            # usando enviar_mail_a_empleados_sobre_reserva(id_reserva) de utils.py
+            enviar_mail_a_empleados_sobre_reserva(reserva.id_reserva)            
             
             messages.success(request, 'Reserva creada exitosamente!')
             return redirect('detalle_inmueble', id_inmueble=id_inmueble)
@@ -899,6 +1042,7 @@ def crear_reserva(request, id_inmueble):
     # Si no es POST, redirigir al detalle del inmueble
     return redirect('detalle_inmueble', id_inmueble=id_inmueble)
 
+@login_required
 def crear_reserva_cochera(request, id_cochera):
     """
     Permite a los usuarios crear una reserva para una cochera.
@@ -943,6 +1087,10 @@ def crear_reserva_cochera(request, id_cochera):
                     cochera=cochera,
                     reserva=reserva
                 )
+
+            # Enviar notificación a todos los empleados
+            # usando enviar_mail_a_empleados_sobre_reserva(id_reserva) de utils.py
+            enviar_mail_a_empleados_sobre_reserva(reserva.id_reserva)    
             
             messages.success(request, 'Reserva creada exitosamente!')
             return redirect('detalle_cochera', id_cochera=id_cochera)
@@ -958,13 +1106,11 @@ def crear_reserva_cochera(request, id_cochera):
 @user_passes_test(is_admin)
 def cambiar_estado_reserva(request, id_reserva):
     """
-    Permite a los administradores cambiar el estado de una reserva de inmueble.
-    Valida las transiciones de estado permitidas.
+    Maneja el cambio de estado para reservas de INMUEBLES y COCHERAS.
     """
     reserva = get_object_or_404(Reserva, id_reserva=id_reserva)
     
     try:
-        # Parsear el cuerpo JSON de la solicitud
         data = json.loads(request.body)
         nuevo_estado = data.get('estado')
         comentario = data.get('comentario', '')
@@ -977,7 +1123,7 @@ def cambiar_estado_reserva(request, id_reserva):
     try:
         estado = Estado.objects.get(nombre=nuevo_estado)
         
-        # Validar transición de estados permitida
+        # Validar transiciones de estado permitidas
         transiciones_permitidas = {
             'Pendiente': ['Aprobada', 'Rechazada', 'Cancelada'],
             'Aprobada': ['Pagada', 'Cancelada', 'Rechazada'],
@@ -985,22 +1131,113 @@ def cambiar_estado_reserva(request, id_reserva):
             'Confirmada': ['Finalizada', 'Cancelada']
         }
         
-        if (reserva.estado and # Asegurarse de que reserva.estado no sea None
+        if (reserva.estado and 
             reserva.estado.nombre in transiciones_permitidas and 
             nuevo_estado in transiciones_permitidas[reserva.estado.nombre]):
             
             reserva.estado = estado
             reserva.save()
+
+            # Registrar en el historial (reservaEstado)
+
+            ReservaEstado.objects.create(
+                reserva=reserva,
+                estado=estado,
+                fecha=timezone.now()
+            )
+
+            """
+            Envía un mail al cliente asociado a la reserva del inmueble notificando el nuevo estado.
+            """
+            if reserva.inmueble:
+                cliente_rel = ClienteInmueble.objects.filter(reserva=reserva).first()
+                if cliente_rel and cliente_rel.cliente.usuario.email:
+                    email_cliente = cliente_rel.cliente.usuario.email
+                    nombre_cliente = cliente_rel.cliente.usuario.get_full_name() or cliente_rel.cliente.usuario.username
+                    
+                    asunto = f"Actualización de tu reserva #{reserva.id_reserva}"
+                    cuerpo = (
+                        f"Hola {nombre_cliente},\n\n"
+                        f"El estado de tu reserva #{reserva.id_reserva} para el inmueble {reserva.inmueble.nombre} ha cambiado a: {estado.nombre}.\n"
+                    )
+                    if comentario:
+                        cuerpo += f"\nComentario del administrador: {comentario}\n"
+                    cuerpo += (
+                        f"\nDetalles de la reserva:\n"
+                        f"- Inmueble: {reserva.inmueble}\n"
+                        f"- Fechas: {reserva.fecha_inicio} a {reserva.fecha_fin}\n"
+                        f"- Estado actual: {estado.nombre}\n"
+                    )
+                    if nuevo_estado == "Aprobada":
+                        cuerpo += f"\nAhora debe abonar la reserva, el total es de ${reserva.precio_total}.\n"
+                    elif nuevo_estado == "Pagada":
+                        cuerpo += f"\nLa reserva ha sido pagada. Por favor, espere a que un empleado se comunique con usted.\n"
+                    elif nuevo_estado == "Confirmada":
+                        cuerpo += f"\nLa reserva ha sido confirmada. ¡Disfrute de su inmueble!\n"
+
+
+                    cuerpo += f"\nGracias por usar Alquiler Express."
+                    
+                    send_mail(
+                        subject=asunto,
+                        message=cuerpo,
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        recipient_list=[email_cliente],
+                        fail_silently=False,
+                    )
+            elif reserva.cochera:
+                cliente_rel = ClienteInmueble.objects.filter(reserva=reserva).first()
+                if cliente_rel and cliente_rel.cliente.usuario.email:
+                    email_cliente = cliente_rel.cliente.usuario.email
+                    nombre_cliente = cliente_rel.cliente.usuario.get_full_name() or cliente_rel.cliente.usuario.username
+                    
+                    asunto = f"Actualización de tu reserva #{reserva.id_reserva}"
+                    cuerpo = (
+                        f"Hola {nombre_cliente},\n\n"
+                        f"El estado de tu reserva #{reserva.id_reserva} para la cochera {reserva.cochera.nombre} ha cambiado a: {estado.nombre}.\n"
+                    )
+                    if comentario:
+                        cuerpo += f"\nComentario del administrador: {comentario}\n"
+                    cuerpo += (
+                        f"\nDetalles de la reserva:\n"
+                        f"- Cochera: {reserva.cochera}\n"
+                        f"- Fechas: {reserva.fecha_inicio} a {reserva.fecha_fin}\n"
+                        f"- Estado actual: {estado.nombre}\n"
+                    )
+                    if nuevo_estado == "Aprobada":
+                        cuerpo += f"\nAhora debe abonar la reserva, el total es de ${reserva.precio_total}.\n"
+                    elif nuevo_estado == "Pagada":
+                        cuerpo += f"\nLa reserva ha sido pagada. Por favor, espere a que un empleado se comunique con usted.\n"
+                    elif nuevo_estado == "Confirmada":
+                        cuerpo += f"\nLa reserva ha sido confirmada. ¡Disfrute de su cochera!\n"
+
+                    cuerpo += f"\nGracias por usar Alquiler Express."
+                    
+                    send_mail(
+                        subject=asunto,
+                        message=cuerpo,
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        recipient_list=[email_cliente],
+                        fail_silently=False,
+                    )
+
             
-            # Registrar en historial (descomentar si la funcionalidad está activa)
+
+            
+            
+            # Opcional: Registrar en historial (si tienes un modelo para ello)
             # HistorialEstadoReserva.objects.create(
             #     reserva=reserva,
             #     estado=estado,
             #     usuario=request.user,
-            #     comentario=comentario
+            #     comentario=comentario,
+            #     tipo='COCHERA' if reserva.cochera else 'INMUEBLE'
             # )
             
-            return JsonResponse({'success': True})
+            return JsonResponse({
+                'success': True,
+                'tipo': 'COCHERA' if reserva.cochera else 'INMUEBLE'  # Para debug/frontend
+            })
         else:
             return JsonResponse(
                 {'success': False, 'error': 'Transición no permitida'}, 
@@ -1012,59 +1249,7 @@ def cambiar_estado_reserva(request, id_reserva):
             {'success': False, 'error': 'Estado no válido'}, 
             status=400
         )
-        
-
-@require_POST
-@login_required
-@user_passes_test(is_admin)
-def cambiar_estado_reserva_cochera(request, id_reserva):
-    """
-    Permite a los administradores cambiar el estado de una reserva de cochera.
-    Valida las transiciones de estado permitidas.
-    """
-    reserva = get_object_or_404(Reserva, id_reserva=id_reserva)
     
-    try:
-        data = json.loads(request.body)
-        nuevo_estado = data.get('estado')
-        comentario = data.get('comentario', '')
-    except json.JSONDecodeError:
-        return JsonResponse(
-            {'success': False, 'error': 'Formato JSON inválido'}, 
-            status=400
-        )
-    
-    try:
-        estado = Estado.objects.get(nombre=nuevo_estado)
-        
-        # Validar transición de estados permitida (misma lógica que para inmuebles)
-        transiciones_permitidas = {
-            'Pendiente': ['Aprobada', 'Rechazada', 'Cancelada'],
-            'Aprobada': ['Pagada', 'Cancelada', 'Rechazada'],
-            'Pagada': ['Confirmada', 'Cancelada'],
-            'Confirmada': ['Finalizada', 'Cancelada']
-        }
-        
-        if (reserva.estado and # Asegurarse de que reserva.estado no sea None
-            reserva.estado.nombre in transiciones_permitidas and 
-            nuevo_estado in transiciones_permitidas[reserva.estado.nombre]):
-            
-            reserva.estado = estado
-            reserva.save()
-            
-            return JsonResponse({'success': True})
-        else:
-            return JsonResponse(
-                {'success': False, 'error': 'Transición no permitida'}, 
-                status=400
-            )
-            
-    except Estado.DoesNotExist:
-        return JsonResponse(
-            {'success': False, 'error': 'Estado no válido'}, 
-            status=400
-        )
-
 ################################################################################################################
 # --- Vistas de Notificaciones ---
 ################################################################################################################
@@ -1107,7 +1292,7 @@ def marcar_todas_leidas(request):
         return JsonResponse({'success': True})
     except Exception as e:
         messages.error(request, f"Error al marcar notificaciones: {e}")
-        return JsonResponse({'success': False, 'error': str(e)})
+        return JsonResponse({'success': False, 'error': str(e)}) 
     
 ################################################################################################################
 # --- OTRAS VISTAS ---

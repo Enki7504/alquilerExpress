@@ -89,6 +89,12 @@ class InmuebleForm(forms.ModelForm):
         label="Cochera",
         widget=forms.Select(attrs={'class': 'form-select', 'id': 'cocheraSelect'})
     )
+    empleado = forms.ModelChoiceField(
+        queryset=Perfil.objects.filter(usuario__groups__name="empleado"),
+        required=False,
+        label="Empleado asignado",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -108,7 +114,7 @@ class InmuebleForm(forms.ModelForm):
         fields = [
             'nombre', 'ubicacion', 'descripcion', 'cantidad_banios', 'cantidad_ambientes',
             'cantidad_camas', 'cantidad_huespedes', 'precio_por_dia', 'politica_cancelacion',
-            'provincia', 'ciudad', 'cochera', 'estado'
+            'provincia', 'ciudad', 'cochera', 'estado', 'empleado'  # <-- AGREGADO AQUÍ
         ]
         widgets = {
             'descripcion': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
@@ -156,6 +162,12 @@ class CocheraForm(forms.ModelForm):
         required=True,
         label="Estado"
     )
+    empleado = forms.ModelChoiceField(
+        queryset=Perfil.objects.filter(usuario__groups__name="empleado"),
+        required=False,
+        label="Empleado asignado",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -175,7 +187,7 @@ class CocheraForm(forms.ModelForm):
         fields = [
             'nombre', 'ubicacion', 'descripcion', 'alto', 'ancho', 'largo',
             'cantidad_vehiculos', 'con_techo', 'precio_por_dia', 'politica_cancelacion',
-            'provincia', 'ciudad', 'estado'
+            'provincia', 'ciudad', 'estado', 'empleado'  # <-- AGREGADO AQUÍ
         ]
         widgets = {
             'nombre': forms.TextInput(attrs={'class': 'form-control'}),
@@ -346,6 +358,51 @@ class EmpleadoAdminCreationForm(forms.Form):
 
     def clean_dni(self):
         dni = self.cleaned_data['dni']
+        if Perfil.objects.filter(dni=dni).exists():
+            raise forms.ValidationError("Ya existe un usuario con este DNI.")
+        return dni
+
+class ClienteAdminCreationForm(forms.Form):
+    first_name = forms.CharField(
+        label="Nombre",
+        max_length=30,
+        validators=[
+            RegexValidator(
+                regex=r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$',
+                message="El nombre solo puede contener letras y espacios."
+            )
+        ]
+    )
+    last_name = forms.CharField(
+        label="Apellido",
+        max_length=30,
+        validators=[
+            RegexValidator(
+                regex=r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$',
+                message="El apellido solo puede contener letras y espacios."
+            )
+        ]
+    )
+    email = forms.EmailField(label="Correo electrónico")
+    dni = forms.CharField(
+        label="DNI",
+        max_length=20,
+        validators=[
+            RegexValidator(
+                regex=r'^\d{7,8}$',
+                message="El DNI debe contener 7 u 8 dígitos numéricos."
+            )
+        ]
+    )
+
+    def clean_email(self):
+        email = self.cleaned_data["email"]
+        if User.objects.filter(username=email).exists():
+            raise forms.ValidationError("Ya existe un usuario con este correo electrónico.")
+        return email
+
+    def clean_dni(self):
+        dni = self.cleaned_data["dni"]
         if Perfil.objects.filter(dni=dni).exists():
             raise forms.ValidationError("Ya existe un usuario con este DNI.")
         return dni

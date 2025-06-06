@@ -4,15 +4,15 @@
 {% block title %}Historial del Inmueble | Admin{% endblock %}
 
 {% block admin_content %}
-<div class="d-flex justify-content-between flex-wrap">
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
   <h1 class="h2">Historial del Inmueble: {{ inmueble.nombre }}</h1>
-  <a href="{% url 'detalle_inmueble' id_inmueble=inmueble.id_inmueble %}" class="btn btn-outline-secondary">Volver</a>
+  <a href="{% url 'admin_inmuebles' %}" class="btn btn-outline-secondary">Volver</a>
 </div>
 
 <div class="card shadow-sm">
   <div class="card-body">
-    {% if historial %}
-      <table class="table table-striped">
+    <div class="table-responsive">
+      <table class="table table-hover">
         <thead>
           <tr>
             <th>Estado</th>
@@ -21,18 +21,22 @@
           </tr>
         </thead>
         <tbody>
-          {% for registro in historial %}
+          {% if historial %}
+            {% for registro in historial %}
+              <tr>
+                <td>{{ registro.estado.nombre }}</td>
+                <td>{{ registro.fecha_inicio|date:"d/m/Y" }}</td>
+                <td>{{ registro.fecha_fin|date:"d/m/Y" | default:"Activo" }}</td>
+              </tr>
+            {% endfor %}
+          {% else %}
             <tr>
-              <td>{{ registro.estado.nombre }}</td>
-              <td>{{ registro.fecha_inicio|date:"d/m/Y" }}</td>
-              <td>{{ registro.fecha_fin|date:"d/m/Y" | default:"Activo" }}</td>
+              <td colspan="3" class="text-center">No hay historial de estados para este inmueble.</td>
             </tr>
-          {% endfor %}
+          {% endif %}
         </tbody>
       </table>
-    {% else %}
-      <div class="alert alert-secondary">No hay historial de estados para este inmueble.</div>
-    {% endif %}
+    </div>
   </div>
 </div>
 {% endblock %}

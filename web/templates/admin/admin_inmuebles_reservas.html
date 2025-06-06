@@ -1,9 +1,12 @@
 {% extends 'admin/admin_base.html' %}
 {% load static %}
 
+{% block title %}Reservas del Inmueble | Admin{% endblock %}
+
 {% block admin_content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-  <h1 class="h2">Reservas de: {{ cochera.nombre }}</h1>
+  <h1 class="h2">Reservas del Inmueble: {{ inmueble.nombre }}</h1>
+  <a href="{% url 'admin_inmuebles' %}" class="btn btn-outline-secondary">Volver</a>
 </div>
 
 <div class="card shadow-sm mb-4">
@@ -25,8 +28,12 @@
           <tr>
             <td>{{ reserva.id_reserva }}</td>
             <td>
-              {% with cliente=reserva.clientecochera_set.first.cliente %}
-                {{ cliente.usuario.get_full_name|default:cliente.usuario.username }}
+              {% with relacion=reserva.clienteinmueble_set.first %}
+                {% if relacion and relacion.cliente %}
+                  {{ relacion.cliente.usuario.get_full_name|default:relacion.cliente.usuario.username }}
+                {% else %}
+                  Cliente no disponible
+                {% endif %}
               {% endwith %}
             </td>
             <td>{{ reserva.fecha_inicio|date:"d/m/Y" }} - {{ reserva.fecha_fin|date:"d/m/Y" }}</td>
@@ -44,14 +51,15 @@
                 <button class="btn btn-sm btn-success" onclick="showConfirmModal('{{ reserva.id_reserva }}', 'Aprobada')">Aprobar Solicitud</button>
                 <button class="btn btn-sm btn-danger" onclick="showConfirmModal('{{ reserva.id_reserva }}', 'Rechazada')">Rechazar Solicitud</button>
               {% elif reserva.estado.nombre == 'Aprobada' %}
-                <button class="btn btn-sm btn-success">Esperando Pago...</button>
-              {% elif reserva.estado.nombre == 'Pagada' %}
-                <button class="btn btn-sm btn-success" onclick="showConfirmModal('{{ reserva.id_reserva }}', 'Confirmada')">Confirmar Pago</button>
+                <button class="btn btn-sm btn-success" onclick="showConfirmModal('{{ reserva.id_reserva }}', 'Pagada')">Confirmar Pago</button>
                 <button class="btn btn-sm btn-danger" onclick="showConfirmModal('{{ reserva.id_reserva }}', 'Cancelada')">Rechazar Pago</button>
+              {% elif reserva.estado.nombre == 'Pagada' %}
+                <button class="btn btn-sm btn-success" onclick="showConfirmModal('{{ reserva.id_reserva }}', 'Confirmada')">Confirmar Totalmente</button>
+                <button class="btn btn-sm btn-danger" onclick="showConfirmModal('{{ reserva.id_reserva }}', 'Cancelada')">Cancelar Alquiler</button>
               {% elif reserva.estado.nombre == 'Confirmada' %}
                 <button class="btn btn-sm btn-danger" onclick="showConfirmModal('{{ reserva.id_reserva }}', 'Cancelada')">Cancelar Alquiler</button>
               {% endif %}
-              <a href="#" class="btn btn-sm btn-info">Detalles</a>
+              <a href="{% url 'detalle_inmueble' inmueble.id_inmueble %}" class="btn btn-sm btn-info">Ver Inmueble</a>
             </td>
           </tr>
           {% empty %}
@@ -144,7 +152,7 @@ function hideInputModal() {
 }
 
 function cambiarEstado(reservaId, nuevoEstado, comentario) {
-  fetch(`/panel/reserva-cochera/${reservaId}/cambiar-estado/`, {
+  fetch(`/panel/reserva-inmueble/${reservaId}/cambiar-estado/`, {
     method: 'POST',
     headers: {
       'X-CSRFToken': '{{ csrf_token }}',

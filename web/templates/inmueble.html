@@ -8,6 +8,27 @@
 <link rel="stylesheet" href="{% static 'css/inmueble.css' %}">
 {% endblock %}
 
+<style>
+  .img-carrusel-inmueble {
+    width: 100% !important;
+    height: 50vh !important;
+    min-height: 400px !important;
+    max-height: 400px !important;
+    object-fit: cover !important;
+    border-radius: 1rem !important;
+    background: #eee !important;
+    display: block !important;
+  }
+
+  .carousel-inner,
+  .carousel-item {
+    border-radius: 1rem !important;
+    overflow: hidden !important;
+    height: 50vh !important;
+    min-height: 400px !important;
+    max-height: 400px !important;
+  }
+</style>
 {% block content %}
 
   <!-- Contenido principal -->
@@ -23,11 +44,11 @@
           <div class="carousel-inner rounded">
             {% for imagen in inmueble.imagenes.all %}
               <div class="carousel-item {% if forloop.first %}active{% endif %}">
-                <img src="{{ imagen.imagen.url }}" class="d-block w-100 inmueble-hero-img" alt="{{ inmueble.nombre }}">
+                <img src="{{ imagen.imagen.url }}" class="d-block w-100 img-carrusel-inmueble" alt="{{ inmueble.nombre }}">
               </div>
             {% empty %}
               <div class="carousel-item active">
-                <img src="{% static 'img/default-property-large.jpg' %}" class="d-block w-100 inmueble-hero-img" alt="Imagen por defecto">
+                <img src="{% static 'img/default-property-large.jpg' %}" class="d-block w-100 img-carrusel-inmueble" alt="Imagen por defecto">
               </div>
             {% endfor %}
           </div>
@@ -104,15 +125,15 @@
                 <a href="{% url 'admin_inmuebles_editar' id_inmueble=inmueble.id_inmueble %}" class="btn btn-warning">
                   <i class="bi bi-pencil-square me-2"></i> Editar inmueble
                 </a>
-                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">
-                  <i class="bi bi-trash me-2"></i> Eliminar inmueble
-                </button>
+                <a href="{% url 'admin_inmuebles_reservas' id_inmueble=inmueble.id_inmueble %}" class="btn btn-primary">
+                  <i class="bi bi-calendar-check me-2"></i> Ver Reservas
+                </a>
                 <a href="{% url 'admin_inmuebles_historial' id_inmueble=inmueble.id_inmueble %}" class="btn btn-secondary">
                   <i class="bi bi-clock-history me-2"></i> Ver Historial
                 </a>
-                <a href="{% url 'admin_inmuebles_estado' id_inmueble=inmueble.id_inmueble %}" class="btn btn-primary">
-                  <i class="bi bi-calendar-check me-2"></i> Ver Reservas
-                </a>
+                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">
+                  <i class="bi bi-trash me-2"></i> Eliminar inmueble
+                </button>
               </div>
             {% else %}
               <h3 class="h4 mb-3">Reservar</h3>
@@ -133,6 +154,16 @@
                 <button type="submit" class="btn btn-primary btn-azul w-100 py-2">
                   <i class="bi bi-calendar-check me-2"></i> Reservar ahora
                 </button>
+                {% if messages %}
+                  <div class="container mt-3">
+                    {% for message in messages %}
+                      <div class="alert alert-{% if message.tags == 'error' %}warning{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+                      </div>
+                    {% endfor %}
+                  </div>
+                {% endif %}
               </form>
             {% endif %}
           </div>
@@ -302,5 +333,4 @@
     </div>
     {% endif %}
   </div>
-
 {% endblock %}

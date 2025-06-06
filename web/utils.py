@@ -4,11 +4,9 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.core.mail import send_mail
-
+from django.conf import settings
 from .models import ClienteInmueble, Reserva
-from datetime import timedelta
 from django.contrib.auth.models import Group
-
 
 #comando para ejecutar el script en consola
 # python manage.py shell
@@ -23,58 +21,66 @@ def enviar_mail_a_empleados_sobre_reserva(id_reserva):
         reserva = Reserva.objects.get(id_reserva=id_reserva)
 
         # Buscar el cliente asociado
-        cliente_reserva = ClienteInmueble.objects.get(reserva_id=id_reserva)
+        cliente_reserva = ClienteInmueble.objects.filter(reserva_id=id_reserva).first()
+        if not cliente_reserva:
+            print("No se encontró cliente asociado a la reserva.")
+            return False
         perfil = cliente_reserva.cliente
         nombre_cliente = f"{perfil.usuario.first_name} {perfil.usuario.last_name}"
 
-        # Obtener datos del inmueble
-        inmueble = reserva.inmueble
-        nombre_inmueble = inmueble.nombre
-        id_inmueble = inmueble.id_inmueble
-        precio_por_dia = inmueble.precio_por_dia
+        # Obtener datos del inmueble o cochera y el empleado asignado
+        empleado_email = None
+        if reserva.inmueble and reserva.inmueble.empleado:
+            nombre_obj = f"inmueble #{reserva.inmueble.id_inmueble} - {reserva.inmueble.nombre}"
+            precio_por_dia = reserva.inmueble.precio_por_dia
+            empleado_email = reserva.inmueble.empleado.usuario.email
+        elif reserva.cochera and reserva.cochera.empleado:
+            nombre_obj = f"cochera #{reserva.cochera.id_cochera} - {reserva.cochera.nombre}"
+            precio_por_dia = reserva.cochera.precio_por_dia
+            empleado_email = reserva.cochera.empleado.usuario.email
+        else:
+            nombre_obj = "reserva"
+            precio_por_dia = 0
+
+        if not empleado_email:
+            print("No hay empleado asignado al inmueble o cochera, o no tiene email.")
+            return False
 
         # Calcular cantidad de días y total
         cantidad_dias = (reserva.fecha_fin - reserva.fecha_inicio).days
-        total = cantidad_dias * precio_por_dia
+        total = cantidad_dias * float(precio_por_dia)
 
         # Armar el cuerpo del mensaje
         cuerpo = (
             f"El cliente {nombre_cliente} solicitó una reserva #{reserva.id_reserva} "
-            f"para el inmueble #{id_inmueble} - {nombre_inmueble} desde el {reserva.fecha_inicio} "
-            f"hasta el {reserva.fecha_fin}. Debe pagar ${precio_por_dia:.2f} por día, "
-            f"en total son ${total:.2f} por {cantidad_dias} días. "
-            f"¿Desea confirmar la reserva para que el cliente pueda pagar?"
-            f"Para aceptar la reserva, haga click en el siguiente enlace: "
-            f"http://localhost:8000/reservas/confirmar/{reserva.id_reserva}/"
-            f"Para rechazar la reserva, haga click en el siguiente enlace: "
-            f"http://localhost:8000/reservas/rechazar/{reserva.id_reserva}/"
-            f"Para ver la reserva, haga click en el siguiente enlace: "
-            f"http://localhost:8000/reservas/{reserva.id_reserva}/"
+            f"para el {nombre_obj} desde el {reserva.fecha_inicio} hasta el {reserva.fecha_fin}. "
+            f"Debe pagar ${precio_por_dia:.2f} por día, en total son ${total:.2f} por {cantidad_dias} días. "
+            f"¿Desea confirmar la reserva para que el cliente pueda pagar?\n"
+            f"Para aceptar o rechazar la reserva, haga click en el siguiente enlace: "
         )
+        if reserva.inmueble:
+            cuerpo += (
+                f"http://localhost:8000/panel/inmuebles/reservas/{reserva.inmueble.id_inmueble}/"
+            )
+        elif reserva.cochera:
+            cuerpo += (
+                f"http://localhost:8000/panel/cocheras/reservas/{reserva.cochera.id_cochera}/"
+            )
 
-        # Obtener todos los mails de empleados
-        empleados_group = Group.objects.get(name="empleados")
-        empleados = empleados_group.user_set.all()
-        lista_mails = [emp.email for emp in empleados if emp.email]
-
-        if not lista_mails:
-            print("No hay empleados con mail definido.")
-            return False
-
-        # Enviar el mail
+        # Enviar el mail solo al empleado asignado
         send_mail(
             subject="Nueva solicitud de reserva",
             message=cuerpo,
             from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=lista_mails,
+            recipient_list=[empleado_email],
             fail_silently=False,
         )
 
-        print("Mail enviado a empleados")
+        print("Mail enviado a empleado:", empleado_email)
         return True
 
     except Exception as e:
-        print("Error al enviar mail a empleados:", e)
+        print("Error al enviar mail a empleado:", e)
         return False
 
 #si borro esto da error, no se porque
@@ -87,3 +93,5 @@ class EmailLinkTokenGenerator(PasswordResetTokenGenerator):
 
 # instanciamos un generador
 email_link_token = EmailLinkTokenGenerator()
+
+# Enviar mail al cliente sobre la reserva
