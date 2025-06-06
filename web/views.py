@@ -69,7 +69,20 @@ def index(request):
     """
     Renderiza la página de inicio de la aplicación.
     """
-    return render(request, 'index.html')
+    # Tomar las primeras 5 imágenes de inmuebles
+    hero_imgs = [img.imagen.url for img in InmuebleImagen.objects.all()[:5] if img.imagen]
+    # Si se quiere sumar cocheras, descomentar la línea:
+    # hero_imgs += [img.imagen.url for img in CocheraImagen.objects.all()[:5] if img.imagen]
+
+    # Si no hay imágenes en la BD, usar imágenes por defecto
+    if not hero_imgs:
+        hero_imgs = [
+            "https://images.unsplash.com/photo-1560184897-292b8d0a21d6?auto=format&fit=crop&w=1350&q=80",
+            "https://images.unsplash.com/photo-1590080877777-9b9b28d24d7d?auto=format&fit=crop&w=600&q=80",
+            "https://images.unsplash.com/photo-1600585154197-3c2f1d93d9e0?auto=format&fit=crop&w=600&q=80"
+        ]
+
+    return render(request, 'index.html', {'hero_imgs': hero_imgs})
 
 def logout_view(request):
     """
