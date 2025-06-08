@@ -452,16 +452,31 @@ def detalle_cochera(request, id_cochera):
 # --- Funciones para filtrar ---
 ################################################################################################################
 
+# def cargar_ciudades_filtro(request):
+#     provincia_id = request.GET.get('provincia')
+#     # Solo ciudades de la provincia seleccionada que tengan al menos un inmueble
+#     ciudades = Ciudad.objects.filter(
+#         provincia_id=provincia_id,
+#         inmueble__isnull=False
+#     ).distinct().order_by('nombre')
+#     ciudades_list = [{'id': ciudad.id, 'nombre': ciudad.nombre} for ciudad in ciudades]
+#     return JsonResponse({'ciudades': ciudades_list})
+
 def cargar_ciudades_filtro(request):
     provincia_id = request.GET.get('provincia')
-    # Solo ciudades de la provincia seleccionada que tengan al menos un inmueble
-    ciudades = Ciudad.objects.filter(
-        provincia_id=provincia_id,
-        inmueble__isnull=False
-    ).distinct().order_by('nombre')
+    tipo = request.GET.get('tipo')
+    if tipo == 'cochera':
+        ciudades = Ciudad.objects.filter(
+            provincia_id=provincia_id,
+            cochera__isnull=False
+        ).distinct().order_by('nombre')
+    else:
+        ciudades = Ciudad.objects.filter(
+            provincia_id=provincia_id,
+            inmueble__isnull=False
+        ).distinct().order_by('nombre')
     ciudades_list = [{'id': ciudad.id, 'nombre': ciudad.nombre} for ciudad in ciudades]
     return JsonResponse({'ciudades': ciudades_list})
-
 
 ################################################################################################################
 # --- Funciones de Ayuda para Permisos ---
