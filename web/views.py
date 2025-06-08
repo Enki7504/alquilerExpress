@@ -456,63 +456,64 @@ def admin_alta_empleados(request):
     return render(request, 'admin/admin_alta_empleados.html', {'form': form})
 
 @login_required
-@user_passes_test(is_admin)
+@user_passes_test(is_admin_or_empleado)
 def admin_alta_cliente(request):
+    """
+    Permite a administradores y empleados dar de alta un cliente.
+    El cliente es agregado al grupo 'cliente' y 'firstlogincliente' para forzar cambio de contraseña.
+    """
+    from django.contrib.auth.models import Group
+    from .forms import ClienteAdminCreationForm
+    import secrets, string
+
     if request.method == "POST":
         form = ClienteAdminCreationForm(request.POST)
         if form.is_valid():
             data = form.cleaned_data
-            with transaction.atomic():
-                password = generar_contraseña_segura()
-                user = User.objects.create_user(
-                    username=data["email"],
-                    email=data["email"],
-                    password=password,
-                    first_name=data["first_name"].title(),
-                    last_name=data["last_name"].title(),
-                )
-                grupo_cliente, _ = Group.objects.get_or_create(name="cliente")
-                firstlogin_cliente, _ = Group.objects.get_or_create(name="firstlogincliente")
-                user.groups.add(grupo_cliente)
-                user.groups.add(firstlogin_cliente)
-                Perfil.objects.create(usuario=user, dni=data["dni"])
+            password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(10))
+            user = User.objects.create_user(
+                username=data["email"],
+                email=data["email"],
+                password=password,
+                first_name=data["first_name"].title(),
+                last_name=data["last_name"].title(),
+            )
+            grupo_cliente, _ = Group.objects.get_or_create(name="cliente")
+            firstlogin_cliente, _ = Group.objects.get_or_create(name="firstlogincliente")
+            user.groups.add(grupo_cliente)
+            user.groups.add(firstlogin_cliente)
+            Perfil.objects.create(usuario=user, dni=data["dni"])
             # Enviar mail con la contraseña
             try:
                 send_mail(
-                    "Bienvenido a AlquilerExpress",
+                    "Bienvenido a AlquilerExpress - Acceso de Cliente",
                     f"Hola {user.first_name},\n\n"
                     f"Tu cuenta de cliente ha sido creada.\n"
                     f"Usuario: {user.email}\n"
-                    f"Contraseña: {password}\n\n"
+                    f"Contraseña temporal: {password}\n\n"
                     f"Por favor, inicia sesión y cambia tu contraseña.",
                     settings.DEFAULT_FROM_EMAIL,
                     [user.email],
                     fail_silently=False,
                 )
-                return _respuesta_cliente(
-                    request,
-                    status='success',
-                    message=f'Cliente registrado y correo enviado a {user.email}',
-                    icon='success'
-                )
+                message = f"Cliente registrado y correo enviado a {user.email}."
+                icon = "success"
+                status = "success"
             except Exception as e:
-                return _respuesta_cliente(
-                    request,
-                    status='warning',
-                    message=f'Cliente creado pero error enviando correo: {e}. Contraseña: {password}',
-                    icon='warning'
-                )
+                message = f"Cliente creado, pero error enviando el correo: {e}"
+                icon = "warning"
+                status = "success"
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'status': status, 'message': message, 'icon': icon})
+            messages.success(request, message)
+            return redirect('admin_alta_cliente')
         else:
             errors = {field: error[0] for field, error in form.errors.items()}
-            return _respuesta_cliente(
-                request,
-                status='form_errors',
-                message='Corrige los errores en el formulario',
-                icon='error',
-                errors=errors,
-                form=form
-            )
-    form = ClienteAdminCreationForm()
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'status': 'form_errors', 'errors': errors})
+            messages.error(request, "Corrige los errores en el formulario.")
+    else:
+        form = ClienteAdminCreationForm()
     return render(request, 'admin/admin_alta_cliente.html', {'form': form})
 
 ##################
