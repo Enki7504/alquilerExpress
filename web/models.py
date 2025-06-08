@@ -172,8 +172,8 @@ class LoginOTP(models.Model):
     creado_en = models.DateTimeField(auto_now_add=True)
 
     def is_valido(self):
-        # Verifica si el código es válido (dentro de 10 minutos)        
-        return timezone.now() < self.creado_en + timedelta(minutes=10)
+        # Verifica si el código es válido (dentro de 1 minuto)
+        return timezone.now() < self.creado_en + timedelta(minutes=1)
 
 class Notificacion(models.Model):
     usuario = models.ForeignKey(Perfil, on_delete=models.CASCADE)
