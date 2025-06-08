@@ -19,18 +19,20 @@
     <nav class="col-md-3 col-lg-2 d-md-block sidebar">
       <div class="position-sticky pt-3">
         <!-- Sección de Gestión de Usuarios -->
-        {% if user.is_staff %}
+        {% if user.is_staff or user|has_group:"empleado" %}
         <div class="sidebar-section">
           <div class="sidebar-section-title">
             <i class="bi bi-people-fill"></i> Gestión de Usuarios
           </div>
           <ul class="nav flex-column">
+            {% if user.is_staff %}
             <li class="nav-item">
               <a class="nav-link {% if request.resolver_match.url_name == 'admin_alta_empleados' %}active{% endif %}" 
                   href="{% url 'admin_alta_empleados' %}">
                 <i class="bi bi-person-plus"></i> Registrar Empleados
               </a>
             </li>
+            {% endif %}
             <li class="nav-item">
               <a class="nav-link {% if request.resolver_match.url_name == 'admin_alta_cliente' %}active{% endif %}" 
                   href="{% url 'admin_alta_cliente' %}">

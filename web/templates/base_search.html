@@ -16,95 +16,24 @@
   <link rel="stylesheet" href="{% static 'css/global.css' %}">
   <link rel="stylesheet" href="{% static 'css/notification.css' %}">
   {% block extra_css %}{% endblock %}
+    <link rel="icon" type="image/png" href="{% static 'img/logo-alquiler-express-3.png' %}">
 </head>
 <body>
-  <!-- Navbar -->
-  <nav class="navbar navbar-expand-lg navbar-light bg-white fixed-top shadow-sm px-4">
-    <div class="navbar__container container-fluid d-flex align-items-center justify-content-between">
-      <!-- Icono de alquiler express -->
-      <div class="d-flex align-items-center me-3">
-        <a href="{% url 'index' %}">
-          <img src="{% static 'img/logo-alquiler-express-2.png' %}" alt="Logo Alquiler Express" class="navbar__icon">
-        </a>
-      </div>
-      <!-- Barrita de busqueda -->
-      <form class="navbar__search d-flex flex-grow-1 justify-content-center mx-3" 
-            action="{% if 'cochera' in request.path %}{% url 'buscar_cocheras' %}{% else %}{% url 'buscar_inmuebles' %}{% endif %}" 
-            method="get">
-        <div class="search__input input-group w-100">
-          <input type="text" class="form-control" name="q" placeholder="¿Qué estas buscando?..." value="{{ request.GET.q }}">
+  {% block navbar_search %}
+    <form class="navbar__search d-flex flex-grow-1 justify-content-center mx-3"
+          action="{% if 'cochera' in request.path %}{% url 'buscar_cocheras' %}{% else %}{% url 'buscar_inmuebles' %}{% endif %}"
+          method="get">
+      <div class="search__input input-group w-100">
+        <input type="text" class="form-control" name="q" placeholder="¿Qué estas buscando?..." value="{{ request.GET.q }}">
           <!--
-          <select class="search__select form-select" name="tipo" id="searchType">
-            <option value="inmuebles" {% if 'inmueble' in request.path %}selected{% endif %}>Inmuebles</option>
-            <option value="cocheras" {% if 'cochera' in request.path %}selected{% endif %}>Cocheras</option>
-          </select>
           -->
-          <button class="search__button btn btn-outline-success" type="submit">
-            <i class="bi bi-search"></i>
-          </button>
-        </div>
-      </form>
-      <!-- Botoncitos -->
-      <div class="navbar__buttons d-flex align-items-center ms-3">
-        {% if user.is_authenticated %}
-          <!-- Notificaciones -->
-          <div class="dropdown me-2">
-            <button class="btn btn-outline-secondary position-relative dropdown-toggle" 
-                    type="button" 
-                    id="notificacionesDropdown" 
-                    data-bs-toggle="dropdown" 
-                    aria-expanded="false">
-                <i class="bi bi-bell"></i>
-                {% if notificaciones_no_leidas > 0 %}
-                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                        {{ notificaciones_no_leidas }}
-                        <span class="visually-hidden">notificaciones no leídas</span>
-                    </span>
-                {% endif %}
-            </button>
-            <ul class="dropdown-menu dropdown-menu-end dropdown-menu-notifications" aria-labelledby="notificacionesDropdown">
-                {% if notificaciones %}
-                    <div class="notification-scrollable">
-                        {% for notificacion in notificaciones %}
-                            <li class="notification-item {% if not notificacion.leido %}unread{% endif %}">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div class="notification-content">
-                                        <div class="notification-message">{{ notificacion.mensaje }}</div>
-                                        <small class="text-muted notification-time">{{ notificacion.fecha_creacion|timesince }}</small>
-                                    </div>
-                                    <form action="{% url 'eliminar_notificacion' notificacion.id %}" method="post" class="d-inline">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn btn-sm btn-link text-danger p-0" title="Eliminar">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    </form>
-                                </div>
-                            </li>
-                        {% endfor %}
-                    </div>
-                {% else %}
-                    <li class="notification-item text-center py-2">No hay notificaciones</li>
-                {% endif %}
-            </ul>
-          </div>
-          
-          {% if user.is_staff or user|has_group:"empleado" %}
-            <a href="{% url 'admin_panel' %}" class="btn btn-outline-primary me-2">
-                <i class="bi bi-speedometer2"></i> Panel
-            </a>
-          {% endif %}
-          <form action="{% url 'logout' %}" method="post" class="d-inline">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-outline-secondary me-2">Cerrar sesión</button>
-          </form>
-        {% else %}
-          <a href="{% url 'login' %}" class="btn btn-outline-secondary me-2">Iniciar sesión</a>
-          <a href="{% url 'register' %}" class="btn btn-primary">Registrarse</a>
-        {% endif %}
+        <button class="search__button btn btn-outline-success" type="submit">
+          <i class="bi bi-search"></i>
+        </button>
       </div>
-    </div>
-  </nav>
-
+    </form>
+  {% endblock %}
+  {% include "partials/_navbar.html" %}
   <!-- Contenido específico -->
   {% block content %}{% endblock %}
 

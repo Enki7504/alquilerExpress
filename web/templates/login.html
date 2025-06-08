@@ -22,7 +22,8 @@
       </div>
       <div class="mb-3">
         <label for="id_password" class="form-label">Contraseña</label>
-        {{ form.password|add_class:"form-control" }}
+        <input type="password" name="password" class="form-control" id="id_password"
+               value="{{ form.data.password|default_if_none:'' }}">
         <div class="form-text">Ingresa tu contraseña.</div>
       </div>
       <div class="d-grid">
