@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 
-from .models import Cochera, Comentario, Estado, Inmueble, Perfil
+from .models import Cochera, Comentario, Estado, Inmueble, Perfil, Resenia
 from .models import Perfil, Comentario, Inmueble, Estado, Cochera, Ciudad, Provincia
 from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
@@ -450,3 +450,26 @@ class ChangePasswordForm(forms.Form):
             if current_password and new_password1 == current_password:
                 raise forms.ValidationError("La contraseña debe ser diferente a la actual.")
         return cleaned_data
+
+class ReseniaForm(forms.ModelForm):
+    calificacion = forms.ChoiceField(
+        choices=[
+            (5, "⭐️⭐️⭐️⭐️⭐️ Excelente"),
+            (4, "⭐️⭐️⭐️⭐️ Muy bueno"),
+            (3, "⭐️⭐️⭐️ Bueno"),
+            (2, "⭐️⭐️ Regular"),
+            (1, "⭐️ Malo"),
+        ],
+        widget=forms.Select(attrs={'class': 'form-select form-select-lg'}),
+        label="Calificación",
+        required=True
+    )
+    descripcion = forms.CharField(
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'Compartí detalles de tu estadía...'}),
+        label="Opinión (opcional)",
+        required=False
+    )
+
+    class Meta:
+        model = Resenia
+        fields = ['calificacion', 'descripcion']

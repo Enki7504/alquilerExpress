@@ -193,45 +193,62 @@
       <a href="{% url 'login' %}">Inicia sesión</a> para dejar un comentario.
     </div>
   {% endif %}
+  <hr>
 </div>
 
 <!-- Formulario para reseñas -->
-{% if user.is_authenticated %}
-<div class="container mt-5">
-  <div class="card shadow-sm border-0">
-    <div class="card-body p-4">
-      <h3 class="h4 mb-4 border-bottom pb-3">Dejá tu reseña</h3>
-      <form>
-        {% csrf_token %}
-        <!-- Selector de Calificación -->
-        <div class="mb-4">
-          <label for="calificacion" class="form-label">Calificación</label>
-          <select id="calificacion" name="calificacion" class="form-select form-select-lg" required>
-            <option value="" disabled selected>Selecciona una calificación</option>
-            <option value="5">⭐️⭐️⭐️⭐️⭐️ Excelente</option>
-            <option value="4">⭐️⭐️⭐️⭐️ Muy bueno</option>
-            <option value="3">⭐️⭐️⭐️ Bueno</option>
-            <option value="2">⭐️⭐️ Regular</option>
-            <option value="1">⭐️ Malo</option>
-          </select>
-          <small class="text-muted d-block mt-2">Selecciona de 1 a 5 estrellas</small>
+{% if user.is_authenticated and puede_reseñar %}
+  {% if usuario_resenia %}
+    <!-- Bloque: Ya dejó reseña -->
+    <div class="container mt-5">
+      <div class="card shadow-sm border-0">
+        <div class="card-body p-4">
+          <h3 class="h4 mb-4 border-bottom pb-3">Tu reseña</h3>
+          <div class="d-flex align-items-center mb-2">
+            <div class="text-warning me-2">
+              {% for i in "12345" %}
+                <i class="bi bi-star-fill{% if forloop.counter > usuario_resenia.calificacion %} text-muted{% endif %}"></i>
+              {% endfor %}
+            </div>
+            <span class="text-muted small">{{ usuario_resenia.fecha_creacion|date:"d M Y" }}</span>
+          </div>
+          {% if usuario_resenia.descripcion %}
+            <p class="mb-0">{{ usuario_resenia.descripcion }}</p>
+          {% else %}
+            <p class="mb-0 text-muted fst-italic">No escribiste una opinión.</p>
+          {% endif %}
         </div>
-        <!-- Comentario -->
-        <div class="mb-4">
-          <label for="comentario" class="form-label">Compartí tu experiencia</label>
-          <textarea class="form-control" id="comentario" name="comentario" rows="4" placeholder="Compartí detalles de tu estadía..." required></textarea>
-        </div>
-        <!-- Botoncito para publicar -->
-        <div class="d-flex justify-content-end">
-          <button type="submit" class="btn btn-primary btn-azul px-4">
-            <i class="bi bi-send-fill me-2"></i> Publicar reseña
-          </button>
-        </div>
-      </form>
+      </div>
     </div>
-  </div>
-</div>
+  {% else %}
+    <!-- Formulario para dejar reseña -->
+    <div class="container mt-5">
+      <div class="card shadow-sm border-0">
+        <div class="card-body p-4">
+          <h3 class="h4 mb-4 border-bottom pb-3">Dejá tu reseña</h3>
+          <form method="post" action="">
+            {% csrf_token %}
+            <div class="mb-4">
+              <label for="{{ resenia_form.calificacion.id_for_label }}" class="form-label">Calificación</label>
+              {{ resenia_form.calificacion }}
+              <small class="text-muted d-block mt-2">Selecciona de 1 a 5 estrellas</small>
+            </div>
+            <div class="mb-4">
+              <label for="comentario" class="form-label">Compartí tu experiencia</label>
+              {{ resenia_form.descripcion }}
+            </div>
+            <div class="d-flex justify-content-end">
+              <button type="submit" name="crear_resenia" class="btn btn-primary btn-azul px-4">
+                <i class="bi bi-send-fill me-2"></i> Publicar reseña
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  {% endif %}
 {% else %}
+<!-- Cartelito para autenticarte -->
 <div class="container mt-5">
   <div class="card shadow-sm border-0 text-center py-4">
     <div class="card-body">
@@ -239,7 +256,7 @@
       <h3 class="h4 mb-3">Iniciá sesión para dejar tu reseña</h3>
       <p class="mb-4">Compartí tu experiencia con este alojamiento</p>
       <div class="d-flex justify-content-center gap-3">
-        <a href="#" class="btn btn-primary btn-azul">
+        <a href="{% url 'login' %}" class="btn btn-primary btn-azul">
           Iniciar sesión
         </a>
         <a href="{% url 'register' %}" class="btn btn-outline-primary">
@@ -253,11 +270,13 @@
 
 <!-- Listado de reseñas -->
 <div class="container mt-5 mb-5">
+  <!-- Cabecera de esta sección -->
   <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
     <h3 class="h4 mb-0">Reseñas de huéspedes</h3>
-    <div class="badge bg-primary rounded-pill">{{ resenias.count }} reseñas</div>
+    <div class="badge bg-primary">{{ resenias.count }} reseñas</div>
   </div>
   {% if resenias %}
+  <!-- Se muestran todas las reseñas -->
   <div class="row g-4">
     {% for resenia in resenias %}
     <div class="col-12">
@@ -291,6 +310,7 @@
     {% endfor %}
   </div>
   {% else %}
+  <!-- Se muestra un mensaje de que no hay reseñas -->
   <div class="card border-0 shadow-sm">
     <div class="card-body text-center py-5">
       <i class="bi bi-chat-square-text display-4 text-muted mb-3"></i>

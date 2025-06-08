@@ -32,6 +32,7 @@ from .forms import (
     EmpleadoAdminCreationForm,
     ClienteAdminCreationForm,
     ChangePasswordForm,
+    ReseniaForm,
 )
 
 # Importaciones de modelos locales
@@ -302,18 +303,28 @@ def detalle_inmueble(request, id_inmueble):
     reservas = Reserva.objects.filter(inmueble=inmueble, estado__nombre__in=['Confirmada', 'Pendiente']).order_by('-fecha_inicio')
     historial = InmuebleEstado.objects.filter(inmueble=inmueble).order_by('-fecha_inicio')
 
-    if request.method == 'POST' and request.user.is_authenticated:
-        comentario_form = ComentarioForm(request.POST)
-        if comentario_form.is_valid():
-            comentario = comentario_form.save(commit=False)
-            comentario.usuario = request.user.perfil
-            comentario.inmueble = inmueble
-            comentario.save()
-            messages.success(request, "Comentario añadido exitosamente.")
+    # Solo clientes pueden crear reseñas
+    puede_reseñar = request.user.is_authenticated and request.user.groups.filter(name="cliente").exists()
+
+    # Detectar si el usuario ya dejó una reseña
+    usuario_resenia = None
+    if request.user.is_authenticated:
+        usuario_resenia = Resenia.objects.filter(inmueble=inmueble, usuario=request.user.perfil).first()
+
+    # Procesar reseña
+    if request.method == 'POST' and puede_reseñar and 'crear_resenia' in request.POST:
+        resenia_form = ReseniaForm(request.POST)
+        if resenia_form.is_valid():
+            resenia = resenia_form.save(commit=False)
+            resenia.usuario = request.user.perfil
+            resenia.inmueble = inmueble
+            resenia.save()
+            messages.success(request, "¡Reseña publicada!")
             return redirect('detalle_inmueble', id_inmueble=id_inmueble)
         else:
-            messages.error(request, "Error al añadir el comentario.")
+            messages.error(request, "Corrige los errores en la reseña.")
     else:
+        resenia_form = ReseniaForm()
         comentario_form = ComentarioForm()
 
     return render(request, 'inmueble.html', {
@@ -321,8 +332,11 @@ def detalle_inmueble(request, id_inmueble):
         'resenias': resenias,
         'comentarios': comentarios,
         'comentario_form': comentario_form,
+        'resenia_form': resenia_form,
         'reservas': reservas,
         'historial': historial,
+        'puede_reseñar': puede_reseñar,
+        'usuario_resenia': usuario_resenia,  # <--- IMPORTANTE
     })
 
 def detalle_cochera(request, id_cochera):
@@ -334,19 +348,36 @@ def detalle_cochera(request, id_cochera):
         Cochera.objects.select_related('estado'),
         id_cochera=id_cochera
     )
-    
     resenias = Resenia.objects.filter(cochera=cochera)
     comentarios = Comentario.objects.filter(cochera=cochera).order_by('-fecha_creacion')
     reservas = Reserva.objects.filter(cochera=cochera, estado__nombre__in=['Confirmada', 'Pendiente']).order_by('-fecha_inicio')
     historial = CocheraEstado.objects.filter(cochera=cochera).order_by('-fecha_inicio')
 
-    if request.method == 'POST' and request.user.is_authenticated:
+    puede_reseñar = request.user.is_authenticated and request.user.groups.filter(name="cliente").exists()
+
+    # --- Procesar reseña ---
+    if request.method == 'POST' and puede_reseñar and 'crear_resenia' in request.POST:
+        resenia_form = ReseniaForm(request.POST)
+        if resenia_form.is_valid():
+            resenia = resenia_form.save(commit=False)
+            resenia.usuario = request.user.perfil
+            resenia.cochera = cochera
+            resenia.save()
+            messages.success(request, "¡Reseña publicada!")
+            return redirect('detalle_cochera', id_cochera=id_cochera)
+        else:
+            messages.error(request, "Corrige los errores en la reseña.")
+    else:
+        resenia_form = ReseniaForm()
+
+    # --- Procesar comentario ---
+    if request.method == 'POST' and request.user.is_authenticated and not 'crear_resenia' in request.POST:
         comentario_form = ComentarioForm(request.POST)
         if comentario_form.is_valid():
             comentario = comentario_form.save(commit=False)
             comentario.usuario = request.user.perfil
             comentario.cochera = cochera
-            comentario.inmueble = None  # Asegurarse que no está asociado a un inmueble
+            comentario.inmueble = None
             comentario.save()
             messages.success(request, "Comentario añadido exitosamente.")
             return redirect('detalle_cochera', id_cochera=id_cochera)
@@ -355,13 +386,21 @@ def detalle_cochera(request, id_cochera):
     else:
         comentario_form = ComentarioForm()
 
+    # Verificar si el usuario ha dejado una reseña antes (para mostrar en el formulario de reseña)
+    usuario_resenia = None
+    if request.user.is_authenticated:
+        usuario_resenia = Resenia.objects.filter(cochera=cochera, usuario=request.user.perfil).first()
+
     return render(request, 'cochera.html', {
         'cochera': cochera,
         'resenias': resenias,
         'comentarios': comentarios,
         'comentario_form': comentario_form,
+        'resenia_form': resenia_form,
         'reservas': reservas,
         'historial': historial,
+        'puede_reseñar': puede_reseñar,
+        'usuario_resenia': usuario_resenia,  # Enviar la reseña del usuario al template
     })
 
 
