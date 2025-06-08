@@ -85,7 +85,8 @@ def index(request):
             "https://images.unsplash.com/photo-1600585154197-3c2f1d93d9e0?auto=format&fit=crop&w=600&q=80"
         ]
 
-    return render(request, 'index.html', {'hero_imgs': hero_imgs})
+    mostrar_bienvenida = request.session.pop('mostrar_bienvenida', False)
+    return render(request, 'index.html', {'hero_imgs': hero_imgs, 'mostrar_bienvenida': mostrar_bienvenida})
 
 def logout_view(request):
     """
@@ -151,6 +152,7 @@ def login_view(request):
                     return redirect("loginAdmin_2fa")
                 else:
                     login(request, user_auth)
+                    request.session['mostrar_bienvenida'] = True
                     messages.success(request, f"Bienvenido, {user_auth.first_name}!")
                     return redirect('index')
             else:

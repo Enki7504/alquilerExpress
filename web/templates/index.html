@@ -153,6 +153,14 @@
     </div>
   </nav>
 
+  {% if user.is_authenticated and mostrar_bienvenida %}
+    <h4 class="text-center text-success mt-4 mb-0">
+      Bienvenido, {{ user.first_name|default:user.username }} 👋
+    </h4>
+    <br>
+  {% endif %}
+    
+
   <!-- Hero Carousel -->
   <section class="hero text-center p-0" style="height: 60vh;">
     <div class="container h-100">
