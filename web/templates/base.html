@@ -77,7 +77,9 @@
                 <i class="bi bi-speedometer2"></i> Panel
             </a>
           {% endif %}
+          <!--
           <a href="{% url 'cambiar_contrasena' %}" class="btn btn-outline-secondary me-2">Cambiar contraseña</a>
+          -->
           <form action="{% url 'logout' %}" method="post" class="d-inline">
             {% csrf_token %}
             <button type="submit" class="btn btn-outline-secondary me-2">Cerrar sesión</button>
