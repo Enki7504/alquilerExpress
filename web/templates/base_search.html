@@ -31,10 +31,12 @@
             method="get">
         <div class="search__input input-group w-100">
           <input type="text" class="form-control" name="q" placeholder="¿Qué estas buscando?..." value="{{ request.GET.q }}">
+          <!--
           <select class="search__select form-select" name="tipo" id="searchType">
             <option value="inmuebles" {% if 'inmueble' in request.path %}selected{% endif %}>Inmuebles</option>
             <option value="cocheras" {% if 'cochera' in request.path %}selected{% endif %}>Cocheras</option>
           </select>
+          -->
           <button class="search__button btn btn-outline-success" type="submit">
             <i class="bi bi-search"></i>
           </button>
