@@ -397,8 +397,6 @@ def admin_alta_empleados(request):
         form = EmpleadoAdminCreationForm(request.POST)
         if form.is_valid():
             data = form.cleaned_data
-            # Generar contraseña aleatoria segura
-            import secrets, string
             password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(10))
             user = User.objects.create_user(
                 username=data["email"],
@@ -408,7 +406,9 @@ def admin_alta_empleados(request):
                 last_name=data["last_name"].title(),
             )
             grupo_empleado, _ = Group.objects.get_or_create(name="empleado")
+            firstlogin_empleado, _ = Group.objects.get_or_create(name="firstloginempleado")
             user.groups.add(grupo_empleado)
+            user.groups.add(firstlogin_empleado)
             Perfil.objects.create(usuario=user, dni=data["dni"])
             # Enviar mail con la contraseña
             try:
@@ -462,37 +462,21 @@ def admin_alta_cliente(request):
         form = ClienteAdminCreationForm(request.POST)
         if form.is_valid():
             data = form.cleaned_data
-            #try:
             with transaction.atomic():
                 password = generar_contraseña_segura()
                 user = User.objects.create_user(
                     username=data["email"],
                     email=data["email"],
-                        password=password,
-                        first_name=data["first_name"].title(),
-                        last_name=data["last_name"].title(),
-                    )
-                grupo_cliente, _ = Group.objects.get_or_create(name="cliente")
-                user.groups.add(grupo_cliente)
-                Perfil.objects.create(usuario=user, dni=data["dni"])
-            """except IntegrityError as e:
-                # ¡IMPORTANTE! Retornar inmediatamente para cortar el flujo
-                return _respuesta_cliente(
-                    request,
-                    status='error',
-                    message=f'Error al crear cliente: {str(e)}. Verifica email/DNI.',
-                    icon='error',
-                    form=form
+                    password=password,
+                    first_name=data["first_name"].title(),
+                    last_name=data["last_name"].title(),
                 )
-            except Exception as e:
-                return _respuesta_cliente(
-                    request,
-                    status='error',
-                    message=f'Error inesperado: {str(e)}',
-                    icon='error',
-                    form=form
-                )"""
-            # Solo si no hubo error, sigue con el envío de mail y el success
+                grupo_cliente, _ = Group.objects.get_or_create(name="cliente")
+                firstlogin_cliente, _ = Group.objects.get_or_create(name="firstlogincliente")
+                user.groups.add(grupo_cliente)
+                user.groups.add(firstlogin_cliente)
+                Perfil.objects.create(usuario=user, dni=data["dni"])
+            # Enviar mail con la contraseña
             try:
                 send_mail(
                     "Bienvenido a AlquilerExpress",
@@ -1261,7 +1245,7 @@ def marcar_notificacion(request, id_notificacion):
     Marca una notificación específica como leída para el usuario actual.
     """
     notificacion = get_object_or_404(Notificacion, id=id_notificacion, usuario=request.user.perfil)
-    if not notificacion.leido:
+    if notificacion.leido:
         notificacion.leido = True
         notificacion.save()
         messages.info(request, "Notificación marcada como leída.")
@@ -1308,17 +1292,23 @@ def cargar_ciudades(request):
 
 @login_required
 def cambiar_contrasena(request):
+    from django.contrib.auth.models import Group
     if request.method == "POST":
         form = ChangePasswordForm(request.user, request.POST)
         if form.is_valid():
             new_password = form.cleaned_data["new_password1"]
             request.user.set_password(new_password)
             request.user.save()
-            messages.success(request, "La contraseña se cambió exitosamente. Vuelve a iniciar sesión.")
-            return redirect('login')
-        else:
-            # Los errores se mostrarán en el template
-            pass
+            # Quitar de los grupos firstlogin
+            for group_name in ["firstloginempleado", "firstlogincliente"]:
+                group = Group.objects.filter(name=group_name).first()
+                if group:
+                    request.user.groups.remove(group)
+            # Mantener sesión activa
+            from django.contrib.auth import update_session_auth_hash
+            update_session_auth_hash(request, request.user)
+            messages.success(request, "Contraseña cambiada exitosamente. Ya puedes usar el sistema normalmente.")
+            return redirect("index")
     else:
         form = ChangePasswordForm(request.user)
     return render(request, "cambiar_contrasena.html", {"form": form})
