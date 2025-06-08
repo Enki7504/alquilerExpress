@@ -8,316 +8,317 @@
 {% endblock %}
 
 {% block content %}
-<main class="container mt-5 pt-5">
-  <a href="{% url 'buscar_cocheras' %}" class="btn btn-outline-secondary mb-3">
-    ← Volver a la búsqueda
-  </a>
-  <div id="detalle-cochera" class="row">
-    <!-- Info de la cochera -->
-    <div class="col-lg-8">
-      <!-- Carrusel de imágenes -->
-      <div id="cocheraCarousel" class="carousel slide mb-4 shadow-sm rounded" data-bs-ride="carousel">
-        <div class="carousel-inner rounded">
-          {% for imagen in cochera.imagenes.all %}
-            <div class="carousel-item {% if forloop.first %}active{% endif %}">
-              <img src="{{ imagen.imagen.url }}" class="d-block w-100 cochera-hero-img" alt="{{ cochera.nombre }}">
-            </div>
-          {% empty %}
-            <div class="carousel-item active">
-              <img src="{% static 'img/default-garage-large.jpg' %}" class="d-block w-100 cochera-hero-img" alt="Imagen por defecto">
-            </div>
-          {% endfor %}
-        </div>
-        {% if cochera.imagenes.count > 1 %}
-          <button class="carousel-control-prev" type="button" data-bs-target="#cocheraCarousel" data-bs-slide="prev">
-            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-            <span class="visually-hidden">Previous</span>
-          </button>
-          <button class="carousel-control-next" type="button" data-bs-target="#cocheraCarousel" data-bs-slide="next">
-            <span class="carousel-control-next-icon" aria-hidden="true"></span>
-            <span class="visually-hidden">Next</span>
-          </button>
-        {% endif %}
-      </div>
-      <!-- Información detallada -->
-      <div class="card mb-4 shadow-sm">
-        <div class="card-body">
-          <h1 class="h2 mb-3">{{ cochera.nombre }}</h1>
-          <div class="d-flex align-items-center mb-3">
-            <i class="bi bi-geo-alt-fill text-primary me-2"></i>
-            <span class="text-muted">{{ cochera.ubicacion }}</span>
+  <!-- Contenido principal -->
+  <main class="container mt-5 pt-5">
+    <a href="{% url 'buscar_cocheras' %}" class="btn btn-outline-secondary mb-3">
+      ← Volver a la búsqueda
+    </a>
+    <div id="detalle-cochera" class="row">
+      <!-- Info de la cochera -->
+      <div class="col-lg-8">
+        <!-- Carrusel de imágenes -->
+        <div id="cocheraCarousel" class="carousel slide mb-4 shadow-sm rounded" data-bs-ride="carousel">
+          <div class="carousel-inner rounded">
+            {% for imagen in cochera.imagenes.all %}
+              <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                <img src="{{ imagen.imagen.url }}" class="d-block w-100 cochera-hero-img" alt="{{ cochera.nombre }}">
+              </div>
+            {% empty %}
+              <div class="carousel-item active">
+                <img src="{% static 'img/default-garage-large.jpg' %}" class="d-block w-100 cochera-hero-img" alt="Imagen por defecto">
+              </div>
+            {% endfor %}
           </div>
-          <div class="d-flex flex-wrap gap-3 mb-4">
-            <div class="d-flex align-items-center">
-              <i class="bi bi-car-front text-primary me-2"></i>
-              <span>{{ cochera.cantidad_vehiculos }} vehículo{{ cochera.cantidad_vehiculos|pluralize }}</span>
+          {% if cochera.imagenes.count > 1 %}
+            <button class="carousel-control-prev" type="button" data-bs-target="#cocheraCarousel" data-bs-slide="prev">
+              <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+              <span class="visually-hidden">Previous</span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#cocheraCarousel" data-bs-slide="next">
+              <span class="carousel-control-next-icon" aria-hidden="true"></span>
+              <span class="visually-hidden">Next</span>
+            </button>
+          {% endif %}
+        </div>
+        <!-- Información detallada -->
+        <div class="card mb-4 shadow-sm">
+          <div class="card-body">
+            <h1 class="h2 mb-3">{{ cochera.nombre }}</h1>
+            <div class="d-flex align-items-center mb-3">
+              <i class="bi bi-geo-alt-fill text-primary me-2"></i>
+              <span class="text-muted">{{ cochera.ubicacion }}</span>
             </div>
-            <div class="d-flex align-items-center">
-              <i class="bi bi-arrows-angle-expand text-primary me-2"></i>
-              <span>{{ cochera.ancho }}m × {{ cochera.largo }}m × {{ cochera.alto }}m</span>
+            <div class="d-flex flex-wrap gap-3 mb-4">
+              <div class="d-flex align-items-center">
+                <i class="bi bi-car-front text-primary me-2"></i>
+                <span>{{ cochera.cantidad_vehiculos }} vehículo{{ cochera.cantidad_vehiculos|pluralize }}</span>
+              </div>
+              <div class="d-flex align-items-center">
+                <i class="bi bi-arrows-angle-expand text-primary me-2"></i>
+                <span>{{ cochera.ancho }}m × {{ cochera.largo }}m × {{ cochera.alto }}m</span>
+              </div>
+              <div class="d-flex align-items-center">
+                <i class="bi bi-building text-primary me-2"></i>
+                <span>Techo: {{ cochera.con_techo|yesno:"Sí,No" }}</span>
+              </div>
+              <p class="text-muted small mt-2">
+                <i class="bi bi-calendar-date me-1"></i>
+                Publicado el {{ cochera.fecha_publicacion|date:"d/m/Y" }}
+              </p>
+              {% if cochera.estado %}
+              <span class="badge bg-{% if cochera.estado.nombre == 'Disponible' %}success{% else %}warning{% endif %}">
+                {{ cochera.estado.nombre }}
+              </span>
+              {% endif %}
             </div>
-            <div class="d-flex align-items-center">
-              <i class="bi bi-building text-primary me-2"></i>
-              <span>Techo: {{ cochera.con_techo|yesno:"Sí,No" }}</span>
-            </div>
-            <p class="text-muted small mt-2">
-              <i class="bi bi-calendar-date me-1"></i>
-              Publicado el {{ cochera.fecha_publicacion|date:"d/m/Y" }}
-            </p>
-            {% if cochera.estado %}
-            <span class="badge bg-{% if cochera.estado.nombre == 'Disponible' %}success{% else %}warning{% endif %}">
-              {{ cochera.estado.nombre }}
-            </span>
+            <h3 class="h4 mb-3">Descripción</h3>
+            <p class="mb-4">{{ cochera.descripcion }}</p>
+            <h3 class="h4 mb-3">Política de cancelación</h3>
+            <p>{{ cochera.politica_cancelacion }}</p>
+          </div>
+        </div>
+      </div>
+      <!-- Sidebar - Panel administrativo o reserva -->
+      <div class="col-lg-4">
+        <div class="card shadow-sm sticky-top" style="top: 20px;">
+          <div class="card-body">
+            {% if user.is_staff %}
+              <h3 class="h4 mb-3">Gestión de la Cochera</h3>
+              <div class="d-flex align-items-end mb-3">
+                <span class="h3 text-primary">${{ cochera.precio_por_dia|floatformat:"0" }}</span>
+                <span class="text-muted ms-1">/ día</span>
+              </div>
+              <div class="d-grid gap-2">
+                <a href="{% url 'admin_cocheras_editar' id_cochera=cochera.id_cochera %}" class="btn btn-warning">
+                  <i class="bi bi-pencil-square me-2"></i> Editar Cochera
+                </a>
+                <a href="{% url 'admin_cocheras_reservas' id_cochera=cochera.id_cochera %}" class="btn btn-primary">
+                  <i class="bi bi-calendar-check me-2"></i> Ver Reservas
+                </a>
+                <a href="{% url 'admin_cocheras_historial' id_cochera=cochera.id_cochera %}" class="btn btn-secondary">
+                  <i class="bi bi-clock-history me-2"></i> Ver Historial
+                </a>
+                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">
+                  <i class="bi bi-trash me-2"></i> Eliminar Cochera
+                </button>
+              </div>
+            {% else %}
+              <h3 class="h4 mb-3">Reservar</h3>
+              <div class="d-flex align-items-end mb-3">
+                <span class="h3 text-primary">${{ cochera.precio_por_dia|floatformat:"0" }}</span>
+                <span class="text-muted ms-1">/ noche</span>
+              </div>
+              <form method="post" action="{% url 'crear_reserva_cochera' id_cochera=cochera.id_cochera %}">
+                {% csrf_token %}
+                <div class="mb-3">
+                  <label for="fecha_inicio" class="form-label">Fecha de llegada</label>
+                  <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio" required>
+                </div>
+                <div class="mb-3">
+                  <label for="fecha_fin" class="form-label">Fecha de salida</label>
+                  <input type="date" class="form-control" id="fecha_fin" name="fecha_fin" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-azul w-100 py-2">
+                  <i class="bi bi-calendar-check me-2"></i> Reservar ahora
+                </button>
+                {% if messages %}
+                  <div class="container mt-3">
+                    {% for message in messages %}
+                      <div class="alert alert-{% if message.tags == 'error' %}warning{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+                      </div>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              </form>
             {% endif %}
           </div>
-          <h3 class="h4 mb-3">Descripción</h3>
-          <p class="mb-4">{{ cochera.descripcion }}</p>
-          <h3 class="h4 mb-3">Política de cancelación</h3>
-          <p>{{ cochera.politica_cancelacion }}</p>
         </div>
       </div>
     </div>
-    <!-- Sidebar - Panel administrativo o reserva -->
-    <div class="col-lg-4">
-      <div class="card shadow-sm sticky-top" style="top: 20px;">
-        <div class="card-body">
-          {% if user.is_staff %}
-            <h3 class="h4 mb-3">Gestión de la Cochera</h3>
-            <div class="d-flex align-items-end mb-3">
-              <span class="h3 text-primary">${{ cochera.precio_por_dia|floatformat:"0" }}</span>
-              <span class="text-muted ms-1">/ día</span>
-            </div>
-            <div class="d-grid gap-2">
-              <a href="{% url 'admin_cocheras_editar' id_cochera=cochera.id_cochera %}" class="btn btn-warning">
-                <i class="bi bi-pencil-square me-2"></i> Editar Cochera
-              </a>
-              <a href="{% url 'admin_cocheras_reservas' id_cochera=cochera.id_cochera %}" class="btn btn-primary">
-                <i class="bi bi-calendar-check me-2"></i> Ver Reservas
-              </a>
-              <a href="{% url 'admin_cocheras_historial' id_cochera=cochera.id_cochera %}" class="btn btn-secondary">
-                <i class="bi bi-clock-history me-2"></i> Ver Historial
-              </a>
-              <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">
-                <i class="bi bi-trash me-2"></i> Eliminar Cochera
-              </button>
-            </div>
-          {% else %}
-            <h3 class="h4 mb-3">Reservar</h3>
-            <div class="d-flex align-items-end mb-3">
-              <span class="h3 text-primary">${{ cochera.precio_por_dia|floatformat:"0" }}</span>
-              <span class="text-muted ms-1">/ noche</span>
-            </div>
-            <form method="post" action="{% url 'crear_reserva_cochera' id_cochera=cochera.id_cochera %}">
+
+    <!-- Modal de confirmación para eliminar -->
+    <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="confirmDeleteModalLabel">Confirmar Eliminación</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            ¿Estás seguro de que quieres eliminar la cochera "{{ cochera.nombre }}"? Esta acción no se puede deshacer.
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <form method="post" action="{% url 'admin_cocheras_eliminar' id_cochera=cochera.id_cochera %}">
               {% csrf_token %}
-              <div class="mb-3">
-                <label for="fecha_inicio" class="form-label">Fecha de llegada</label>
-                <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio" required>
-              </div>
-              <div class="mb-3">
-                <label for="fecha_fin" class="form-label">Fecha de salida</label>
-                <input type="date" class="form-control" id="fecha_fin" name="fecha_fin" required>
-              </div>
-              <button type="submit" class="btn btn-primary btn-azul w-100 py-2">
-                <i class="bi bi-calendar-check me-2"></i> Reservar ahora
-              </button>
-              {% if messages %}
-                <div class="container mt-3">
-                  {% for message in messages %}
-                    <div class="alert alert-{% if message.tags == 'error' %}warning{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
-                      {{ message }}
-                      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
-                    </div>
+              <button type="submit" class="btn btn-danger">Eliminar</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Formulario para Comentarios -->
+  <section class="container mt-5">
+    {% if user.is_authenticated %}
+      {% if puede_comentar %}
+        <h4 class="mb-3">Publicar comentario</h4>
+        <form method="post" action="">
+          {% csrf_token %}
+          {{ comentario_form.descripcion }}
+          <div class="d-flex justify-content-end mt-3">
+            <button type="submit" class="btn btn-primary btn-azul px-4">Publicar comentario</button>
+          </div>
+        </form>
+      {% endif %}
+    {% else %}
+      <div class="alert alert-info mb-0">
+        <a href="{% url 'login' %}">Inicia sesión</a> para dejar un comentario.
+      </div>
+    {% endif %}
+  </section>
+
+  <!-- Listado de Comentarios -->
+  <section class="container mt-5 mb-5">
+    <h3 class="h4 mb-4 border-bottom pb-3">Comentarios de Usuarios</h3>
+    {% for comentario in comentarios %}
+      <div class="card mb-3">
+        <div class="card-body">
+          <strong>
+            {{ comentario.usuario.usuario.get_full_name|default:comentario.usuario.usuario.email }}
+          </strong>
+          <span class="text-muted small ms-2">{{ comentario.fecha_creacion|date:"d/m/Y H:i" }}</span>
+          <p class="mb-0 mt-2">{{ comentario.descripcion }}</p>
+        </div>
+      </div>
+    {% empty %}
+      <div class="alert alert-secondary">No hay comentarios aún.</div>
+    {% endfor %}
+  </section>
+
+  <!-- Formulario para Reseñas -->
+  <section class="container mt-5">
+    {% if user.is_authenticated %}
+      {% if puede_reseñar %}
+        {% if usuario_resenia %}
+          <!-- Bloque: Ya dejó reseña -->
+          <div class="card shadow-sm border-0 mb-5">
+            <div class="card-body p-4">
+              <h3 class="h4 mb-4 border-bottom pb-3">Tu reseña</h3>
+              <div class="d-flex align-items-center mb-2">
+                <div class="text-warning me-2">
+                  {% for i in "12345" %}
+                    <i class="bi bi-star-fill{% if forloop.counter > usuario_resenia.calificacion %} text-muted{% endif %}"></i>
                   {% endfor %}
                 </div>
+                <span class="text-muted small">{{ usuario_resenia.fecha_creacion|date:"d M Y" }}</span>
+              </div>
+              {% if usuario_resenia.descripcion %}
+                <p class="mb-0">{{ usuario_resenia.descripcion }}</p>
+              {% else %}
+                <p class="mb-0 text-muted fst-italic">No escribiste una opinión.</p>
               {% endif %}
-            </form>
-          {% endif %}
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal de confirmación para eliminar -->
-  <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="confirmDeleteModalLabel">Confirmar Eliminación</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          ¿Estás seguro de que quieres eliminar la cochera "{{ cochera.nombre }}"? Esta acción no se puede deshacer.
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <form method="post" action="{% url 'admin_cocheras_eliminar' id_cochera=cochera.id_cochera %}">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-danger">Eliminar</button>
-          </form>
-        </div>
-      </div>
-    </div>
-  </div>
-</main>
-
-
-<!-- Comentarios -->
-<div class="container mt-5 mb-5">
-  <h3 class="h4 mb-4 border-bottom pb-3">Comentarios</h3>
-  {% for comentario in comentarios %}
-    <div class="card mb-3">
-      <div class="card-body">
-        <strong>
-          {{ comentario.usuario.usuario.get_full_name|default:comentario.usuario.usuario.email }}
-        </strong>
-        <span class="text-muted small ms-2">{{ comentario.fecha_creacion|date:"d/m/Y H:i" }}</span>
-        <p class="mb-0 mt-2">{{ comentario.descripcion }}</p>
-      </div>
-    </div>
-  {% empty %}
-    <div class="alert alert-secondary">No hay comentarios aún.</div>
-  {% endfor %}
-
-  <hr>
-  <h4 class="mb-3">Publicar comentario</h4>
-  {% if user.is_authenticated %}
-    <form method="post" action="">
-      {% csrf_token %}
-      {{ comentario_form.descripcion }}
-      <div class="d-flex justify-content-end mt-3">
-        <button type="submit" class="btn btn-primary btn-azul px-4">Publicar comentario</button>
-      </div>
-    </form>
-  {% else %}
-    <div class="alert alert-info mb-0">
-      <a href="{% url 'login' %}">Inicia sesión</a> para dejar un comentario.
-    </div>
-  {% endif %}
-  <hr>
-</div>
-
-<!-- Formulario para reseñas -->
-{% if user.is_authenticated and puede_reseñar %}
-  {% if usuario_resenia %}
-    <!-- Bloque: Ya dejó reseña -->
-    <div class="container mt-5">
-      <div class="card shadow-sm border-0">
-        <div class="card-body p-4">
-          <h3 class="h4 mb-4 border-bottom pb-3">Tu reseña</h3>
-          <div class="d-flex align-items-center mb-2">
-            <div class="text-warning me-2">
-              {% for i in "12345" %}
-                <i class="bi bi-star-fill{% if forloop.counter > usuario_resenia.calificacion %} text-muted{% endif %}"></i>
-              {% endfor %}
             </div>
-            <span class="text-muted small">{{ usuario_resenia.fecha_creacion|date:"d M Y" }}</span>
           </div>
-          {% if usuario_resenia.descripcion %}
-            <p class="mb-0">{{ usuario_resenia.descripcion }}</p>
-          {% else %}
-            <p class="mb-0 text-muted fst-italic">No escribiste una opinión.</p>
-          {% endif %}
+        {% else %}
+          <!-- Formulario para dejar reseña -->
+          <div class="card shadow-sm border-0 mb-5">
+            <div class="card-body p-4">
+              <h3 class="h4 mb-4 border-bottom pb-3">Dejá tu reseña</h3>
+              <form method="post" action="">
+                {% csrf_token %}
+                <div class="mb-4">
+                  <label for="{{ resenia_form.calificacion.id_for_label }}" class="form-label">Calificación</label>
+                  {{ resenia_form.calificacion }}
+                  <small class="text-muted d-block mt-2">Selecciona de 1 a 5 estrellas</small>
+                </div>
+                <div class="mb-4">
+                  <label for="comentario" class="form-label">Compartí tu experiencia</label>
+                  {{ resenia_form.descripcion }}
+                </div>
+                <div class="d-flex justify-content-end">
+                  <button type="submit" name="crear_resenia" class="btn btn-primary btn-azul px-4">
+                    <i class="bi bi-send-fill me-2"></i> Publicar reseña
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        {% endif %}
+      {% endif %}
+    {% else %}
+      <!-- Cartelito para autenticarte -->
+      <div class="card shadow-sm border-0 text-center py-4 mb-5">
+        <div class="card-body">
+          <i class="bi bi-lock-fill display-4 text-muted mb-3"></i>
+          <h3 class="h4 mb-3">Iniciá sesión para dejar tu reseña</h3>
+          <p class="mb-4">Compartí tu experiencia con este alojamiento</p>
+          <div class="d-flex justify-content-center gap-3">
+            <a href="{% url 'login' %}" class="btn btn-primary btn-azul">
+              Iniciar sesión
+            </a>
+            <a href="{% url 'register' %}" class="btn btn-outline-primary">
+              Registrarse
+            </a>
+          </div>
         </div>
       </div>
+    {% endif %}
+  </section>
+
+  <!-- Listado de Reseñas -->
+  <section class="container mt-5 mb-5">
+    <!-- Cabecera de esta sección -->
+    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+      <h3 class="h4 mb-0">Reseñas de Huéspedes</h3>
+      <div class="badge bg-primary">{{ resenias.count }} reseñas</div>
     </div>
-  {% else %}
-    <!-- Formulario para dejar reseña -->
-    <div class="container mt-5">
-      <div class="card shadow-sm border-0">
-        <div class="card-body p-4">
-          <h3 class="h4 mb-4 border-bottom pb-3">Dejá tu reseña</h3>
-          <form method="post" action="">
-            {% csrf_token %}
-            <div class="mb-4">
-              <label for="{{ resenia_form.calificacion.id_for_label }}" class="form-label">Calificación</label>
-              {{ resenia_form.calificacion }}
-              <small class="text-muted d-block mt-2">Selecciona de 1 a 5 estrellas</small>
+    {% if resenias %}
+    <!-- Se muestran todas las reseñas -->
+    <div class="row g-4">
+      {% for resenia in resenias %}
+      <div class="col-12">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body p-4">
+            <div class="d-flex justify-content-between mb-3">
+              <div>
+                <h5 class="mb-1">{{ resenia.usuario.usuario.get_full_name|default:resenia.usuario.usuario.first_name }}</h5>
+                <p class="text-muted small mb-0">
+                  <i class="bi bi-calendar-event me-1"></i>
+                  {{ resenia.fecha_creacion|date:"d M Y" }}
+                </p>
+              </div>
+              <div class="text-warning">
+                {% for i in "12345" %}
+                  <i class="bi bi-star-fill{% if forloop.counter > resenia.calificacion %} text-muted{% endif %}"></i>
+                {% endfor %}
+              </div>
             </div>
-            <div class="mb-4">
-              <label for="comentario" class="form-label">Compartí tu experiencia</label>
-              {{ resenia_form.descripcion }}
-            </div>
-            <div class="d-flex justify-content-end">
-              <button type="submit" name="crear_resenia" class="btn btn-primary btn-azul px-4">
-                <i class="bi bi-send-fill me-2"></i> Publicar reseña
+            <p class="mb-0">{{ resenia.comentario }}</p>
+            {% if user == resenia.usuario %}
+            <div class="mt-3 pt-3 border-top text-end">
+              <button class="btn btn-sm btn-outline-danger">
+                <i class="bi bi-trash me-1"></i> Eliminar
               </button>
             </div>
-          </form>
+            {% endif %}
+          </div>
         </div>
       </div>
+      {% endfor %}
     </div>
-  {% endif %}
-{% else %}
-<!-- Cartelito para autenticarte -->
-<div class="container mt-5">
-  <div class="card shadow-sm border-0 text-center py-4">
-    <div class="card-body">
-      <i class="bi bi-lock-fill display-4 text-muted mb-3"></i>
-      <h3 class="h4 mb-3">Iniciá sesión para dejar tu reseña</h3>
-      <p class="mb-4">Compartí tu experiencia con este alojamiento</p>
-      <div class="d-flex justify-content-center gap-3">
-        <a href="{% url 'login' %}" class="btn btn-primary btn-azul">
-          Iniciar sesión
-        </a>
-        <a href="{% url 'register' %}" class="btn btn-outline-primary">
-          Registrarse
-        </a>
+    {% else %}
+    <!-- Se muestra un mensaje de que no hay reseñas -->
+    <div class="card border-0 shadow-sm">
+      <div class="card-body text-center py-5">
+        <i class="bi bi-chat-square-text display-4 text-muted mb-3"></i>
+        <h4 class="h5 mb-2">Este inmueble no tiene reseñas todavía</h4>
+        <p class="text-muted mb-0">Sé el primero en compartir tu experiencia</p>
       </div>
     </div>
-  </div>
-</div>
-{% endif %}
-
-<!-- Listado de reseñas -->
-<div class="container mt-5 mb-5">
-  <!-- Cabecera de esta sección -->
-  <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
-    <h3 class="h4 mb-0">Reseñas de huéspedes</h3>
-    <div class="badge bg-primary">{{ resenias.count }} reseñas</div>
-  </div>
-  {% if resenias %}
-  <!-- Se muestran todas las reseñas -->
-  <div class="row g-4">
-    {% for resenia in resenias %}
-    <div class="col-12">
-      <div class="card border-0 shadow-sm">
-        <div class="card-body p-4">
-          <div class="d-flex justify-content-between mb-3">
-            <div>
-              <h5 class="mb-1">{{ resenia.usuario.usuario.get_full_name|default:resenia.usuario.usuario.first_name }}</h5>
-              <p class="text-muted small mb-0">
-                <i class="bi bi-calendar-event me-1"></i>
-                {{ resenia.fecha_creacion|date:"d M Y" }}
-              </p>
-            </div>
-            <div class="text-warning">
-              {% for i in "12345" %}
-                <i class="bi bi-star-fill{% if forloop.counter > resenia.calificacion %} text-muted{% endif %}"></i>
-              {% endfor %}
-            </div>
-          </div>
-          <p class="mb-0">{{ resenia.comentario }}</p>
-          {% if user == resenia.usuario %}
-          <div class="mt-3 pt-3 border-top text-end">
-            <button class="btn btn-sm btn-outline-danger">
-              <i class="bi bi-trash me-1"></i> Eliminar
-            </button>
-          </div>
-          {% endif %}
-        </div>
-      </div>
-    </div>
-    {% endfor %}
-  </div>
-  {% else %}
-  <!-- Se muestra un mensaje de que no hay reseñas -->
-  <div class="card border-0 shadow-sm">
-    <div class="card-body text-center py-5">
-      <i class="bi bi-chat-square-text display-4 text-muted mb-3"></i>
-      <h4 class="h5 mb-2">Este inmueble no tiene reseñas todavía</h4>
-      <p class="text-muted mb-0">Sé el primero en compartir tu experiencia</p>
-    </div>
-  </div>
-  {% endif %}
-</div>
+    {% endif %}
+  </section>
 {% endblock %}

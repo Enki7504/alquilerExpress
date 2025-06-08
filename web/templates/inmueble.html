@@ -30,7 +30,6 @@
   }
 </style>
 {% block content %}
-
   <!-- Contenido principal -->
   <main class="container mt-5 pt-5">
     <a href="{% url 'buscar_inmuebles' %}" class="btn btn-outline-secondary mb-3">
@@ -194,95 +193,97 @@
     </div>
   </main>
 
-<!-- Comentarios -->
-<div class="container mt-5 mb-5">
-  <h3 class="h4 mb-4 border-bottom pb-3">Comentarios</h3>
-  {% for comentario in comentarios %}
-    <div class="card mb-3">
-      <div class="card-body">
-        <strong>
-          {{ comentario.usuario.usuario.get_full_name|default:comentario.usuario.usuario.email }}
-        </strong>
-        <span class="text-muted small ms-2">{{ comentario.fecha_creacion|date:"d/m/Y H:i" }}</span>
-        <p class="mb-0 mt-2">{{ comentario.descripcion }}</p>
-      </div>
-    </div>
-  {% empty %}
-    <div class="alert alert-secondary">No hay comentarios aún.</div>
-  {% endfor %}
-
-  <hr>
-  <h4 class="mb-3">Publicar comentario</h4>
-  {% if user.is_authenticated %}
-    <form method="post" action="">
-      {% csrf_token %}
-      {{ comentario_form.descripcion }}
-      <div class="d-flex justify-content-end mt-3">
-        <button type="submit" class="btn btn-primary btn-azul px-4">Publicar comentario</button>
-      </div>
-    </form>
-  {% else %}
-    <div class="alert alert-info mb-0">
-      <a href="{% url 'login' %}">Inicia sesión</a> para dejar un comentario.
-    </div>
-  {% endif %}
-</div>
-
-  <!-- Formulario para reseñas -->
-  {% if user.is_authenticated and puede_reseñar %}
-    {% if usuario_resenia %}
-      <!-- Bloque: Ya dejó reseña -->
-      <div class="container mt-5">
-        <div class="card shadow-sm border-0">
-          <div class="card-body p-4">
-            <h3 class="h4 mb-4 border-bottom pb-3">Tu reseña</h3>
-            <div class="d-flex align-items-center mb-2">
-              <div class="text-warning me-2">
-                {% for i in "12345" %}
-                  <i class="bi bi-star-fill{% if forloop.counter > usuario_resenia.calificacion %} text-muted{% endif %}"></i>
-                {% endfor %}
-              </div>
-              <span class="text-muted small">{{ usuario_resenia.fecha_creacion|date:"d M Y" }}</span>
-            </div>
-            {% if usuario_resenia.descripcion %}
-              <p class="mb-0">{{ usuario_resenia.descripcion }}</p>
-            {% else %}
-              <p class="mb-0 text-muted fst-italic">No escribiste una opinión.</p>
-            {% endif %}
+  <!-- Formulario para Comentarios -->
+  <section class="container mt-5">
+    {% if user.is_authenticated %}
+      {% if puede_comentar %}
+        <h4 class="mb-3">Publicar comentario</h4>
+        <form method="post" action="">
+          {% csrf_token %}
+          {{ comentario_form.descripcion }}
+          <div class="d-flex justify-content-end mt-3">
+            <button type="submit" class="btn btn-primary btn-azul px-4">Publicar comentario</button>
           </div>
-        </div>
-      </div>
+        </form>
+      {% endif %}
     {% else %}
-      <!-- Formulario para dejar reseña -->
-      <div class="container mt-5">
-        <div class="card shadow-sm border-0">
-          <div class="card-body p-4">
-            <h3 class="h4 mb-4 border-bottom pb-3">Dejá tu reseña</h3>
-            <form method="post" action="">
-              {% csrf_token %}
-              <div class="mb-4">
-                <label for="{{ resenia_form.calificacion.id_for_label }}" class="form-label">Calificación</label>
-                {{ resenia_form.calificacion }}
-                <small class="text-muted d-block mt-2">Selecciona de 1 a 5 estrellas</small>
-              </div>
-              <div class="mb-4">
-                <label for="comentario" class="form-label">Compartí tu experiencia</label>
-                {{ resenia_form.descripcion }}
-              </div>
-              <div class="d-flex justify-content-end">
-                <button type="submit" name="crear_resenia" class="btn btn-primary btn-azul px-4">
-                  <i class="bi bi-send-fill me-2"></i> Publicar reseña
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+      <div class="alert alert-info mb-0">
+        <a href="{% url 'login' %}">Inicia sesión</a> para dejar un comentario.
       </div>
     {% endif %}
-  {% else %}
-  <!-- Cartelito para autenticarte -->
-  <div class="container mt-5">
-    <div class="card shadow-sm border-0 text-center py-4">
+  </section>
+
+  <!-- Listado de Comentarios -->
+  <section class="container mt-5 mb-5">
+    <h3 class="h4 mb-4 border-bottom pb-3">Comentarios de Usuarios</h3>
+    {% for comentario in comentarios %}
+      <div class="card mb-3">
+        <div class="card-body">
+          <strong>
+            {{ comentario.usuario.usuario.get_full_name|default:comentario.usuario.usuario.email }}
+          </strong>
+          <span class="text-muted small ms-2">{{ comentario.fecha_creacion|date:"d/m/Y H:i" }}</span>
+          <p class="mb-0 mt-2">{{ comentario.descripcion }}</p>
+        </div>
+      </div>
+    {% empty %}
+      <div class="alert alert-secondary">No hay comentarios aún.</div>
+    {% endfor %}
+  </section>
+
+  <!-- Formulario para Reseñas -->
+  <section class="container mt-5">
+    {% if user.is_authenticated %}
+      {% if puede_reseñar %}
+        {% if usuario_resenia %}
+          <!-- Bloque: Ya dejaste una reseña -->
+          <div class="card shadow-sm border-0 mb-5">
+            <div class="card-body p-4">
+              <h3 class="h4 mb-4 border-bottom pb-3">Tu reseña</h3>
+              <div class="d-flex align-items-center mb-2">
+                <div class="text-warning me-2">
+                  {% for i in "12345" %}
+                    <i class="bi bi-star-fill{% if forloop.counter > usuario_resenia.calificacion %} text-muted{% endif %}"></i>
+                  {% endfor %}
+                </div>
+                <span class="text-muted small">{{ usuario_resenia.fecha_creacion|date:"d M Y" }}</span>
+              </div>
+              {% if usuario_resenia.descripcion %}
+                <p class="mb-0">{{ usuario_resenia.descripcion }}</p>
+              {% else %}
+                <p class="mb-0 text-muted fst-italic">No escribiste una opinión.</p>
+              {% endif %}
+            </div>
+          </div>
+        {% else %}
+          <!-- Formulario para dejar reseña -->
+          <div class="card shadow-sm border-0 mb-5">
+            <div class="card-body p-4">
+              <h3 class="h4 mb-4 border-bottom pb-3">Dejá tu reseña</h3>
+              <form method="post" action="">
+                {% csrf_token %}
+                <div class="mb-4">
+                  <label for="{{ resenia_form.calificacion.id_for_label }}" class="form-label">Calificación</label>
+                  {{ resenia_form.calificacion }}
+                  <small class="text-muted d-block mt-2">Selecciona de 1 a 5 estrellas</small>
+                </div>
+                <div class="mb-4">
+                  <label for="comentario" class="form-label">Compartí tu experiencia</label>
+                  {{ resenia_form.descripcion }}
+                </div>
+                <div class="d-flex justify-content-end">
+                  <button type="submit" name="crear_resenia" class="btn btn-primary btn-azul px-4">
+                    <i class="bi bi-send-fill me-2"></i> Publicar reseña
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        {% endif %}
+      {% endif %}
+    {% else %}
+    <!-- Cartel para usuarios no autenticados -->
+    <div class="card shadow-sm border-0 text-center py-4 mb-5">
       <div class="card-body">
         <i class="bi bi-lock-fill display-4 text-muted mb-3"></i>
         <h3 class="h4 mb-3">Iniciá sesión para dejar tu reseña</h3>
@@ -297,14 +298,14 @@
         </div>
       </div>
     </div>
-  </div>
-  {% endif %}
+    {% endif %}
+  </section>
 
-  <!-- Listado de reseñas -->
-  <div class="container mt-5 mb-5">
-    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
-      <h3 class="h4 mb-0">Reseñas de huéspedes</h3>
-      <div class="badge bg-primary rounded-pill">{{ resenias.count }} reseñas</div>
+  <!-- Listado de Reseñas -->
+  <section class="container mt-5 mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3"">
+      <h3 class="h4 mb-0">Reseñas de Huéspedes</h3>
+      <div class="badge bg-primary">{{ resenias.count }} reseñas</div>
     </div>
     {% if resenias %}
     <div class="row g-4">
@@ -326,7 +327,7 @@
                 {% endfor %}
               </div>
             </div>
-            <p class="mb-0">{{ resenia.comentario }}</p>
+            <p class="mb-0">{{ resenia.descripcion }}</p>
             {% if user == resenia.usuario %}
             <div class="mt-3 pt-3 border-top text-end">
               <button class="btn btn-sm btn-outline-danger">
@@ -349,4 +350,5 @@
     </div>
     {% endif %}
   </div>
+  </section>
 {% endblock %}
