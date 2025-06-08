@@ -6,29 +6,26 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/inmueble.css' %}">
-{% endblock %}
-
 <style>
-  .img-carrusel-inmueble {
-    width: 100% !important;
-    height: 50vh !important;
-    min-height: 400px !important;
-    max-height: 400px !important;
-    object-fit: cover !important;
-    border-radius: 1rem !important;
-    background: #eee !important;
-    display: block !important;
-  }
-
   .carousel-inner,
   .carousel-item {
+    width: 100%;
+    height: 500px; /* Altura fija para el carrusel */
     border-radius: 1rem !important;
     overflow: hidden !important;
-    height: 50vh !important;
-    min-height: 400px !important;
-    max-height: 400px !important;
+    background: #eee !important;
+  }
+  .img-carrusel-inmueble {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    border-radius: 0 !important;
+    display: block !important;
+    background: #eee !important;
   }
 </style>
+{% endblock %}
+
 {% block content %}
 
   <!-- Contenido principal -->
