@@ -353,8 +353,9 @@ def detalle_inmueble(request, id_inmueble):
     # Detectar si el usuario ya dejó una reseña
     usuario_resenia = None
     if request.user.is_authenticated:
-        usuario_resenia = Resenia.objects.filter(inmueble=inmueble, usuario=request.user.perfil).first()
-
+        perfil = getattr(request.user, "perfil", None)
+        if perfil:
+            usuario_resenia = Resenia.objects.filter(inmueble=inmueble, usuario=perfil).first()
     # Procesar reseña
     if request.method == 'POST' and puede_reseñar and 'crear_resenia' in request.POST:
         resenia_form = ReseniaForm(request.POST)
