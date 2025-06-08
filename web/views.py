@@ -248,21 +248,63 @@ def verify_admin_link(request, uidb64, token):
 ################################################################################################################
 
 def buscar_inmuebles(request):
-    """
-    Permite buscar inmuebles por nombre y muestra todos si no hay consulta.
-    """
-    query = request.GET.get('q', '').strip() # Elimina espacios en blanco
-    
+    query = request.GET.get('q', '').strip()
+    provincia_id = request.GET.get('provincia')
+    ciudad_id = request.GET.get('ciudad')
+    precio = request.GET.get('precio')
+    ubicacion = request.GET.get('ubicacion')
+    huespedes = request.GET.get('huespedes')
+    ambientes = request.GET.get('ambientes')
+    camas = request.GET.get('camas')
+    banios = request.GET.get('banios')
+
+    inmuebles = Inmueble.objects.all()
     if query:
-        # Búsqueda solo por nombre (insensible a mayúsculas/minúsculas)
-        inmuebles = Inmueble.objects.filter(nombre__icontains=query)
+        inmuebles = inmuebles.filter(nombre__icontains=query)
+    if provincia_id:
+        inmuebles = inmuebles.filter(provincia_id=provincia_id)
+    if ciudad_id:
+        inmuebles = inmuebles.filter(ciudad_id=ciudad_id)
+    if precio:
+        inmuebles = inmuebles.filter(precio_por_dia__lte=precio)
+    if ubicacion:
+        inmuebles = inmuebles.filter(ubicacion__icontains=ubicacion)
+    if huespedes:
+        inmuebles = inmuebles.filter(cantidad_huespedes__gte=huespedes)
+    if ambientes:
+        if ambientes.endswith('+'):
+            inmuebles = inmuebles.filter(cantidad_ambientes__gte=int(ambientes[:-1]))
+        else:
+            inmuebles = inmuebles.filter(cantidad_ambientes=int(ambientes))
+    if camas:
+        if camas.endswith('+'):
+            inmuebles = inmuebles.filter(cantidad_camas__gte=int(camas[:-1]))
+        else:
+            inmuebles = inmuebles.filter(cantidad_camas=int(camas))
+    if banios:
+        if banios.endswith('+'):
+            inmuebles = inmuebles.filter(cantidad_banios__gte=int(banios[:-1]))
+        else:
+            inmuebles = inmuebles.filter(cantidad_banios=int(banios))
+
+    # Provincias solo con inmuebles
+    provincias = Provincia.objects.filter(ciudades__inmueble__isnull=False).distinct()
+    # Ciudades solo con inmuebles (y opcionalmente de la provincia seleccionada)
+    if provincia_id:
+        ciudades = Ciudad.objects.filter(
+            provincia_id=provincia_id,
+            inmueble__isnull=False
+        ).distinct()
     else:
-        # Si no hay query, mostrar todos los inmuebles
-        inmuebles = Inmueble.objects.all()
-    
+        ciudades = Ciudad.objects.filter(
+            inmueble__isnull=False
+        ).distinct()
+
     return render(request, 'buscar_inmuebles.html', {
         'inmuebles': inmuebles,
-        'query': query
+        'query': query,
+        'provincias': provincias,
+        'ciudades': ciudades,
     })
 
 def buscar_cocheras(request):
@@ -402,6 +444,20 @@ def detalle_cochera(request, id_cochera):
         'puede_reseñar': puede_reseñar,
         'usuario_resenia': usuario_resenia,  # Enviar la reseña del usuario al template
     })
+
+################################################################################################################
+# --- Funciones para filtrar ---
+################################################################################################################
+
+def cargar_ciudades_filtro(request):
+    provincia_id = request.GET.get('provincia')
+    # Solo ciudades de la provincia seleccionada que tengan al menos un inmueble
+    ciudades = Ciudad.objects.filter(
+        provincia_id=provincia_id,
+        inmueble__isnull=False
+    ).distinct().order_by('nombre')
+    ciudades_list = [{'id': ciudad.id, 'nombre': ciudad.nombre} for ciudad in ciudades]
+    return JsonResponse({'ciudades': ciudades_list})
 
 
 ################################################################################################################

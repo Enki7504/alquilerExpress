@@ -16,6 +16,9 @@ urlpatterns = [
     path('buscar-inmuebles/<int:id_inmueble>/', views.detalle_inmueble, name='detalle_inmueble'),
     path('buscar-cocheras/', views.buscar_cocheras, name='buscar_cocheras'),
     path('buscar-cocheras/<int:id_cochera>/', views.detalle_cochera, name='detalle_cochera'),
+
+    # Filtros de busqueda
+    path('ajax/cargar-ciudades-filtro/', views.cargar_ciudades_filtro, name='ajax_cargar_ciudades_filtro'),
     
     #########################################################################################################
     # URLs del Panel de Administración                                                                       
