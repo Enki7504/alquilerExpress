@@ -13,7 +13,7 @@
   <div class="container-wrapper row">
     <!-- Filtros -->
     <aside class="filtros col-md-2 sidebar bg-light sticky-top">
-        <form>
+        <form method="get">
           <div class="mb-3">
             <label class="form-label">Precio por dia</label>
             <input type="number" class="form-control filtros__campo" placeholder="$" min="0">
@@ -68,6 +68,26 @@
               <option>8+</option>
             </select>
           </div>
+          <div class="mb-3">
+            <label class="form-label">Provincia</label>
+            <select class="form-select filtros__campo" name="provincia" id="provincia-select">
+              <option value="">Todas</option>
+              {% for provincia in provincias %}
+                <option value="{{ provincia.id }}" {% if request.GET.provincia == provincia.id|stringformat:"s" %}selected{% endif %}>{{ provincia.nombre }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Ciudad</label>
+            <select class="form-select filtros__campo" name="ciudad" id="ciudad-select" {% if not request.GET.provincia %}disabled{% endif %}>
+              <option value="">Todas</option>
+              {% if request.GET.provincia %}
+                {% for ciudad in ciudades %}
+                  <option value="{{ ciudad.id }}" {% if request.GET.ciudad == ciudad.id|stringformat:"s" %}selected{% endif %}>{{ ciudad.nombre }}</option>
+                {% endfor %}
+              {% endif %}
+            </select>
+          </div>
           <button class="btn btn-primary w-100 btn-azul">Aplicar</button>
         </form>
     </aside>
@@ -114,4 +134,36 @@
     </aside>
   </div>
 </main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+console.log("Cargando script de búsqueda de inmuebles");
+console.log("Cargando script de búsqueda de inmuebles1");
+
+document.addEventListener('DOMContentLoaded', function() {
+  const provincia = document.getElementById('provincia-select');
+  const ciudad = document.getElementById('ciudad-select');
+  if (!provincia || !ciudad) return;
+
+  provincia.addEventListener('change', function() {
+    const provinciaId = this.value;
+    ciudad.innerHTML = '<option value="">Todas</option>';
+    ciudad.disabled = true;
+    if (!provinciaId) return;
+
+    fetch(`/ajax/cargar-ciudades-filtro/?provincia=${provinciaId}`)
+      .then(response => response.json())
+      .then(data => {
+        data.ciudades.forEach(function(ciudadObj) {
+          const option = document.createElement('option');
+          option.value = ciudadObj.id;
+          option.textContent = ciudadObj.nombre;
+          ciudad.appendChild(option);
+        });
+        ciudad.disabled = false;
+      });
+  });
+});
+</script>
 {% endblock %}
