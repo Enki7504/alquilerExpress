@@ -90,7 +90,7 @@
       <div class="flex-grow-1 mx-3"></div>
       <!-- Botones -->
       <div class="navbar__buttons d-flex align-items-center ms-3">
-        <a href="{% url 'buscar_inmuebles' %}" class="btn btn-outline-secondary me-2">Inmuebles</a>
+        <a href="{% url 'buscar_inmuebles' %}" class="btn btn-outline-secondary me-2">Viviendas</a>
         <a href="{% url 'buscar_cocheras' %}" class="btn btn-outline-secondary me-2">Cocheras</a>
         {% if user.is_authenticated %}
           <!-- Notificaciones -->
@@ -210,11 +210,11 @@
       
       <div class="col-md-6">
         <div class="card shadow-sm">
-          <img src="/media/inmuebles/departamento-piloto.png" class="card-img-top" alt="Inmuebles">
+          <img src="/media/inmuebles/departamento-piloto.png" class="card-img-top" alt="Viviendas">
           <div class="card-body">
-            <h5 class="card-title">Alquiler de Inmuebles</h5>
+            <h5 class="card-title">Alquiler de Viviendas</h5>
             <p class="card-text">Casas, departamentos y locales comerciales para alquiler, con la mejor relación calidad-precio.</p>
-            <a href="{% url 'buscar_inmuebles' %}" class="btn btn-outline-primary">Ver inmuebles</a>
+            <a href="{% url 'buscar_inmuebles' %}" class="btn btn-outline-primary">Ver viviendas</a>
           </div>
         </div>
       </div>
