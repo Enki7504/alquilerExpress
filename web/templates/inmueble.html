@@ -401,22 +401,3 @@
     });
   </script>
 {% endblock %}
-
-{% block extra_js %}
-  {{ fechas_ocupadas|json_script:"fechasOcupadasJSON" }}
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      var fechasOcupadas = JSON.parse(document.getElementById('fechasOcupadasJSON').textContent);
-      flatpickr("#fecha_inicio", {
-        disable: fechasOcupadas,
-        dateFormat: "Y-m-d",
-        minDate: "today"
-      });
-      flatpickr("#fecha_fin", {
-        disable: fechasOcupadas,
-        dateFormat: "Y-m-d",
-        minDate: "today"
-      });
-    });
-  </script>
-{% endblock %}
