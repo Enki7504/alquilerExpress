@@ -19,6 +19,7 @@ from django.views.decorators.http import require_POST
 from django.db import IntegrityError, transaction
 from django.db.models import Q
 from datetime import timedelta
+from django.template.loader import render_to_string
 
 
 # Importaciones de formularios locales

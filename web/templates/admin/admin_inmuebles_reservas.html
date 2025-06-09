@@ -42,6 +42,10 @@
                 {% if reserva.estado.nombre == 'Confirmada' %}bg-success
                 {% elif reserva.estado.nombre == 'Cancelada' %}bg-danger
                 {% elif reserva.estado.nombre == 'Rechazada' %}bg-secondary
+                {% elif reserva.estado.nombre == 'Pagada' %}bg-info
+                {% elif reserva.estado.nombre == 'Aprobada' %}bg-primary
+                {% elif reserva.estado.nombre == 'Pendiente' %}bg-warning
+                {% elif reserva.estado.nombre == 'Finalizada' %}bg-dark
                 {% else %}bg-warning{% endif %}">
                 {{ reserva.estado.nombre }}
               </span>
@@ -57,6 +61,7 @@
                 <button class="btn btn-sm btn-success" onclick="showConfirmModal('{{ reserva.id_reserva }}', 'Confirmada')">Confirmar Totalmente</button>
                 <button class="btn btn-sm btn-danger" onclick="showConfirmModal('{{ reserva.id_reserva }}', 'Cancelada')">Cancelar Alquiler</button>
               {% elif reserva.estado.nombre == 'Confirmada' %}
+                <button class="btn btn-sm btn-success" onclick="cambiarEstado('{{ reserva.id_reserva }}', 'Finalizada')">Terminar Alquiler</button>
                 <button class="btn btn-sm btn-danger" onclick="showConfirmModal('{{ reserva.id_reserva }}', 'Cancelada')">Cancelar Alquiler</button>
               {% endif %}
               <a href="{% url 'detalle_inmueble' inmueble.id_inmueble %}" class="btn btn-sm btn-info">Ver Inmueble</a>
