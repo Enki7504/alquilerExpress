@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 
-from .models import Cochera, Comentario, Estado, Inmueble, Perfil, Resenia
+from .models import Cochera, Comentario, Estado, Inmueble, Perfil, Resenia, RespuestaComentario
 from .models import Perfil, Comentario, Inmueble, Estado, Cochera, Ciudad, Provincia
 from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
@@ -473,3 +473,14 @@ class ReseniaForm(forms.ModelForm):
     class Meta:
         model = Resenia
         fields = ['calificacion', 'descripcion']
+
+class RespuestaComentarioForm(forms.ModelForm):
+    texto = forms.CharField(
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Responder al comentario...'}),
+        label='Respuesta',
+        required=True
+    )
+
+    class Meta:
+        model = RespuestaComentario
+        fields = ['texto']
