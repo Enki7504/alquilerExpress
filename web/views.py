@@ -362,8 +362,11 @@ def detalle_inmueble(request, id_inmueble):
     # Fechas ocupadas para flatpickr
     fechas_ocupadas = []
     for reserva in reservas:
-        current = reserva.fecha_inicio
+        # Bloquear el día anterior al inicio
+        dia_anterior = reserva.fecha_inicio - timedelta(days=1)
+        fechas_ocupadas.append(dia_anterior.strftime('%Y-%m-%d'))
         # Bloquea hasta el día después de fecha_fin (igual que en cocheras)
+        current = reserva.fecha_inicio
         while current <= reserva.fecha_fin + timedelta(days=1):
             fechas_ocupadas.append(current.strftime('%Y-%m-%d'))
             current += timedelta(days=1)
@@ -412,6 +415,9 @@ def detalle_cochera(request, id_cochera):
     )
     fechas_ocupadas = []
     for reserva in reservas:
+        # Bloquear el día anterior al inicio
+        dia_anterior = reserva.fecha_inicio - timedelta(days=1)
+        fechas_ocupadas.append(dia_anterior.strftime('%Y-%m-%d'))
         # Genera todas las fechas ocupadas en ese rango
         current = reserva.fecha_inicio
         # Bloquea hasta el día después de fecha_fin
