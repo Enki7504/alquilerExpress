@@ -1411,13 +1411,19 @@ def cambiar_estado_reserva(request, id_reserva):
                         cuerpo += f"\nLa reserva ha sido pagada. Por favor, espere a que un empleado se comunique con usted.\n"
                     elif nuevo_estado == "Confirmada":
                         cuerpo += f"\nLa reserva ha sido confirmada. ¡Disfrute de su inmueble!\n"
+                    elif nuevo_estado == "Finalizada":
+                        cuerpo += f"\nLa reserva ha sido finalizada. Esperamos que haya disfrutado de su estancia.\n"
+                    elif nuevo_estado == "Cancelada":
+                        cuerpo += f"\nLa reserva ha sido cancelada. Si tiene alguna pregunta, por favor contáctenos.\n"
+                    elif nuevo_estado == "Rechazada":
+                        cuerpo += f"\nLa reserva ha sido rechazada. Si tiene alguna pregunta, por favor contáctenos.\n"
 
 
                     cuerpo += f"\nGracias por usar Alquiler Express."
 
                     crear_notificacion(
                         usuario=cliente_rel.cliente,
-                        mensaje=f"El estado de tu reserva #{reserva.id_reserva} ha cambiado a: {estado.nombre}"
+                        mensaje=f"El estado de tu reserva #{reserva.id_reserva} ha cambiado a: {estado.nombre}" + (f" (Comentario: {comentario})" if comentario else "") + "."
                     )
                     
                     send_mail(
@@ -1452,6 +1458,12 @@ def cambiar_estado_reserva(request, id_reserva):
                         cuerpo += f"\nLa reserva ha sido pagada. Por favor, espere a que un empleado se comunique con usted.\n"
                     elif nuevo_estado == "Confirmada":
                         cuerpo += f"\nLa reserva ha sido confirmada. ¡Disfrute de su cochera!\n"
+                    elif nuevo_estado == "Finalizada":
+                        cuerpo += f"\nLa reserva ha sido finalizada. Esperamos que haya disfrutado de su estancia.\n"
+                    elif nuevo_estado == "Cancelada":
+                        cuerpo += f"\nLa reserva ha sido cancelada. Si tiene alguna pregunta, por favor contáctenos.\n"
+                    elif nuevo_estado == "Rechazada":
+                        cuerpo += f"\nLa reserva ha sido rechazada. Si tiene alguna pregunta, por favor contáctenos.\n"
 
                     cuerpo += f"\nGracias por usar Alquiler Express."
                     
