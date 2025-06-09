@@ -348,7 +348,7 @@ def detalle_inmueble(request, id_inmueble):
     historial = InmuebleEstado.objects.filter(inmueble=inmueble).order_by('-fecha_inicio')
 
     # Solo clientes pueden crear reseñas
-    puede_reseñar = request.user.is_authenticated and request.user.groups.filter(name="cliente").exists()
+    es_usuario = request.user.is_authenticated and request.user.groups.filter(name="cliente").exists()
 
     # Detectar si el usuario ya dejó una reseña
     usuario_resenia = None
@@ -357,7 +357,7 @@ def detalle_inmueble(request, id_inmueble):
         if perfil:
             usuario_resenia = Resenia.objects.filter(inmueble=inmueble, usuario=perfil).first()
     # Procesar reseña
-    if request.method == 'POST' and puede_reseñar and 'crear_resenia' in request.POST:
+    if request.method == 'POST' and es_usuario and 'crear_resenia' in request.POST:
         resenia_form = ReseniaForm(request.POST)
         if resenia_form.is_valid():
             resenia = resenia_form.save(commit=False)
@@ -380,7 +380,7 @@ def detalle_inmueble(request, id_inmueble):
         'resenia_form': resenia_form,
         'reservas': reservas,
         'historial': historial,
-        'puede_reseñar': puede_reseñar,
+        'es_usuario': es_usuario,
         'usuario_resenia': usuario_resenia,  # <--- IMPORTANTE
     })
 
@@ -398,10 +398,10 @@ def detalle_cochera(request, id_cochera):
     reservas = Reserva.objects.filter(cochera=cochera, estado__nombre__in=['Confirmada', 'Pendiente']).order_by('-fecha_inicio')
     historial = CocheraEstado.objects.filter(cochera=cochera).order_by('-fecha_inicio')
 
-    puede_reseñar = request.user.is_authenticated and request.user.groups.filter(name="cliente").exists()
+    es_usuario = request.user.is_authenticated and request.user.groups.filter(name="cliente").exists()
 
     # --- Procesar reseña ---
-    if request.method == 'POST' and puede_reseñar and 'crear_resenia' in request.POST:
+    if request.method == 'POST' and es_usuario and 'crear_resenia' in request.POST:
         resenia_form = ReseniaForm(request.POST)
         if resenia_form.is_valid():
             resenia = resenia_form.save(commit=False)
@@ -444,7 +444,7 @@ def detalle_cochera(request, id_cochera):
         'resenia_form': resenia_form,
         'reservas': reservas,
         'historial': historial,
-        'puede_reseñar': puede_reseñar,
+        'es_usuario': es_usuario,
         'usuario_resenia': usuario_resenia,  # Enviar la reseña del usuario al template
     })
 
