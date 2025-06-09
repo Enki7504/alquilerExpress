@@ -115,28 +115,28 @@
       <div class="col-lg-4">
         <div class="card shadow-sm sticky-top" style="top: 20px;">
           <div class="card-body">
-            {% if user.is_staff %}
-              <!--
+            {% if is_admin_or_empleado %}
               <h3 class="h4 mb-3">Gestión del Inmueble</h3>
               <div class="d-flex align-items-end mb-3">
                 <span class="h3 text-primary">${{ inmueble.precio_por_dia|floatformat:"0" }}</span>
                 <span class="text-muted ms-1">/ noche</span>
               </div>
               <div class="d-grid gap-2">
-                <a href="{% url 'admin_inmuebles_editar' id_inmueble=inmueble.id_inmueble %}" class="btn btn-warning">
-                  <i class="bi bi-pencil-square me-2"></i> Editar inmueble
-                </a>
                 <a href="{% url 'admin_inmuebles_reservas' id_inmueble=inmueble.id_inmueble %}" class="btn btn-primary">
                   <i class="bi bi-calendar-check me-2"></i> Ver Reservas
                 </a>
                 <a href="{% url 'admin_inmuebles_historial' id_inmueble=inmueble.id_inmueble %}" class="btn btn-secondary">
                   <i class="bi bi-clock-history me-2"></i> Ver Historial
                 </a>
+                {% if is_admin %}
                 <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">
                   <i class="bi bi-trash me-2"></i> Eliminar inmueble
                 </button>
+                <a href="{% url 'admin_inmuebles_editar' id_inmueble=inmueble.id_inmueble %}" class="btn btn-warning">
+                  <i class="bi bi-pencil-square me-2"></i> Editar inmueble
+                </a>
+                {% endif %}
               </div>
-              -->
             {% else %}
               <h3 class="h4 mb-3">Reservar</h3>
               <div class="d-flex align-items-end mb-3">
