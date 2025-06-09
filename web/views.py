@@ -62,7 +62,10 @@ from .models import (
 )
 
 # Importaciones de utilidades locales
-from .utils import email_link_token
+from .utils import (
+    email_link_token,
+    crear_notificacion
+)
 
 # para enviar correos a empleados sobre reservas
 from .utils import enviar_mail_a_empleados_sobre_reserva
@@ -645,7 +648,7 @@ def admin_alta_empleados(request):
     return render(request, 'admin/admin_alta_empleados.html', {'form': form})
 
 @login_required
-@user_passes_test(is_admin)
+@user_passes_test(is_admin_or_empleado)
 def admin_alta_cliente(request):
     """
     Permite a administradores y empleados dar de alta un cliente.
@@ -1097,7 +1100,7 @@ def admin_cocheras_eliminar(request, id_cochera):
     })
 
 @login_required
-@user_passes_test(is_admin)
+@user_passes_test(is_admin_or_empleado)
 def admin_cocheras_historial(request, id_cochera):
     """
     Muestra el historial de estados de una cochera específica.
@@ -1107,7 +1110,7 @@ def admin_cocheras_historial(request, id_cochera):
     return render(request, 'admin/admin_cocheras_historial.html', {'cochera': cochera, 'historial': historial})
 
 @login_required
-@user_passes_test(is_admin)
+@user_passes_test(is_admin_or_empleado)
 def admin_cocheras_reservas(request, id_cochera):
     """
     Muestra el estado actual y las reservas de una cochera específica.
@@ -1186,18 +1189,19 @@ def crear_reserva(request, id_inmueble):
                 messages.error(request, f"El mínimo de noches de alquiler para esta vivienda es {inmueble.minimo_dias_alquiler}.")
                 return redirect('detalle_inmueble', id_inmueble=id_inmueble)
             
-            # --- VALIDACIÓN DE RESERVA ACTIVA DE INMUEBLE DEL USUARIO ---
+            # --- VALIDACIÓN DE RESERVA SUPERPUESTA DEL USUARIO ---
             perfil = request.user.perfil
-            reserva_inmueble_activa = Reserva.objects.filter(
+            reserva_superpuesta_usuario = Reserva.objects.filter(
                 clienteinmueble__cliente=perfil,
                 inmueble__isnull=False,
                 estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada'],
-                fecha_fin__gte=timezone.now().date()
+                fecha_inicio__lt=fecha_fin,
+                fecha_fin__gt=fecha_inicio
             ).exists()
-            if reserva_inmueble_activa:
-                messages.error(request, "Ya tenés una reserva activa de viviendas. No podés reservar otra hasta finalizar la actual.")
+            if reserva_superpuesta_usuario:
+                messages.error(request, "Ya tenés una reserva de vivienda que se superpone con las fechas seleccionadas.")
                 return redirect('detalle_inmueble', id_inmueble=id_inmueble)
-            # -----------------------------------------------------------
+            # -----------------------------------------------------
 
             # --- VALIDACIÓN DE RESERVAS SUPERPUESTAS EN EL INMUEBLE ---
             reservas_superpuestas = Reserva.objects.filter(
@@ -1277,18 +1281,19 @@ def crear_reserva_cochera(request, id_cochera):
                 messages.error(request, f"El mínimo de noches de alquiler para esta cochera es {cochera.minimo_dias_alquiler}.")
                 return redirect('detalle_cochera', id_cochera=id_cochera)
             
-            # --- VALIDACIÓN DE RESERVA ACTIVA DE COCHERA DEL USUARIO ---
+            # --- VALIDACIÓN DE RESERVA SUPERPUESTA DEL USUARIO ---
             perfil = request.user.perfil
-            reserva_cochera_activa = Reserva.objects.filter(
+            reserva_superpuesta_usuario = Reserva.objects.filter(
                 clienteinmueble__cliente=perfil,
                 cochera__isnull=False,
                 estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada'],
-                fecha_fin__gte=timezone.now().date()
+                fecha_inicio__lt=fecha_fin,
+                fecha_fin__gt=fecha_inicio
             ).exists()
-            if reserva_cochera_activa:
-                messages.error(request, "Ya tenés una reserva activa de cochera. No podés reservar otra hasta finalizar la actual.")
+            if reserva_superpuesta_usuario:
+                messages.error(request, "Ya tenés una reserva de cochera que se superpone con las fechas seleccionadas.")
                 return redirect('detalle_cochera', id_cochera=id_cochera)
-            # -----------------------------------------------------------
+            # -----------------------------------------------------
 
             # --- Validar que no haya reservas superpuestas ---
             reservas_superpuestas = Reserva.objects.filter(
@@ -1339,7 +1344,7 @@ def crear_reserva_cochera(request, id_cochera):
 
 @require_POST
 @login_required
-@user_passes_test(is_admin)
+@user_passes_test(is_admin_or_empleado)
 def cambiar_estado_reserva(request, id_reserva):
     """
     Maneja el cambio de estado para reservas de INMUEBLES y COCHERAS.
@@ -1413,6 +1418,11 @@ def cambiar_estado_reserva(request, id_reserva):
 
 
                     cuerpo += f"\nGracias por usar Alquiler Express."
+
+                    crear_notificacion(
+                        usuario=cliente_rel.cliente,
+                        mensaje=f"El estado de tu reserva #{reserva.id_reserva} ha cambiado a: {estado.nombre}"
+                    )
                     
                     send_mail(
                         subject=asunto,
@@ -1449,6 +1459,11 @@ def cambiar_estado_reserva(request, id_reserva):
 
                     cuerpo += f"\nGracias por usar Alquiler Express."
                     
+                    crear_notificacion(
+                        usuario=cliente_rel.cliente,
+                        mensaje=f"El estado de tu reserva #{reserva.id_reserva} ha cambiado a: {estado.nombre}"
+                    )
+
                     send_mail(
                         subject=asunto,
                         message=cuerpo,
@@ -1456,10 +1471,6 @@ def cambiar_estado_reserva(request, id_reserva):
                         recipient_list=[email_cliente],
                         fail_silently=False,
                     )
-
-            
-
-            
             
             # Opcional: Registrar en historial (si tienes un modelo para ello)
             # HistorialEstadoReserva.objects.create(
