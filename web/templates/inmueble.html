@@ -5,9 +5,10 @@
 {% block title %}Detalle del Inmueble - {{ inmueble.nombre }}{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/inmueble.css' %}">
+<!-- Incluye flatpickr -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-<link rel="stylesheet" href="{% static 'css/inmueble.css' %}">
 <style>
   .carousel-inner,
   .carousel-item {

@@ -394,6 +394,7 @@ def detalle_inmueble(request, id_inmueble):
         'historial': historial,
         'es_usuario': es_usuario,
         'usuario_resenia': usuario_resenia,  # <--- IMPORTANTE
+        'fechas_ocupadas': fechas_ocupadas,  # Fechas ocupadas para flatpickr
     })
 
 def detalle_cochera(request, id_cochera):
@@ -1130,7 +1131,20 @@ def crear_reserva(request, id_inmueble):
                 messages.error(request, 'La fecha de salida debe ser posterior a la de llegada.')
                 return redirect('detalle_inmueble', id_inmueble=id_inmueble)
             
-            # --- VALIDACIÓN DE RESERVAS SUPERPUESTAS ---
+            # --- VALIDACIÓN DE RESERVA ACTIVA DE INMUEBLE DEL USUARIO ---
+            perfil = request.user.perfil
+            reserva_inmueble_activa = Reserva.objects.filter(
+                clienteinmueble__cliente=perfil,
+                inmueble__isnull=False,
+                estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada'],
+                fecha_fin__gte=timezone.now().date()
+            ).exists()
+            if reserva_inmueble_activa:
+                messages.error(request, "Ya tenés una reserva activa de inmueble. No podés reservar otro hasta finalizar la actual.")
+                return redirect('detalle_inmueble', id_inmueble=id_inmueble)
+            # -----------------------------------------------------------
+
+            # --- VALIDACIÓN DE RESERVAS SUPERPUESTAS EN EL INMUEBLE ---
             reservas_superpuestas = Reserva.objects.filter(
                 inmueble=inmueble,
                 estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada'],
@@ -1140,7 +1154,8 @@ def crear_reserva(request, id_inmueble):
             if reservas_superpuestas.exists():
                 messages.error(request, "El inmueble ya está reservado en esas fechas.")
                 return redirect('detalle_inmueble', id_inmueble=id_inmueble)
-            # -------------------------------------------
+            # ---------------------------------------------------------
+
 
             # Calcular días y precio total
             dias = (fecha_fin - fecha_inicio).days
@@ -1202,7 +1217,20 @@ def crear_reserva_cochera(request, id_cochera):
                 messages.error(request, 'La fecha de fin debe ser posterior a la de inicio.')
                 return redirect('detalle_cochera', id_cochera=id_cochera)
 
-            # Validar que no haya reservas superpuestas
+            # --- VALIDACIÓN DE RESERVA ACTIVA DE COCHERA DEL USUARIO ---
+            perfil = request.user.perfil
+            reserva_cochera_activa = Reserva.objects.filter(
+                clienteinmueble__cliente=perfil,
+                cochera__isnull=False,
+                estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada'],
+                fecha_fin__gte=timezone.now().date()
+            ).exists()
+            if reserva_cochera_activa:
+                messages.error(request, "Ya tenés una reserva activa de cochera. No podés reservar otra hasta finalizar la actual.")
+                return redirect('detalle_cochera', id_cochera=id_cochera)
+            # -----------------------------------------------------------
+
+            # --- Validar que no haya reservas superpuestas ---
             reservas_superpuestas = Reserva.objects.filter(
                 cochera=cochera,
                 estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada'],
@@ -1212,6 +1240,7 @@ def crear_reserva_cochera(request, id_cochera):
             if reservas_superpuestas.exists():
                 messages.error(request, "La cochera ya está reservada en esas fechas.")
                 return redirect('detalle_cochera', id_cochera=id_cochera)
+            # ------------------------------------------------------
                 
             # Calcular días y precio total
             dias = (fecha_fin - fecha_inicio).days
