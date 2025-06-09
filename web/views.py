@@ -62,7 +62,10 @@ from .models import (
 )
 
 # Importaciones de utilidades locales
-from .utils import email_link_token
+from .utils import (
+    email_link_token,
+    crear_notificacion
+)
 
 # para enviar correos a empleados sobre reservas
 from .utils import enviar_mail_a_empleados_sobre_reserva
@@ -641,7 +644,7 @@ def admin_alta_empleados(request):
     return render(request, 'admin/admin_alta_empleados.html', {'form': form})
 
 @login_required
-@user_passes_test(is_admin)
+@user_passes_test(is_admin_or_empleado)
 def admin_alta_cliente(request):
     """
     Permite a administradores y empleados dar de alta un cliente.
@@ -1093,7 +1096,7 @@ def admin_cocheras_eliminar(request, id_cochera):
     })
 
 @login_required
-@user_passes_test(is_admin)
+@user_passes_test(is_admin_or_empleado)
 def admin_cocheras_historial(request, id_cochera):
     """
     Muestra el historial de estados de una cochera específica.
@@ -1103,7 +1106,7 @@ def admin_cocheras_historial(request, id_cochera):
     return render(request, 'admin/admin_cocheras_historial.html', {'cochera': cochera, 'historial': historial})
 
 @login_required
-@user_passes_test(is_admin)
+@user_passes_test(is_admin_or_empleado)
 def admin_cocheras_reservas(request, id_cochera):
     """
     Muestra el estado actual y las reservas de una cochera específica.
@@ -1337,7 +1340,7 @@ def crear_reserva_cochera(request, id_cochera):
 
 @require_POST
 @login_required
-@user_passes_test(is_admin)
+@user_passes_test(is_admin_or_empleado)
 def cambiar_estado_reserva(request, id_reserva):
     """
     Maneja el cambio de estado para reservas de INMUEBLES y COCHERAS.
@@ -1413,7 +1416,7 @@ def cambiar_estado_reserva(request, id_reserva):
                     cuerpo += f"\nGracias por usar Alquiler Express."
 
                     crear_notificacion(
-                        usuario=cliente_rel.cliente.usuario,
+                        usuario=cliente_rel.cliente,
                         mensaje=f"El estado de tu reserva #{reserva.id_reserva} ha cambiado a: {estado.nombre}"
                     )
                     
@@ -1451,12 +1454,12 @@ def cambiar_estado_reserva(request, id_reserva):
                         cuerpo += f"\nLa reserva ha sido confirmada. ¡Disfrute de su cochera!\n"
 
                     cuerpo += f"\nGracias por usar Alquiler Express."
-
+                    
                     crear_notificacion(
-                        usuario=cliente_rel.cliente.usuario,
+                        usuario=cliente_rel.cliente,
                         mensaje=f"El estado de tu reserva #{reserva.id_reserva} ha cambiado a: {estado.nombre}"
                     )
-                    
+
                     send_mail(
                         subject=asunto,
                         message=cuerpo,
@@ -1464,10 +1467,6 @@ def cambiar_estado_reserva(request, id_reserva):
                         recipient_list=[email_cliente],
                         fail_silently=False,
                     )
-
-            
-
-            
             
             # Opcional: Registrar en historial (si tienes un modelo para ello)
             # HistorialEstadoReserva.objects.create(
