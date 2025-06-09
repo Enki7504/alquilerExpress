@@ -354,6 +354,7 @@ def detalle_inmueble(request, id_inmueble):
 
     es_usuario = request.user.is_authenticated and request.user.groups.filter(name="cliente").exists()
     is_admin_or_empleado_var = is_admin_or_empleado(request.user)
+    is_admin_var = is_admin(request.user)
 
     usuario_resenia = None
     if request.user.is_authenticated:
@@ -424,11 +425,12 @@ def detalle_inmueble(request, id_inmueble):
         'resenia_form': resenia_form,
         'reservas': reservas,
         'historial': historial,
-        'es_usuario': es_usuario,
         'usuario_resenia': usuario_resenia,
-        'is_admin_or_empleado': is_admin_or_empleado_var,
         'respuestas': respuestas_dict,
         'fechas_ocupadas': fechas_ocupadas,
+        'es_usuario': es_usuario,
+        'is_admin_or_empleado': is_admin_or_empleado_var,
+        'is_admin': is_admin_var,
     })
 
 def detalle_cochera(request, id_cochera):
@@ -443,6 +445,7 @@ def detalle_cochera(request, id_cochera):
 
     es_usuario = request.user.is_authenticated and request.user.groups.filter(name="cliente").exists()
     is_admin_or_empleado_var = is_admin_or_empleado(request.user)
+    is_admin_var = is_admin(request.user)
 
     # Fechas ocupadas
     fechas_ocupadas = []
@@ -512,11 +515,12 @@ def detalle_cochera(request, id_cochera):
         'resenia_form': resenia_form,
         'reservas': reservas,
         'historial': historial,
-        'es_usuario': es_usuario,
         'usuario_resenia': usuario_resenia,
         'fechas_ocupadas': fechas_ocupadas,
-        'is_admin_or_empleado': is_admin_or_empleado_var,
         'respuestas': respuestas_dict,
+        'es_usuario': es_usuario,
+        'is_admin_or_empleado': is_admin_or_empleado_var,
+        'is_admin': is_admin_var,
     })
 
 ################################################################################################################
