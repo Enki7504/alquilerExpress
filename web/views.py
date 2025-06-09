@@ -1140,6 +1140,11 @@ def crear_reserva(request, id_inmueble):
             if fecha_inicio >= fecha_fin:
                 messages.error(request, 'La fecha de salida debe ser posterior a la de llegada.')
                 return redirect('detalle_inmueble', id_inmueble=id_inmueble)
+
+            dias = (fecha_fin - fecha_inicio).days
+            if dias < inmueble.minimo_dias_alquiler:
+                messages.error(request, f"El mínimo de noches de alquiler para esta vivienda es {inmueble.minimo_dias_alquiler}.")
+                return redirect('detalle_inmueble', id_inmueble=id_inmueble)
             
             # --- VALIDACIÓN DE RESERVA ACTIVA DE INMUEBLE DEL USUARIO ---
             perfil = request.user.perfil
@@ -1226,7 +1231,12 @@ def crear_reserva_cochera(request, id_cochera):
             if fecha_inicio >= fecha_fin:
                 messages.error(request, 'La fecha de fin debe ser posterior a la de inicio.')
                 return redirect('detalle_cochera', id_cochera=id_cochera)
-
+                
+            dias = (fecha_fin - fecha_inicio).days
+            if dias < cochera.minimo_dias_alquiler:
+                messages.error(request, f"El mínimo de noches de alquiler para esta cochera es {cochera.minimo_dias_alquiler}.")
+                return redirect('detalle_cochera', id_cochera=id_cochera)
+            
             # --- VALIDACIÓN DE RESERVA ACTIVA DE COCHERA DEL USUARIO ---
             perfil = request.user.perfil
             reserva_cochera_activa = Reserva.objects.filter(
