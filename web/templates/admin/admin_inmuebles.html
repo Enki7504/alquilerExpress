@@ -5,9 +5,11 @@
 {% block admin_content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>Gestión de Inmuebles</h2>
+    {% if user.is_staff %}
     <a href="{% url 'admin_inmuebles_alta' %}" class="btn btn-success">
         <i class="bi bi-plus-circle"></i> Nuevo Inmueble
     </a>
+    {% endif %}
 </div>
 
 <form class="d-flex mb-4" role="search" method="GET" action="{% url 'admin_inmuebles' %}">
@@ -39,23 +41,25 @@
           <td>${{ inmueble.precio_por_dia|floatformat:2 }}</td>
           <td>{{ inmueble.estado.nombre }}</td>
           <td>
-            <a href="{% url 'detalle_inmueble' inmueble.id_inmueble %}" class="btn btn-sm btn-info">Ver</a>
-            <a href="{% url 'admin_inmuebles_editar' inmueble.id_inmueble %}" class="btn btn-sm btn-warning">Editar</a>
-            <a href="{% url 'admin_inmuebles_reservas' inmueble.id_inmueble %}" class="btn btn-sm btn-primary">Reservas</a>
-            <a href="{% url 'admin_inmuebles_historial' inmueble.id_inmueble %}" class="btn btn-sm btn-secondary">Historial</a>
-            <a href="#" class="btn btn-sm btn-danger eliminar-inmueble" data-id="{{ inmueble.id_inmueble }}">Eliminar</a>
-            <!-- Select de empleado asignado -->
-            <form method="post" action="{% url 'cambiar_empleado_inmueble' inmueble.id_inmueble %}" style="display:inline;">
-              {% csrf_token %}
-              <select name="empleado" class="form-select form-select-sm d-inline w-auto align-middle" onchange="this.form.submit()">
-                <option value="">Sin asignar</option>
-                {% for empleado in empleados %}
-                  <option value="{{ empleado.id_perfil }}" {% if inmueble.empleado and inmueble.empleado.id_perfil == empleado.id_perfil %}selected{% endif %}>
-                    {{ empleado.usuario.get_full_name|default:empleado.usuario.username }}
-                  </option>
-                {% endfor %}
-              </select>
-            </form>
+            <a href="{% url 'detalle_inmueble' inmueble.id_inmueble %}" class="btn btn-sm btn-info" title="Ver Detalles">Ver</a>
+            <a href="{% url 'admin_inmuebles_reservas' inmueble.id_inmueble %}" class="btn btn-sm btn-primary" title="Ver Estado/Reservas">Reservas</a>
+            <a href="{% url 'admin_inmuebles_historial' inmueble.id_inmueble %}" class="btn btn-sm btn-secondary" title="Ver Historial">Historial</a>
+            {% if user.is_staff %}
+              <a href="{% url 'admin_inmuebles_editar' inmueble.id_inmueble %}" class="btn btn-sm btn-warning" title="Editar">Editar</a>
+              <a href="#" class="btn btn-sm btn-danger eliminar-inmueble" data-id="{{ inmueble.id_inmueble }}" title="Eliminar">Eliminar</a>
+              <!-- Select de empleado asignado -->
+              <form method="post" action="{% url 'cambiar_empleado_inmueble' inmueble.id_inmueble %}" style="display:inline;">
+                {% csrf_token %}
+                <select name="empleado" class="form-select form-select-sm d-inline w-auto align-middle" onchange="this.form.submit()">
+                  <option value="">Sin asignar</option>
+                  {% for empleado in empleados %}
+                    <option value="{{ empleado.id_perfil }}" {% if inmueble.empleado and inmueble.empleado.id_perfil == empleado.id_perfil %}selected{% endif %}>
+                      {{ empleado.usuario.get_full_name|default:empleado.usuario.username }}
+                    </option>
+                  {% endfor %}
+                </select>
+              </form>
+            {% endif %}
           </td>
         </tr>
         {% empty %}
