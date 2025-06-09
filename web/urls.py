@@ -70,6 +70,9 @@ urlpatterns = [
     # Cambiar contraseña
     path('cambiar-contrasena/', views.cambiar_contrasena, name='cambiar_contrasena'),
 
+    # Reseñas y comentarios
+    path('comentario/eliminar/<int:id_comentario>/', views.eliminar_comentario, name='eliminar_comentario'),
+
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 

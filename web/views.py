@@ -641,7 +641,7 @@ def admin_alta_empleados(request):
     return render(request, 'admin/admin_alta_empleados.html', {'form': form})
 
 @login_required
-@user_passes_test(is_admin_or_empleado)
+@user_passes_test(is_admin)
 def admin_alta_cliente(request):
     """
     Permite a administradores y empleados dar de alta un cliente.
@@ -1559,3 +1559,11 @@ def cambiar_contrasena(request):
     else:
         form = ChangePasswordForm(request.user)
     return render(request, "cambiar_contrasena.html", {"form": form})
+
+@login_required
+def eliminar_comentario(request, id_comentario):
+    if request.method == "POST" and is_admin_or_empleado(request.user):
+        comentario = get_object_or_404(Comentario, id_comentario=id_comentario)
+        comentario.delete()
+        messages.success(request, "Comentario eliminado correctamente.")
+    return redirect(request.META.get('HTTP_REFERER', 'index'))
