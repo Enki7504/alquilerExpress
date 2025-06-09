@@ -29,13 +29,11 @@
           <tr>
             <td>{{ reserva.id_reserva }}</td>
             <td>
-              {% with relacion=reserva.clientecochera_set.first %}
-                {% if relacion and relacion.cliente %}
-                  {{ relacion.cliente.usuario.get_full_name|default:relacion.cliente.usuario.username }}
-                {% else %}
-                  Cliente no disponible
-                {% endif %}
-              {% endwith %}
+              {% if reserva.cliente %}
+                {{ reserva.cliente.usuario.get_full_name|default:reserva.cliente.usuario.username }}
+              {% else %}
+                Cliente no disponible
+              {% endif %}
             </td>
             <td>{{ reserva.fecha_inicio|date:"d/m/Y" }} - {{ reserva.fecha_fin|date:"d/m/Y" }}</td>
             <td>
@@ -43,6 +41,10 @@
                 {% if reserva.estado.nombre == 'Confirmada' %}bg-success
                 {% elif reserva.estado.nombre == 'Cancelada' %}bg-danger
                 {% elif reserva.estado.nombre == 'Rechazada' %}bg-secondary
+                {% elif reserva.estado.nombre == 'Pagada' %}bg-info
+                {% elif reserva.estado.nombre == 'Aprobada' %}bg-primary
+                {% elif reserva.estado.nombre == 'Pendiente' %}bg-warning
+                {% elif reserva.estado.nombre == 'Finalizada' %}bg-dark
                 {% else %}bg-warning{% endif %}">
                 {{ reserva.estado.nombre }}
               </span>
@@ -52,11 +54,13 @@
                 <button class="btn btn-sm btn-success" onclick="cambiarEstado('{{ reserva.id_reserva }}', 'Aprobada')">Aprobar Solicitud</button>
                 <button class="btn btn-sm btn-danger" onclick="cambiarEstado('{{ reserva.id_reserva }}', 'Rechazada')">Rechazar Solicitud</button>
               {% elif reserva.estado.nombre == 'Aprobada' %}
-                <button class="btn btn-sm btn-success">Esperando Pago...</button>
+                <button class="btn btn-sm btn-success" onclick="cambiarEstado('{{ reserva.id_reserva }}', 'Pagada')">Confirmar Pago</button>
+                <button class="btn btn-sm btn-danger" onclick="cambiarEstado('{{ reserva.id_reserva }}', 'Cancelada')">Cancelar Reserva</button>
               {% elif reserva.estado.nombre == 'Pagada' %}
-                <button class="btn btn-sm btn-success" onclick="cambiarEstado('{{ reserva.id_reserva }}', 'Confirmada')">Confirmar Pago</button>
-                <button class="btn btn-sm btn-danger" onclick="cambiarEstado('{{ reserva.id_reserva }}', 'Cancelada')">Rechazar Pago</button>
+                <button class="btn btn-sm btn-success" onclick="cambiarEstado('{{ reserva.id_reserva }}', 'Confirmada')">Confirmar Totalmente</button>
+                <button class="btn btn-sm btn-danger" onclick="cambiarEstado('{{ reserva.id_reserva }}', 'Cancelada')">Cancelar Alquiler</button>
               {% elif reserva.estado.nombre == 'Confirmada' %}
+                <button class="btn btn-sm btn-success" onclick="cambiarEstado('{{ reserva.id_reserva }}', 'Finalizada')">Terminar Alquiler</button>
                 <button class="btn btn-sm btn-danger" onclick="cambiarEstado('{{ reserva.id_reserva }}', 'Cancelada')">Cancelar Alquiler</button>
               {% endif %}
               <a href="{% url 'detalle_cochera' cochera.id_cochera %}" class="btn btn-sm btn-info">Ver Cochera</a>
@@ -92,6 +96,14 @@ function cambiarEstado(reservaId, nuevoEstado) {
       cancelButtonText: 'Cancelar',
       icon: 'warning',
       preConfirm: (comentario) => {
+        // Mostrar notificación de carga
+        Swal.fire({
+          title: 'Cargando...',
+          allowOutsideClick: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
         return fetch(`/panel/reserva-cochera/${reservaId}/cambiar-estado/`, {
           method: 'POST',
           headers: {
@@ -104,15 +116,12 @@ function cambiarEstado(reservaId, nuevoEstado) {
           })
         })
         .then(response => {
-          return response.text().then(text => {
-            try {
-              return JSON.parse(text);
-            } catch (e) {
-              throw new Error('Respuesta inesperada del servidor');
-            }
-          });
+          Swal.close(); // Cierra el "Cargando..." al recibir respuesta
+          if (!response.ok) throw new Error('Error al actualizar el estado');
+          return response.json();
         })
         .catch(error => {
+          Swal.close();
           Swal.showValidationMessage(error.message || 'Error al actualizar el estado');
         });
       }
@@ -139,6 +148,14 @@ function cambiarEstado(reservaId, nuevoEstado) {
       cancelButtonText: 'Cancelar',
     }).then((result) => {
       if (result.isConfirmed) {
+        // Mostrar notificación de carga
+        Swal.fire({
+          title: 'Cargando...',
+          allowOutsideClick: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
         fetch(`/panel/reserva-cochera/${reservaId}/cambiar-estado/`, {
           method: 'POST',
           headers: {
@@ -150,13 +167,9 @@ function cambiarEstado(reservaId, nuevoEstado) {
           })
         })
         .then(response => {
-          return response.text().then(text => {
-            try {
-              return JSON.parse(text);
-            } catch (e) {
-              throw new Error('Respuesta inesperada del servidor');
-            }
-          });
+          Swal.close(); // Cierra el "Cargando..." al recibir respuesta
+          if (!response.ok) throw new Error('Error al actualizar el estado');
+          return response.json();
         })
         .then(() => {
           Swal.fire({
@@ -171,6 +184,7 @@ function cambiarEstado(reservaId, nuevoEstado) {
           });
         })
         .catch(error => {
+          Swal.close();
           Swal.fire('Error', error.message || 'Error al actualizar el estado', 'error');
         });
       }

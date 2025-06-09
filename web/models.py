@@ -90,6 +90,9 @@ class Reserva(models.Model):
     cochera = models.ForeignKey(Cochera, null=True, blank=True, on_delete=models.SET_NULL)
     descripcion = models.TextField()
     
+    def cliente(self):
+        rel = ClienteInmueble.objects.filter(reserva=self).first()
+        return rel.cliente if rel else None
 
     def __str__(self):
         return f"Reserva #{self.id_reserva} - Estado: {self.estado.nombre if self.estado else 'Sin estado'}"
@@ -188,3 +191,9 @@ class Notificacion(models.Model):
 
     def __str__(self):
         return f"Notificación para {self.usuario}"
+
+class RespuestaComentario(models.Model):
+    comentario = models.OneToOneField(Comentario, on_delete=models.CASCADE, related_name='respuesta')
+    usuario = models.ForeignKey(Perfil, on_delete=models.CASCADE)  # Empleado o admin que responde
+    texto = models.TextField()
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
