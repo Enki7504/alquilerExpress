@@ -518,6 +518,10 @@ def is_admin(user):
     """Verifica si el usuario es un superusuario."""
     return user.is_authenticated and user.is_staff
 
+def is_empleado(user):
+    """Verifica si el usuario es un superusuario."""
+    return user.is_authenticated and user.groups.filter(name="empleado").exists()
+
 def is_admin_or_empleado(user):
     """Verifica si el usuario es un superusuario o pertenece al grupo 'empleado'."""
     return user.is_authenticated and (user.is_staff or user.groups.filter(name="empleado").exists())
@@ -1146,7 +1150,7 @@ def crear_reserva(request, id_inmueble):
                 fecha_fin__gte=timezone.now().date()
             ).exists()
             if reserva_inmueble_activa:
-                messages.error(request, "Ya tenés una reserva activa de inmueble. No podés reservar otro hasta finalizar la actual.")
+                messages.error(request, "Ya tenés una reserva activa de viviendas. No podés reservar otra hasta finalizar la actual.")
                 return redirect('detalle_inmueble', id_inmueble=id_inmueble)
             # -----------------------------------------------------------
 
@@ -1158,7 +1162,7 @@ def crear_reserva(request, id_inmueble):
                 fecha_fin__gt=fecha_inicio
             )
             if reservas_superpuestas.exists():
-                messages.error(request, "El inmueble ya está reservado en esas fechas.")
+                messages.error(request, "La vivienda ya está reservada en esas fechas.")
                 return redirect('detalle_inmueble', id_inmueble=id_inmueble)
             # ---------------------------------------------------------
 
@@ -1340,7 +1344,7 @@ def cambiar_estado_reserva(request, id_reserva):
                     asunto = f"Actualización de tu reserva #{reserva.id_reserva}"
                     cuerpo = (
                         f"Hola {nombre_cliente},\n\n"
-                        f"El estado de tu reserva #{reserva.id_reserva} para el inmueble {reserva.inmueble.nombre} ha cambiado a: {estado.nombre}.\n"
+                        f"El estado de tu reserva #{reserva.id_reserva} para la vivienda {reserva.inmueble.nombre} ha cambiado a: {estado.nombre}.\n"
                     )
                     if comentario:
                         cuerpo += f"\nComentario del administrador: {comentario}\n"
