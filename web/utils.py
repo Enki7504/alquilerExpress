@@ -31,11 +31,11 @@ def enviar_mail_a_empleados_sobre_reserva(id_reserva):
         # Obtener datos del inmueble o cochera y el empleado asignado
         empleado_email = None
         if reserva.inmueble and reserva.inmueble.empleado:
-            nombre_obj = f"vivienda #{reserva.inmueble.id_inmueble} - {reserva.inmueble.nombre}"
+            nombre_obj = f"el inmueble #{reserva.inmueble.id_inmueble} - {reserva.inmueble.nombre}"
             precio_por_dia = reserva.inmueble.precio_por_dia
             empleado_email = reserva.inmueble.empleado.usuario.email
         elif reserva.cochera and reserva.cochera.empleado:
-            nombre_obj = f"cochera #{reserva.cochera.id_cochera} - {reserva.cochera.nombre}"
+            nombre_obj = f"la cochera #{reserva.cochera.id_cochera} - {reserva.cochera.nombre}"
             precio_por_dia = reserva.cochera.precio_por_dia
             empleado_email = reserva.cochera.empleado.usuario.email
         else:
@@ -53,7 +53,7 @@ def enviar_mail_a_empleados_sobre_reserva(id_reserva):
         # Armar el cuerpo del mensaje
         cuerpo = (
             f"El cliente {nombre_cliente} solicitó una reserva #{reserva.id_reserva} "
-            f"para la {nombre_obj} desde el {reserva.fecha_inicio} hasta el {reserva.fecha_fin}. "
+            f"para {nombre_obj} desde el {reserva.fecha_inicio} hasta el {reserva.fecha_fin}. "
             f"Debe pagar ${precio_por_dia:.2f} por día, en total son ${total:.2f} por {cantidad_dias} días. "
             f"¿Desea confirmar la reserva para que el cliente pueda pagar?\n"
             f"Para aceptar o rechazar la reserva, haga click en el siguiente enlace: "

@@ -5,11 +5,9 @@
 {% block admin_content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>Gestión de Cocheras</h2>
-    {% if user.is_staff %}
     <a href="{% url 'admin_cocheras_alta' %}" class="btn btn-success">
         <i class="bi bi-plus-circle"></i> Nueva Cochera
     </a>
-    {% endif %}
 </div>
 
 <form class="d-flex mb-4" role="search" method="GET" action="{% url 'admin_cocheras' %}">
@@ -42,24 +40,22 @@
           <td>{{ cochera.estado.nombre }}</td>
           <td>
             <a href="{% url 'detalle_cochera' cochera.id_cochera %}" class="btn btn-sm btn-info" title="Ver Detalles">Ver</a>
+            <a href="{% url 'admin_cocheras_editar' cochera.id_cochera %}" class="btn btn-sm btn-warning" title="Editar">Editar</a>
             <a href="{% url 'admin_cocheras_reservas' cochera.id_cochera %}" class="btn btn-sm btn-primary" title="Ver Estado/Reservas">Reservas</a>
             <a href="{% url 'admin_cocheras_historial' cochera.id_cochera %}" class="btn btn-sm btn-secondary" title="Ver Historial">Historial</a>
-            {% if user.is_staff %}
-              <a href="{% url 'admin_cocheras_editar' cochera.id_cochera %}" class="btn btn-sm btn-warning" title="Editar">Editar</a>
-              <a href="#" class="btn btn-sm btn-danger eliminar-cochera" data-id="{{ cochera.id_cochera }}" title="Eliminar">Eliminar</a>
-              <!-- Select de empleado asignado -->
-              <form method="post" action="{% url 'cambiar_empleado_cochera' cochera.id_cochera %}" style="display:inline;">
-                {% csrf_token %}
-                <select name="empleado" class="form-select form-select-sm d-inline w-auto align-middle" onchange="this.form.submit()">
-                  <option value="">Sin asignar</option>
-                  {% for empleado in empleados %}
-                    <option value="{{ empleado.id_perfil }}" {% if cochera.empleado and cochera.empleado.id_perfil == empleado.id_perfil %}selected{% endif %}>
-                      {{ empleado.usuario.get_full_name|default:empleado.usuario.username }}
-                    </option>
-                  {% endfor %}
-                </select>
-              </form>
-            {% endif %}
+            <a href="#" class="btn btn-sm btn-danger eliminar-cochera" data-id="{{ cochera.id_cochera }}" title="Eliminar">Eliminar</a>
+            <!-- Select de empleado asignado -->
+            <form method="post" action="{% url 'cambiar_empleado_cochera' cochera.id_cochera %}" style="display:inline;">
+              {% csrf_token %}
+              <select name="empleado" class="form-select form-select-sm d-inline w-auto align-middle" onchange="this.form.submit()">
+                <option value="">Sin asignar</option>
+                {% for empleado in empleados %}
+                  <option value="{{ empleado.id_perfil }}" {% if cochera.empleado and cochera.empleado.id_perfil == empleado.id_perfil %}selected{% endif %}>
+                    {{ empleado.usuario.get_full_name|default:empleado.usuario.username }}
+                  </option>
+                {% endfor %}
+              </select>
+            </form>
           </td>
         </tr>
         {% empty %}
