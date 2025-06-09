@@ -1176,6 +1176,11 @@ def crear_reserva(request, id_inmueble):
             if fecha_inicio >= fecha_fin:
                 messages.error(request, 'La fecha de salida debe ser posterior a la de llegada.')
                 return redirect('detalle_inmueble', id_inmueble=id_inmueble)
+
+            dias = (fecha_fin - fecha_inicio).days
+            if dias < inmueble.minimo_dias_alquiler:
+                messages.error(request, f"El mínimo de noches de alquiler para esta vivienda es {inmueble.minimo_dias_alquiler}.")
+                return redirect('detalle_inmueble', id_inmueble=id_inmueble)
             
             # --- VALIDACIÓN DE RESERVA ACTIVA DE INMUEBLE DEL USUARIO ---
             perfil = request.user.perfil
@@ -1186,7 +1191,7 @@ def crear_reserva(request, id_inmueble):
                 fecha_fin__gte=timezone.now().date()
             ).exists()
             if reserva_inmueble_activa:
-                messages.error(request, "Ya tenés una reserva activa de inmueble. No podés reservar otro hasta finalizar la actual.")
+                messages.error(request, "Ya tenés una reserva activa de viviendas. No podés reservar otra hasta finalizar la actual.")
                 return redirect('detalle_inmueble', id_inmueble=id_inmueble)
             # -----------------------------------------------------------
 
@@ -1198,7 +1203,7 @@ def crear_reserva(request, id_inmueble):
                 fecha_fin__gt=fecha_inicio
             )
             if reservas_superpuestas.exists():
-                messages.error(request, "El inmueble ya está reservado en esas fechas.")
+                messages.error(request, "La vivienda ya está reservada en esas fechas.")
                 return redirect('detalle_inmueble', id_inmueble=id_inmueble)
             # ---------------------------------------------------------
 
@@ -1262,7 +1267,12 @@ def crear_reserva_cochera(request, id_cochera):
             if fecha_inicio >= fecha_fin:
                 messages.error(request, 'La fecha de fin debe ser posterior a la de inicio.')
                 return redirect('detalle_cochera', id_cochera=id_cochera)
-
+                
+            dias = (fecha_fin - fecha_inicio).days
+            if dias < cochera.minimo_dias_alquiler:
+                messages.error(request, f"El mínimo de noches de alquiler para esta cochera es {cochera.minimo_dias_alquiler}.")
+                return redirect('detalle_cochera', id_cochera=id_cochera)
+            
             # --- VALIDACIÓN DE RESERVA ACTIVA DE COCHERA DEL USUARIO ---
             perfil = request.user.perfil
             reserva_cochera_activa = Reserva.objects.filter(
@@ -1380,7 +1390,7 @@ def cambiar_estado_reserva(request, id_reserva):
                     asunto = f"Actualización de tu reserva #{reserva.id_reserva}"
                     cuerpo = (
                         f"Hola {nombre_cliente},\n\n"
-                        f"El estado de tu reserva #{reserva.id_reserva} para el inmueble {reserva.inmueble.nombre} ha cambiado a: {estado.nombre}.\n"
+                        f"El estado de tu reserva #{reserva.id_reserva} para la vivienda {reserva.inmueble.nombre} ha cambiado a: {estado.nombre}.\n"
                     )
                     if comentario:
                         cuerpo += f"\nComentario del administrador: {comentario}\n"

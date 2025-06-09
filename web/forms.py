@@ -95,6 +95,12 @@ class InmuebleForm(forms.ModelForm):
         label="Empleado asignado",
         widget=forms.Select(attrs={'class': 'form-select'})
     )
+    minimo_dias_alquiler = forms.IntegerField(
+        min_value=1,
+        label="Mínimo de días de alquiler",
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+        initial=1
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -114,7 +120,7 @@ class InmuebleForm(forms.ModelForm):
         fields = [
             'nombre', 'ubicacion', 'descripcion', 'cantidad_banios', 'cantidad_ambientes',
             'cantidad_camas', 'cantidad_huespedes', 'precio_por_dia', 'politica_cancelacion',
-            'provincia', 'ciudad', 'cochera', 'estado', 'empleado'  # <-- AGREGADO AQUÍ
+            'provincia', 'ciudad', 'cochera', 'estado', 'empleado', 'minimo_dias_alquiler'  # <-- AGREGADO AQUÍ
         ]
         widgets = {
             'descripcion': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
@@ -168,6 +174,12 @@ class CocheraForm(forms.ModelForm):
         label="Empleado asignado",
         widget=forms.Select(attrs={'class': 'form-select'})
     )
+    minimo_dias_alquiler = forms.IntegerField(
+        min_value=1,
+        label="Mínimo de días de alquiler",
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+        initial=1
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -187,7 +199,7 @@ class CocheraForm(forms.ModelForm):
         fields = [
             'nombre', 'ubicacion', 'descripcion', 'alto', 'ancho', 'largo',
             'cantidad_vehiculos', 'con_techo', 'precio_por_dia', 'politica_cancelacion',
-            'provincia', 'ciudad', 'estado', 'empleado'  # <-- AGREGADO AQUÍ
+            'provincia', 'ciudad', 'estado', 'empleado', 'minimo_dias_alquiler'  # <-- AGREGADO AQUÍ
         ]
         widgets = {
             'nombre': forms.TextInput(attrs={'class': 'form-control'}),
