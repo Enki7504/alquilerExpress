@@ -8,9 +8,11 @@
     <h4 class="mb-4 text-center">Iniciar Sesión</h4>
     {% if messages %}
       {% for message in messages %}
-        <div class="alert alert-danger text-center" role="alert">
-          {{ message }}
-        </div>
+        {% if forloop.first %}
+          <div class="alert alert-danger text-center" role="alert">
+            {{ message }}
+          </div>
+        {% endif %}
       {% endfor %}
     {% endif %}
     <form method="post" action="{% url 'login' %}">

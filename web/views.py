@@ -1182,18 +1182,19 @@ def crear_reserva(request, id_inmueble):
                 messages.error(request, f"El mínimo de noches de alquiler para esta vivienda es {inmueble.minimo_dias_alquiler}.")
                 return redirect('detalle_inmueble', id_inmueble=id_inmueble)
             
-            # --- VALIDACIÓN DE RESERVA ACTIVA DE INMUEBLE DEL USUARIO ---
+            # --- VALIDACIÓN DE RESERVA SUPERPUESTA DEL USUARIO ---
             perfil = request.user.perfil
-            reserva_inmueble_activa = Reserva.objects.filter(
+            reserva_superpuesta_usuario = Reserva.objects.filter(
                 clienteinmueble__cliente=perfil,
                 inmueble__isnull=False,
                 estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada'],
-                fecha_fin__gte=timezone.now().date()
+                fecha_inicio__lt=fecha_fin,
+                fecha_fin__gt=fecha_inicio
             ).exists()
-            if reserva_inmueble_activa:
-                messages.error(request, "Ya tenés una reserva activa de viviendas. No podés reservar otra hasta finalizar la actual.")
+            if reserva_superpuesta_usuario:
+                messages.error(request, "Ya tenés una reserva de vivienda que se superpone con las fechas seleccionadas.")
                 return redirect('detalle_inmueble', id_inmueble=id_inmueble)
-            # -----------------------------------------------------------
+            # -----------------------------------------------------
 
             # --- VALIDACIÓN DE RESERVAS SUPERPUESTAS EN EL INMUEBLE ---
             reservas_superpuestas = Reserva.objects.filter(
@@ -1273,18 +1274,19 @@ def crear_reserva_cochera(request, id_cochera):
                 messages.error(request, f"El mínimo de noches de alquiler para esta cochera es {cochera.minimo_dias_alquiler}.")
                 return redirect('detalle_cochera', id_cochera=id_cochera)
             
-            # --- VALIDACIÓN DE RESERVA ACTIVA DE COCHERA DEL USUARIO ---
+            # --- VALIDACIÓN DE RESERVA SUPERPUESTA DEL USUARIO ---
             perfil = request.user.perfil
-            reserva_cochera_activa = Reserva.objects.filter(
+            reserva_superpuesta_usuario = Reserva.objects.filter(
                 clienteinmueble__cliente=perfil,
                 cochera__isnull=False,
                 estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada'],
-                fecha_fin__gte=timezone.now().date()
+                fecha_inicio__lt=fecha_fin,
+                fecha_fin__gt=fecha_inicio
             ).exists()
-            if reserva_cochera_activa:
-                messages.error(request, "Ya tenés una reserva activa de cochera. No podés reservar otra hasta finalizar la actual.")
+            if reserva_superpuesta_usuario:
+                messages.error(request, "Ya tenés una reserva de cochera que se superpone con las fechas seleccionadas.")
                 return redirect('detalle_cochera', id_cochera=id_cochera)
-            # -----------------------------------------------------------
+            # -----------------------------------------------------
 
             # --- Validar que no haya reservas superpuestas ---
             reservas_superpuestas = Reserva.objects.filter(
@@ -1409,6 +1411,11 @@ def cambiar_estado_reserva(request, id_reserva):
 
 
                     cuerpo += f"\nGracias por usar Alquiler Express."
+
+                    crear_notificacion(
+                        usuario=cliente_rel.cliente.usuario,
+                        mensaje=f"El estado de tu reserva #{reserva.id_reserva} ha cambiado a: {estado.nombre}"
+                    )
                     
                     send_mail(
                         subject=asunto,
@@ -1444,6 +1451,11 @@ def cambiar_estado_reserva(request, id_reserva):
                         cuerpo += f"\nLa reserva ha sido confirmada. ¡Disfrute de su cochera!\n"
 
                     cuerpo += f"\nGracias por usar Alquiler Express."
+
+                    crear_notificacion(
+                        usuario=cliente_rel.cliente.usuario,
+                        mensaje=f"El estado de tu reserva #{reserva.id_reserva} ha cambiado a: {estado.nombre}"
+                    )
                     
                     send_mail(
                         subject=asunto,

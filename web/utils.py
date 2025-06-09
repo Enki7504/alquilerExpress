@@ -5,8 +5,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.core.mail import send_mail
 from django.conf import settings
-from .models import ClienteInmueble, Reserva
-from django.contrib.auth.models import Group
+from .models import ClienteInmueble, Reserva, Notificacion, Perfil
 
 #comando para ejecutar el script en consola
 # python manage.py shell
@@ -29,20 +28,23 @@ def enviar_mail_a_empleados_sobre_reserva(id_reserva):
         nombre_cliente = f"{perfil.usuario.first_name} {perfil.usuario.last_name}"
 
         # Obtener datos del inmueble o cochera y el empleado asignado
+        empleado_perfil = None
         empleado_email = None
         if reserva.inmueble and reserva.inmueble.empleado:
             nombre_obj = f"vivienda #{reserva.inmueble.id_inmueble} - {reserva.inmueble.nombre}"
             precio_por_dia = reserva.inmueble.precio_por_dia
-            empleado_email = reserva.inmueble.empleado.usuario.email
+            empleado_perfil = reserva.inmueble.empleado
+            empleado_email = empleado_perfil.usuario.email
         elif reserva.cochera and reserva.cochera.empleado:
             nombre_obj = f"cochera #{reserva.cochera.id_cochera} - {reserva.cochera.nombre}"
             precio_por_dia = reserva.cochera.precio_por_dia
-            empleado_email = reserva.cochera.empleado.usuario.email
+            empleado_perfil = reserva.cochera.empleado
+            empleado_email = empleado_perfil.usuario.email
         else:
             nombre_obj = "reserva"
             precio_por_dia = 0
 
-        if not empleado_email:
+        if not empleado_email or not empleado_perfil:
             print("No hay empleado asignado al inmueble o cochera, o no tiene email.")
             return False
 
@@ -66,6 +68,14 @@ def enviar_mail_a_empleados_sobre_reserva(id_reserva):
             cuerpo += (
                 f"http://localhost:8000/panel/cocheras/reservas/{reserva.cochera.id_cochera}/"
             )
+
+        # --- AGREGAR NOTIFICACIÓN AL EMPLEADO ---
+        crear_notificacion(
+            usuario=empleado_perfil,
+            mensaje=f"Tienes una nueva solicitud de reserva #{reserva.id_reserva} para la {nombre_obj}."
+        )
+        # ----------------------------------------
+
 
         # Enviar el mail solo al empleado asignado
         send_mail(
@@ -95,3 +105,14 @@ class EmailLinkTokenGenerator(PasswordResetTokenGenerator):
 email_link_token = EmailLinkTokenGenerator()
 
 # Enviar mail al cliente sobre la reserva
+
+def crear_notificacion(usuario, mensaje):
+    """
+    Crea una notificación para el usuario indicado.
+    """
+    notificacion = Notificacion.objects.create(
+        usuario=usuario,
+        mensaje=mensaje
+    )
+    print(f"Notificación creada para {usuario.usuario.username}: {mensaje}")
+    return notificacion
