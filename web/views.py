@@ -18,6 +18,7 @@ from django.utils.http import urlsafe_base64_decode
 from django.views.decorators.http import require_POST
 from django.db import IntegrityError, transaction
 from django.db.models import Q
+from datetime import timedelta
 
 
 # Importaciones de formularios locales
@@ -344,7 +345,7 @@ def detalle_inmueble(request, id_inmueble):
     )
     resenias = Resenia.objects.filter(inmueble=inmueble)
     comentarios = Comentario.objects.filter(inmueble=inmueble).order_by('-fecha_creacion')
-    reservas = Reserva.objects.filter(inmueble=inmueble, estado__nombre__in=['Confirmada', 'Pendiente']).order_by('-fecha_inicio')
+    reservas = Reserva.objects.filter(inmueble=inmueble, estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada'])
     historial = InmuebleEstado.objects.filter(inmueble=inmueble).order_by('-fecha_inicio')
 
     # Solo clientes pueden crear reseñas
@@ -356,6 +357,16 @@ def detalle_inmueble(request, id_inmueble):
         perfil = getattr(request.user, "perfil", None)
         if perfil:
             usuario_resenia = Resenia.objects.filter(inmueble=inmueble, usuario=perfil).first()
+
+    # Fechas ocupadas para flatpickr
+    fechas_ocupadas = []
+    for reserva in reservas:
+        current = reserva.fecha_inicio
+        # Bloquea hasta el día después de fecha_fin (igual que en cocheras)
+        while current <= reserva.fecha_fin + timedelta(days=1):
+            fechas_ocupadas.append(current.strftime('%Y-%m-%d'))
+            current += timedelta(days=1)
+
     # Procesar reseña
     if request.method == 'POST' and puede_reseñar and 'crear_resenia' in request.POST:
         resenia_form = ReseniaForm(request.POST)
@@ -381,7 +392,8 @@ def detalle_inmueble(request, id_inmueble):
         'reservas': reservas,
         'historial': historial,
         'puede_reseñar': puede_reseñar,
-        'usuario_resenia': usuario_resenia,  # <--- IMPORTANTE
+        'usuario_resenia': usuario_resenia,
+        'fechas_ocupadas': fechas_ocupadas,  # <--- AGREGADO
     })
 
 def detalle_cochera(request, id_cochera):
@@ -393,6 +405,18 @@ def detalle_cochera(request, id_cochera):
         Cochera.objects.select_related('estado'),
         id_cochera=id_cochera
     )
+    reservas = Reserva.objects.filter(
+        cochera=cochera,
+        estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada']
+    )
+    fechas_ocupadas = []
+    for reserva in reservas:
+        # Genera todas las fechas ocupadas en ese rango
+        current = reserva.fecha_inicio
+        # Bloquea hasta el día después de fecha_fin
+        while current <= reserva.fecha_fin + timedelta(days=1):
+            fechas_ocupadas.append(current.strftime('%Y-%m-%d'))
+            current += timedelta(days=1)
     resenias = Resenia.objects.filter(cochera=cochera)
     comentarios = Comentario.objects.filter(cochera=cochera).order_by('-fecha_creacion')
     reservas = Reserva.objects.filter(cochera=cochera, estado__nombre__in=['Confirmada', 'Pendiente']).order_by('-fecha_inicio')
@@ -446,6 +470,7 @@ def detalle_cochera(request, id_cochera):
         'historial': historial,
         'puede_reseñar': puede_reseñar,
         'usuario_resenia': usuario_resenia,  # Enviar la reseña del usuario al template
+        'fechas_ocupadas': fechas_ocupadas,
     })
 
 ################################################################################################################
@@ -1104,7 +1129,19 @@ def crear_reserva(request, id_inmueble):
             if fecha_inicio >= fecha_fin:
                 messages.error(request, 'La fecha de salida debe ser posterior a la de llegada.')
                 return redirect('detalle_inmueble', id_inmueble=id_inmueble)
-                
+            
+            # --- VALIDACIÓN DE RESERVAS SUPERPUESTAS ---
+            reservas_superpuestas = Reserva.objects.filter(
+                inmueble=inmueble,
+                estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada'],
+                fecha_inicio__lt=fecha_fin,
+                fecha_fin__gt=fecha_inicio
+            )
+            if reservas_superpuestas.exists():
+                messages.error(request, "El inmueble ya está reservado en esas fechas.")
+                return redirect('detalle_inmueble', id_inmueble=id_inmueble)
+            # -------------------------------------------
+
             # Calcular días y precio total
             dias = (fecha_fin - fecha_inicio).days
             precio_total = dias * inmueble.precio_por_dia
@@ -1163,6 +1200,17 @@ def crear_reserva_cochera(request, id_cochera):
             
             if fecha_inicio >= fecha_fin:
                 messages.error(request, 'La fecha de fin debe ser posterior a la de inicio.')
+                return redirect('detalle_cochera', id_cochera=id_cochera)
+
+            # Validar que no haya reservas superpuestas
+            reservas_superpuestas = Reserva.objects.filter(
+                cochera=cochera,
+                estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada'],
+                fecha_inicio__lt=fecha_fin,
+                fecha_fin__gt=fecha_inicio
+            )
+            if reservas_superpuestas.exists():
+                messages.error(request, "La cochera ya está reservada en esas fechas.")
                 return redirect('detalle_cochera', id_cochera=id_cochera)
                 
             # Calcular días y precio total

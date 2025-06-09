@@ -5,6 +5,8 @@
 {% block title %}Detalle del Inmueble - {{ inmueble.nombre }}{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <link rel="stylesheet" href="{% static 'css/inmueble.css' %}">
 <style>
   .carousel-inner,
@@ -144,11 +146,11 @@
                 {% csrf_token %}
                 <div class="mb-3">
                   <label for="fecha_inicio" class="form-label">Fecha de llegada</label>
-                  <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio" required>
+                  <input type="text" class="form-control" id="fecha_inicio" name="fecha_inicio" required autocomplete="off">
                 </div>
                 <div class="mb-3">
                   <label for="fecha_fin" class="form-label">Fecha de salida</label>
-                  <input type="date" class="form-control" id="fecha_fin" name="fecha_fin" required>
+                  <input type="text" class="form-control" id="fecha_fin" name="fecha_fin" required autocomplete="off">
                 </div>
                 <button type="submit" class="btn btn-primary btn-azul w-100 py-2">
                   <i class="bi bi-calendar-check me-2"></i> Reservar ahora
@@ -348,4 +350,23 @@
     </div>
     {% endif %}
   </div>
+{% endblock %}
+
+{% block extra_js %}
+  {{ fechas_ocupadas|json_script:"fechasOcupadasJSON" }}
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      var fechasOcupadas = JSON.parse(document.getElementById('fechasOcupadasJSON').textContent);
+      flatpickr("#fecha_inicio", {
+        disable: fechasOcupadas,
+        dateFormat: "Y-m-d",
+        minDate: "today"
+      });
+      flatpickr("#fecha_fin", {
+        disable: fechasOcupadas,
+        dateFormat: "Y-m-d",
+        minDate: "today"
+      });
+    });
+  </script>
 {% endblock %}
