@@ -90,6 +90,9 @@ class Reserva(models.Model):
     cochera = models.ForeignKey(Cochera, null=True, blank=True, on_delete=models.SET_NULL)
     descripcion = models.TextField()
     
+    def cliente(self):
+        rel = ClienteInmueble.objects.filter(reserva=self).first()
+        return rel.cliente if rel else None
 
     def __str__(self):
         return f"Reserva #{self.id_reserva} - Estado: {self.estado.nombre if self.estado else 'Sin estado'}"

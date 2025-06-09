@@ -29,13 +29,11 @@
           <tr>
             <td>{{ reserva.id_reserva }}</td>
             <td>
-              {% with relacion=reserva.clientecochera_set.first %}
-                {% if relacion and relacion.cliente %}
-                  {{ relacion.cliente.usuario.get_full_name|default:relacion.cliente.usuario.username }}
-                {% else %}
-                  Cliente no disponible
-                {% endif %}
-              {% endwith %}
+              {% if reserva.cliente %}
+                {{ reserva.cliente.usuario.get_full_name|default:reserva.cliente.usuario.username }}
+              {% else %}
+                Cliente no disponible
+              {% endif %}
             </td>
             <td>{{ reserva.fecha_inicio|date:"d/m/Y" }} - {{ reserva.fecha_fin|date:"d/m/Y" }}</td>
             <td>
