@@ -1,19 +1,19 @@
 {% extends 'admin/admin_base.html' %}
 
-{% block title %}Gestión de Inmuebles{% endblock %}
+{% block title %}Gestión de Viviendas{% endblock %}
 
 {% block admin_content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>Gestión de Inmuebles</h2>
+    <h2>Gestión de Viviendas</h2>
     {% if user.is_staff %}
     <a href="{% url 'admin_inmuebles_alta' %}" class="btn btn-success">
-        <i class="bi bi-plus-circle"></i> Nuevo Inmueble
+        <i class="bi bi-plus-circle"></i> Nueva Vivienda
     </a>
     {% endif %}
 </div>
 
 <form class="d-flex mb-4" role="search" method="GET" action="{% url 'admin_inmuebles' %}">
-    <input class="form-control me-2" type="search" placeholder="Buscar inmueble por nombre..." aria-label="Search" name="q" value="{{ query }}">
+    <input class="form-control me-2" type="search" placeholder="Buscar vivienda por nombre..." aria-label="Search" name="q" value="{{ query }}">
     <button class="btn btn-outline-primary" type="submit">Buscar</button>
 </form>
 
@@ -64,7 +64,7 @@
         </tr>
         {% empty %}
         <tr>
-          <td colspan="5">No se encontraron inmuebles.</td>
+          <td colspan="5">No se encontraron viviendas.</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -82,8 +82,8 @@ document.addEventListener('DOMContentLoaded', function() {
       const id = this.getAttribute('data-id');
       
       const result = await Swal.fire({
-        title: '¿Eliminar inmueble?',
-        text: "¿Está seguro que desea eliminar este inmueble?.",
+        title: '¿Eliminar vivienda?',
+        text: "¿Está seguro que desea eliminar esta vivienda?.",
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#d33',
@@ -105,26 +105,30 @@ document.addEventListener('DOMContentLoaded', function() {
           }
         });
 
-        if (!response.ok) {
-          if (response.status === 401) {
-            throw new Error('No estás autenticado. Por favor, inicia sesión.');
-          } else if (response.status === 403) {
-            throw new Error('No tienes permisos para realizar esta acción.');
-          }
-          throw new Error('Error en la respuesta del servidor');
-        }
-
         const data = await response.json();
 
+        if (!response.ok) {
+          if (response.status === 401) {
+            Swal.fire('Error', 'No estás autenticado. Por favor, inicia sesión.', 'error');
+            return;
+          } else if (response.status === 403) {
+            Swal.fire('Error', 'No tienes permisos para realizar esta acción.', 'error');
+            return;
+          }
+          // Mostrar el mensaje personalizado del backend si existe
+          Swal.fire('Error', data.message || 'Ocurrió un error al eliminar la vivienda', 'error');
+          return;
+        }
+
         if (data.success) {
-          await Swal.fire('Eliminado!', 'El inmueble ha sido eliminado.', 'success');
+          await Swal.fire('Eliminado!', 'La vivienda ha sido eliminado.', 'success');
           btn.closest('tr').remove();
         } else {
-          throw new Error(data.message || 'Error al eliminar el inmueble');
+          Swal.fire('Error', data.message || 'Error al eliminar la vivienda', 'error');
         }
       } catch (error) {
         console.error('Error:', error);
-        Swal.fire('Error', error.message || 'Ocurrió un error al eliminar el inmueble', 'error');
+        Swal.fire('Error', error.message || 'Ocurrió un error al eliminar la vivienda', 'error');
       }
     });
   });

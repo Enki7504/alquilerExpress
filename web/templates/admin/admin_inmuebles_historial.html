@@ -1,11 +1,11 @@
 {% extends 'admin/admin_base.html' %}
 {% load static %}
 
-{% block title %}Historial del Inmueble | Admin{% endblock %}
+{% block title %}Editar Vivienda | Panel Admin{% endblock %}
 
 {% block admin_content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-  <h1 class="h2">Historial del Inmueble: {{ inmueble.nombre }}</h1>
+  <h1 class="h2">Editar Vivienda: {{ inmueble.nombre }}</h1>
   <a href="{% url 'admin_inmuebles' %}" class="btn btn-outline-secondary">Volver</a>
 </div>
 
@@ -39,4 +39,5 @@
     </div>
   </div>
 </div>
+<button type="submit" class="btn btn-primary btn-azul">Guardar Cambios</button>
 {% endblock %}
