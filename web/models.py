@@ -55,6 +55,9 @@ class Cochera(models.Model):
     # se le asigna un perfil de empleado que lo administre, puede ser null si no hay
     empleado = models.ForeignKey(Perfil, null=True, blank=True, on_delete=models.SET_NULL)
 
+    minimo_dias_alquiler = models.PositiveIntegerField(default=1, verbose_name="Mínimo de días de alquiler")
+
+
     def __str__(self):
         return self.nombre
 
@@ -76,6 +79,7 @@ class Inmueble(models.Model):
     estado = models.ForeignKey(Estado, on_delete=models.SET_NULL, null=True)
     # se le asigna un perfil de empleado que lo administre, puede ser null si no hay
     empleado = models.ForeignKey(Perfil, null=True, blank=True, on_delete=models.SET_NULL)
+    minimo_dias_alquiler = models.PositiveIntegerField(default=1, verbose_name="Mínimo de días de alquiler")
 
     def __str__(self):
         return self.nombre
