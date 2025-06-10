@@ -10,15 +10,13 @@
 
 <div class="card shadow-sm">
   <div class="card-body">
-    {% if messages %}
-      <div class="mt-4">
+    <div id="django-messages" style="display: none;">
+      {% if messages %}
         {% for message in messages %}
-          <div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-danger{% endif %}">
-            {{ message }}
-          </div>
+          <div class="django-message" data-tags="{{ message.tags }}" data-message="{{ message }}"></div>
         {% endfor %}
-      </div>
-    {% endif %}
+      {% endif %}
+    </div>
 
     <form method="post" enctype="multipart/form-data">
       {% csrf_token %}
@@ -117,8 +115,10 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+  // Primero carga el código de provincias/ciudades
   const checkbox = document.getElementById('toggleCochera');
   const selectDiv = document.getElementById('cocheraSelectDiv');
   checkbox.addEventListener('change', function() {
@@ -146,6 +146,35 @@ document.addEventListener('DOMContentLoaded', function() {
         });
       });
   });
+
+  // Luego maneja los mensajes
+  const messageElements = document.querySelectorAll('.django-message');
+  
+  if (messageElements.length > 0) {
+    // Pequeño retraso para asegurar que SweetAlert esté listo
+    setTimeout(() => {
+      messageElements.forEach(element => {
+        const tags = element.getAttribute('data-tags');
+        const message = element.getAttribute('data-message');
+        
+        let icon = 'info';
+        if (tags.includes('success')) icon = 'success';
+        if (tags.includes('error') || tags.includes('danger')) icon = 'error';
+        if (tags.includes('warning')) icon = 'warning';
+        
+        Swal.fire({
+          position: 'top-end',
+          icon: icon,
+          title: message,
+          showConfirmButton: false,
+          timer: 5000,
+          toast: true,
+          timerProgressBar: true,
+          width: '400px'
+        });
+      });
+    }, 300); // Pequeño retraso de 300ms
+  }
 });
 </script>
 {% endblock %}
