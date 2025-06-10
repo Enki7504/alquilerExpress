@@ -145,16 +145,13 @@
               <button type="submit" class="btn btn-primary btn-azul w-100 py-2">
                 <i class="bi bi-calendar-check me-2"></i> Reservar ahora
               </button>
-              {% if messages %}
-                <div class="container mt-3">
+              <div id="django-messages" style="display: none;">
+                {% if messages %}
                   {% for message in messages %}
-                    <div class="alert alert-{% if message.tags == 'error' %}warning{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
-                      {{ message }}
-                      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
-                    </div>
+                    <div class="django-message" data-tags="{{ message.tags }}" data-message="{{ message }}"></div>
                   {% endfor %}
-                </div>
-              {% endif %}
+                {% endif %}
+              </div>
             </form>
           {% endif %}
         </div>
@@ -420,6 +417,31 @@
   {{ fechas_ocupadas|json_script:"fechasOcupadasJSON" }}
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script>
+    // Convertir los mensajes de Django a SweetAlert
+    const messageElements = document.querySelectorAll('.django-message');
+
+    messageElements.forEach(element => {
+        const tags = element.getAttribute('data-tags');
+        const message = element.getAttribute('data-message');
+        
+        // Mapear las etiquetas de Django a iconos de SweetAlert
+        let icon = 'info';
+        if (tags.includes('success')) icon = 'success';
+        if (tags.includes('error') || tags.includes('danger')) icon = 'error';
+        if (tags.includes('warning')) icon = 'warning';
+        
+        // Mostrar la notificación tipo toast
+        Swal.fire({
+            position: 'top-end',
+            icon: icon,
+            title: message,
+            showConfirmButton: false,
+            timer: 3000,
+            toast: true,
+            timerProgressBar: true
+        });
+    });
+
     document.addEventListener('DOMContentLoaded', function() {
       var fechasOcupadas = JSON.parse(document.getElementById('fechasOcupadasJSON').textContent);
       flatpickr("#fecha_inicio", {
