@@ -496,3 +496,15 @@ class RespuestaComentarioForm(forms.ModelForm):
     class Meta:
         model = RespuestaComentario
         fields = ['texto']
+
+class NotificarImprevistoForm(forms.Form):
+    usuario = forms.ModelChoiceField(
+        queryset=Perfil.objects.all(),
+        label="Usuario afectado",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    mensaje = forms.CharField(
+        label="Mensaje del imprevisto",
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+        required=True
+    )
