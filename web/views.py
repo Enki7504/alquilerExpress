@@ -350,7 +350,7 @@ def detalle_inmueble(request, id_inmueble):
     # Datos base
     resenias = Resenia.objects.filter(inmueble=inmueble)
     comentarios = Comentario.objects.filter(inmueble=inmueble).order_by('-fecha_creacion')
-    reservas = Reserva.objects.filter(inmueble=inmueble, estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada'])
+    reservas = Reserva.objects.filter(inmueble=inmueble, estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada','Finalizada'])
     historial = InmuebleEstado.objects.filter(inmueble=inmueble).order_by('-fecha_inicio')
 
     es_usuario = request.user.is_authenticated and request.user.groups.filter(name="cliente").exists()
@@ -418,6 +418,16 @@ def detalle_inmueble(request, id_inmueble):
         r.comentario.id_comentario: r for r in RespuestaComentario.objects.filter(comentario__in=comentarios)
     }
 
+    puede_reseñar = False
+    if request.user.is_authenticated and es_usuario:
+        # Busca reservas finalizadas de este usuario en este inmueble
+        tiene_reserva_finalizada = reservas.filter(
+            clienteinmueble__cliente=perfil,
+            inmueble=inmueble,
+            estado__nombre__iexact="Finalizada"
+        ).exists()
+        puede_reseñar = tiene_reserva_finalizada
+
     return render(request, 'inmueble.html', {
         'inmueble': inmueble,
         'resenias': resenias,
@@ -433,6 +443,7 @@ def detalle_inmueble(request, id_inmueble):
         'es_usuario': es_usuario,
         'is_admin_or_empleado': is_admin_or_empleado_var,
         'is_admin': is_admin_var,
+        'puede_reseñar': puede_reseñar,
     })
 
 def detalle_cochera(request, id_cochera):
@@ -442,7 +453,7 @@ def detalle_cochera(request, id_cochera):
     )
     resenias = Resenia.objects.filter(cochera=cochera)
     comentarios = Comentario.objects.filter(cochera=cochera).order_by('-fecha_creacion')
-    reservas = Reserva.objects.filter(cochera=cochera, estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada'])
+    reservas = Reserva.objects.filter(cochera=cochera, estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada', 'Finalizada'])
     historial = CocheraEstado.objects.filter(cochera=cochera).order_by('-fecha_inicio')
 
     es_usuario = request.user.is_authenticated and request.user.groups.filter(name="cliente").exists()
@@ -508,6 +519,16 @@ def detalle_cochera(request, id_cochera):
         r.comentario.id_comentario: r for r in RespuestaComentario.objects.filter(comentario__in=comentarios)
     }
 
+    puede_reseñar = False
+    if request.user.is_authenticated and es_usuario:
+        # Busca reservas finalizadas de este usuario en esta cochera
+        tiene_reserva_finalizada = reservas.filter(
+            clienteinmueble__cliente=perfil,
+            cochera=cochera,
+            estado__nombre__iexact="Finalizada"
+        ).exists()
+        puede_reseñar = tiene_reserva_finalizada
+
     return render(request, 'cochera.html', {
         'cochera': cochera,
         'resenias': resenias,
@@ -523,6 +544,7 @@ def detalle_cochera(request, id_cochera):
         'es_usuario': es_usuario,
         'is_admin_or_empleado': is_admin_or_empleado_var,
         'is_admin': is_admin_var,
+        'puede_reseñar': puede_reseñar,
     })
 
 ################################################################################################################
@@ -646,7 +668,7 @@ def admin_alta_empleados(request):
     return render(request, 'admin/admin_alta_empleados.html', {'form': form})
 
 @login_required
-@user_passes_test(is_admin_or_empleado)
+@user_passes_test(is_admin)
 def admin_alta_cliente(request):
     """
     Permite a administradores y empleados dar de alta un cliente.
@@ -928,7 +950,9 @@ def eliminar_imagen_inmueble(request, imagen_id):
 @user_passes_test(is_admin)
 def admin_inmuebles_eliminar(request, id_inmueble):
     """
-    Cambia el estado de un inmueble a "Eliminado" en lugar de borrarlo.
+    Cambia el estado de un inmueble a "Eliminado" en lugar de borrarlo,
+    pero solo si no tiene reservas a futuro en estado activo.
+    Las reservas a futuro en estado 'Pendiente' se cancelan automáticamente.
     """
     # Verificar autenticación para solicitudes AJAX
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest' and not request.user.is_authenticated:
@@ -939,18 +963,61 @@ def admin_inmuebles_eliminar(request, id_inmueble):
         return JsonResponse({'success': False, 'message': 'No tienes permisos para realizar esta acción.'}, status=403)
 
     inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
-    
+
+    # --- VERIFICAR RESERVAS A FUTURO ---
+    reservas_futuras_activas = Reserva.objects.filter(
+        inmueble=inmueble,
+        fecha_inicio__gte=timezone.now().date(),
+        estado__nombre__in=['Aprobada', 'Pagada', 'Confirmada']
+    )
+    if reservas_futuras_activas.exists():
+        mensaje = 'No se puede eliminar el inmueble porque tiene reservas a futuro.'
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'message': mensaje}, status=400)
+        messages.error(request, mensaje)
+        return redirect('admin_inmuebles')
+    # -----------------------------------
+
     if request.method == 'POST':
+        # Cancelar reservas futuras en estado Pendiente
+        reservas_pendientes = Reserva.objects.filter(
+            inmueble=inmueble,
+            fecha_inicio__gte=timezone.now().date(),
+            estado__nombre='Pendiente'
+        )
+        estado_cancelada, _ = Estado.objects.get_or_create(nombre='Cancelada')
+        for reserva in reservas_pendientes:
+            reserva.estado = estado_cancelada
+            reserva.save()
+            # Notificar y enviar mail al cliente
+            cliente_rel = ClienteInmueble.objects.filter(reserva=reserva).first()
+            if cliente_rel:
+                perfil_cliente = cliente_rel.cliente
+                # Notificación interna
+                crear_notificacion(
+                    usuario=perfil_cliente,
+                    mensaje=f"Tu reserva #{reserva.id_reserva} para la vivienda '{inmueble.nombre}' fue rechazada porque la vivienda fue eliminada por el administrador."
+                )
+                # Enviar mail
+                send_mail(
+                    subject="Reserva cancelada",
+                    message=f"Tu reserva #{reserva.id_reserva} para la vivienda '{inmueble.nombre}' fue rechazada porque la vivienda fue eliminada por el administrador.",
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[perfil_cliente.usuario.email],
+                    fail_silently=True,
+                )
+
+        # Eliminar el inmueble (cambiar estado)
         estado_eliminado, _ = Estado.objects.get_or_create(nombre='Eliminado')
         inmueble.estado = estado_eliminado
         inmueble.save()
-        
+
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({'success': True, 'message': 'Inmueble marcado como eliminado.'})
-        
-        messages.success(request, 'Inmueble marcado como eliminado.')
+            return JsonResponse({'success': True, 'message': 'Vivienda marcada como eliminada. Reservas pendientes a futuro canceladas.'})
+
+        messages.success(request, 'Vivienda marcada como eliminada. Reservas pendientes a futuro canceladas.')
         return redirect('admin_inmuebles')
-    
+
     # Si es GET, muestra la confirmación
     return render(request, 'admin/confirmar_eliminacion.html', {
         'objeto': inmueble,
@@ -1068,7 +1135,9 @@ def eliminar_imagen_cochera(request, id_imagen):
 @user_passes_test(is_admin)
 def admin_cocheras_eliminar(request, id_cochera):
     """
-    Cambia el estado de una cochera a "Eliminado" en lugar de borrarla.
+    Cambia el estado de una cochera a "Eliminado" en lugar de borrarla,
+    pero solo si no tiene reservas a futuro en estado activo.
+    Las reservas a futuro en estado 'Pendiente' se cancelan automáticamente.
     """
     # Verificar autenticación para solicitudes AJAX
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest' and not request.user.is_authenticated:
@@ -1079,18 +1148,61 @@ def admin_cocheras_eliminar(request, id_cochera):
         return JsonResponse({'success': False, 'message': 'No tienes permisos para realizar esta acción.'}, status=403)
 
     cochera = get_object_or_404(Cochera, id_cochera=id_cochera)
-    
+
+    # --- VERIFICAR RESERVAS A FUTURO ---
+    reservas_futuras_activas = Reserva.objects.filter(
+        cochera=cochera,
+        fecha_inicio__gte=timezone.now().date(),
+        estado__nombre__in=['Aprobada', 'Pagada', 'Confirmada']
+    )
+    if reservas_futuras_activas.exists():
+        mensaje = 'No se puede eliminar la cochera porque tiene reservas a futuro.'
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'message': mensaje}, status=400)
+        messages.error(request, mensaje)
+        return redirect('admin_cocheras')
+    # -----------------------------------
+
     if request.method == 'POST':
+        # Cancelar reservas futuras en estado Pendiente
+        reservas_pendientes = Reserva.objects.filter(
+            cochera=cochera,
+            fecha_inicio__gte=timezone.now().date(),
+            estado__nombre='Pendiente'
+        )
+        estado_cancelada, _ = Estado.objects.get_or_create(nombre='Cancelada')
+        for reserva in reservas_pendientes:
+            reserva.estado = estado_cancelada
+            reserva.save()
+            # Notificar y enviar mail al cliente
+            cliente_rel = ClienteInmueble.objects.filter(reserva=reserva).first()
+            if cliente_rel:
+                perfil_cliente = cliente_rel.cliente
+                # Notificación interna
+                crear_notificacion(
+                    usuario=perfil_cliente,
+                    mensaje=f"Tu reserva #{reserva.id_reserva} para la cochera '{cochera.nombre}' fue rechazada porque la cochera fue eliminada por el administrador."
+                )
+                # Enviar mail
+                send_mail(
+                    subject="Reserva cancelada",
+                    message=f"Tu reserva #{reserva.id_reserva} para la cochera '{cochera.nombre}' fue rechazada porque la cochera fue eliminada por el administrador.",
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[perfil_cliente.usuario.email],
+                    fail_silently=True,
+                )
+
+        # Eliminar la cochera (cambiar estado)
         estado_eliminado, _ = Estado.objects.get_or_create(nombre='Eliminado')
         cochera.estado = estado_eliminado
         cochera.save()
-        
+
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({'success': True, 'message': 'Cochera marcada como eliminada.'})
-        
-        messages.success(request, 'Cochera marcada como eliminada.')
+            return JsonResponse({'success': True, 'message': 'Cochera marcada como eliminada. Reservas pendientes a futuro canceladas.'})
+
+        messages.success(request, 'Cochera marcada como eliminada. Reservas pendientes a futuro canceladas.')
         return redirect('admin_cocheras')
-    
+
     # Si es GET, muestra la confirmación
     return render(request, 'admin/confirmar_eliminacion.html', {
         'objeto': cochera,

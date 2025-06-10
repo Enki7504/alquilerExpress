@@ -88,7 +88,7 @@ document.addEventListener('DOMContentLoaded', function() {
       
       const result = await Swal.fire({
         title: '¿Eliminar cochera?',
-        text: "¿Está seguro que desea eliminar esta cochera?.",
+        text: "¿Está seguro que desea eliminar esta cochera?",
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#d33',
@@ -110,22 +110,25 @@ document.addEventListener('DOMContentLoaded', function() {
           }
         });
 
+        const data = await response.json();
+
         if (!response.ok) {
           if (response.status === 401) {
-            throw new Error('No estás autenticado. Por favor, inicia sesión.');
+            Swal.fire('Error', 'No estás autenticado. Por favor, inicia sesión.', 'error');
+            return;
           } else if (response.status === 403) {
-            throw new Error('No tienes permisos para realizar esta acción.');
+            Swal.fire('Error', 'No tienes permisos para realizar esta acción.', 'error');
+            return;
           }
-          throw new Error('Error en la respuesta del servidor');
+          Swal.fire('Error', data.message || 'Ocurrió un error al eliminar la cochera', 'error');
+          return;
         }
-
-        const data = await response.json();
 
         if (data.success) {
           await Swal.fire('Eliminado!', 'La cochera ha sido eliminada.', 'success');
           btn.closest('tr').remove();
         } else {
-          throw new Error(data.message || 'Error al eliminar la cochera');
+          Swal.fire('Error', data.message || 'Error al eliminar la cochera', 'error');
         }
       } catch (error) {
         console.error('Error:', error);

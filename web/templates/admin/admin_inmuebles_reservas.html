@@ -1,12 +1,12 @@
 {% extends 'admin/admin_base.html' %}
 {% load static %}
 
-{% block title %}Reservas del Inmueble | Admin{% endblock %}
+{% block title %}Reservas de la Vivienda | Admin{% endblock %}
 
 {% block admin_content %}
 <input type="hidden" id="csrf_token" value="{{ csrf_token }}">
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-  <h1 class="h2">Reservas del Inmueble: {{ inmueble.nombre }}</h1>
+  <h1 class="h2">Reservas de la Vivienda: {{ inmueble.nombre }}</h1>
   <a href="{% url 'admin_inmuebles' %}" class="btn btn-outline-secondary">Volver</a>
 </div>
 
@@ -65,7 +65,7 @@
                 <button class="btn btn-sm btn-success" onclick="cambiarEstado('{{ reserva.id_reserva }}', 'Finalizada')">Terminar Alquiler</button>
                 <button class="btn btn-sm btn-danger" onclick="cambiarEstado('{{ reserva.id_reserva }}', 'Cancelada')">Cancelar Alquiler</button>
               {% endif %}
-              <a href="{% url 'detalle_inmueble' inmueble.id_inmueble %}" class="btn btn-sm btn-info">Ver Inmueble</a>
+              <a href="{% url 'detalle_inmueble' inmueble.id_inmueble %}" class="btn btn-sm btn-info">Ver Vivienda</a>
             </td>
           </tr>
           {% empty %}
