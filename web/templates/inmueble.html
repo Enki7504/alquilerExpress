@@ -324,7 +324,7 @@
   <div class="container p-3"><hr></div>
 
   <!-- Formulario para Reseñas -->
-  {% if user.is_authenticated and es_usuario %}
+  {% if user.is_authenticated and es_usuario and puede_reseñar %}
   <section class="container mt-5">
     {% if usuario_resenia %}
       <!-- Bloque: Ya dejó reseña -->
