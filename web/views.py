@@ -350,7 +350,7 @@ def detalle_inmueble(request, id_inmueble):
     # Datos base
     resenias = Resenia.objects.filter(inmueble=inmueble)
     comentarios = Comentario.objects.filter(inmueble=inmueble).order_by('-fecha_creacion')
-    reservas = Reserva.objects.filter(inmueble=inmueble, estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada'])
+    reservas = Reserva.objects.filter(inmueble=inmueble, estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada','Finalizada'])
     historial = InmuebleEstado.objects.filter(inmueble=inmueble).order_by('-fecha_inicio')
 
     es_usuario = request.user.is_authenticated and request.user.groups.filter(name="cliente").exists()
@@ -417,6 +417,16 @@ def detalle_inmueble(request, id_inmueble):
         r.comentario.id_comentario: r for r in RespuestaComentario.objects.filter(comentario__in=comentarios)
     }
 
+    puede_reseñar = False
+    if request.user.is_authenticated and es_usuario:
+        # Busca reservas finalizadas de este usuario en este inmueble
+        tiene_reserva_finalizada = reservas.filter(
+            clienteinmueble__cliente=perfil,
+            inmueble=inmueble,
+            estado__nombre__iexact="Finalizada"
+        ).exists()
+        puede_reseñar = tiene_reserva_finalizada
+
     return render(request, 'inmueble.html', {
         'inmueble': inmueble,
         'resenias': resenias,
@@ -432,6 +442,7 @@ def detalle_inmueble(request, id_inmueble):
         'es_usuario': es_usuario,
         'is_admin_or_empleado': is_admin_or_empleado_var,
         'is_admin': is_admin_var,
+        'puede_reseñar': puede_reseñar,
     })
 
 def detalle_cochera(request, id_cochera):
@@ -441,7 +452,7 @@ def detalle_cochera(request, id_cochera):
     )
     resenias = Resenia.objects.filter(cochera=cochera)
     comentarios = Comentario.objects.filter(cochera=cochera).order_by('-fecha_creacion')
-    reservas = Reserva.objects.filter(cochera=cochera, estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada'])
+    reservas = Reserva.objects.filter(cochera=cochera, estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada', 'Finalizada'])
     historial = CocheraEstado.objects.filter(cochera=cochera).order_by('-fecha_inicio')
 
     es_usuario = request.user.is_authenticated and request.user.groups.filter(name="cliente").exists()
@@ -507,6 +518,16 @@ def detalle_cochera(request, id_cochera):
         r.comentario.id_comentario: r for r in RespuestaComentario.objects.filter(comentario__in=comentarios)
     }
 
+    puede_reseñar = False
+    if request.user.is_authenticated and es_usuario:
+        # Busca reservas finalizadas de este usuario en esta cochera
+        tiene_reserva_finalizada = reservas.filter(
+            clienteinmueble__cliente=perfil,
+            cochera=cochera,
+            estado__nombre__iexact="Finalizada"
+        ).exists()
+        puede_reseñar = tiene_reserva_finalizada
+
     return render(request, 'cochera.html', {
         'cochera': cochera,
         'resenias': resenias,
@@ -522,6 +543,7 @@ def detalle_cochera(request, id_cochera):
         'es_usuario': es_usuario,
         'is_admin_or_empleado': is_admin_or_empleado_var,
         'is_admin': is_admin_var,
+        'puede_reseñar': puede_reseñar,
     })
 
 ################################################################################################################
@@ -649,7 +671,7 @@ def admin_alta_empleados(request):
     return render(request, 'admin/admin_alta_empleados.html', {'form': form})
 
 @login_required
-@user_passes_test(is_admin_or_empleado)
+@user_passes_test(is_admin)
 def admin_alta_cliente(request):
     """
     Permite a administradores y empleados dar de alta un cliente.
