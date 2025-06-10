@@ -52,6 +52,9 @@ urlpatterns = [
     path('panel/estadisticas-usuarios/', views.admin_estadisticas_usuarios, name='admin_estadisticas_usuarios'),
     path('panel/estadisticas-inmuebles/', views.admin_estadisticas_inmuebles, name='admin_estadisticas_inmuebles'),
     path('panel/estadisticas-cocheras/', views.admin_estadisticas_cocheras, name='admin_estadisticas_cocheras'),
+
+    # Gestion de Notificaciones
+    path('panel/notificar-imprevisto/', views.admin_notificar_imprevisto, name='admin_notificar_imprevisto'),
     
     # Reservas
     path('crear-reserva/<int:id_inmueble>/', views.crear_reserva, name='crear_reserva'),

@@ -36,6 +36,7 @@ from .forms import (
     ChangePasswordForm,
     ReseniaForm,
     RespuestaComentarioForm,
+    NotificarImprevistoForm,
 )
 
 # Importaciones de modelos locales
@@ -1591,3 +1592,23 @@ def eliminar_comentario(request, id_comentario):
         comentario.delete()
         messages.success(request, "Comentario eliminado correctamente.")
     return redirect(request.META.get('HTTP_REFERER', 'index'))
+
+
+################################################################################################################
+# --- NOTIFICACIONES ---
+################################################################################################################
+
+@login_required
+@user_passes_test(is_admin_or_empleado)
+def admin_notificar_imprevisto(request):
+    if request.method == "POST":
+        form = NotificarImprevistoForm(request.POST)
+        if form.is_valid():
+            usuario = form.cleaned_data["usuario"]
+            mensaje = form.cleaned_data["mensaje"]
+            crear_notificacion(usuario, mensaje)
+            messages.success(request, "Imprevisto notificado correctamente.")
+            return redirect('admin_panel')
+    else:
+        form = NotificarImprevistoForm()
+    return render(request, "admin/admin_notificar_imprevisto.html", {"form": form})
