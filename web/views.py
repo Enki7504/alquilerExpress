@@ -671,7 +671,7 @@ def admin_alta_empleados(request):
     return render(request, 'admin/admin_alta_empleados.html', {'form': form})
 
 @login_required
-@user_passes_test(is_admin)
+@user_passes_test(is_admin_or_empleado)
 def admin_alta_cliente(request):
     """
     Permite a administradores y empleados dar de alta un cliente.
