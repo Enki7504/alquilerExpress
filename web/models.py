@@ -197,7 +197,7 @@ class Notificacion(models.Model):
         return f"Notificación para {self.usuario}"
 
 class RespuestaComentario(models.Model):
-    comentario = models.OneToOneField(Comentario, on_delete=models.CASCADE, related_name='respuesta')
+    comentario = models.OneToOneField(Comentario, on_delete=models.CASCADE, related_name='respuestacomentario')
     usuario = models.ForeignKey(Perfil, on_delete=models.CASCADE)  # Empleado o admin que responde
     texto = models.TextField()
     fecha_creacion = models.DateTimeField(auto_now_add=True)

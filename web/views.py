@@ -35,6 +35,7 @@ from .forms import (
     ClienteAdminCreationForm,
     ChangePasswordForm,
     ReseniaForm,
+    RespuestaComentarioForm,
 )
 
 # Importaciones de modelos locales
@@ -57,10 +58,14 @@ from .models import (
     Ciudad,
     Provincia,
     Cochera,
+    RespuestaComentario,
 )
 
 # Importaciones de utilidades locales
-from .utils import email_link_token
+from .utils import (
+    email_link_token,
+    crear_notificacion
+)
 
 # para enviar correos a empleados sobre reservas
 from .utils import enviar_mail_a_empleados_sobre_reserva
@@ -336,30 +341,28 @@ def lista_inmuebles(request):
     return render(request, 'lista_inmuebles.html', {'inmuebles': inmuebles})
 
 def detalle_inmueble(request, id_inmueble):
-    """
-    Muestra los detalles de un inmueble específico, incluyendo reseñas, comentarios,
-    reservas activas e historial de estados. Permite añadir comentarios.
-    """
     inmueble = get_object_or_404(
         Inmueble.objects.select_related('estado'),
         id_inmueble=id_inmueble
     )
+
+    # Datos base
     resenias = Resenia.objects.filter(inmueble=inmueble)
     comentarios = Comentario.objects.filter(inmueble=inmueble).order_by('-fecha_creacion')
     reservas = Reserva.objects.filter(inmueble=inmueble, estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada'])
     historial = InmuebleEstado.objects.filter(inmueble=inmueble).order_by('-fecha_inicio')
 
-    # Solo clientes pueden crear reseñas
     es_usuario = request.user.is_authenticated and request.user.groups.filter(name="cliente").exists()
+    is_admin_or_empleado_var = is_admin_or_empleado(request.user)
+    is_admin_var = is_admin(request.user)
 
-    # Detectar si el usuario ya dejó una reseña
     usuario_resenia = None
     if request.user.is_authenticated:
         perfil = getattr(request.user, "perfil", None)
         if perfil:
             usuario_resenia = Resenia.objects.filter(inmueble=inmueble, usuario=perfil).first()
 
-    # Fechas ocupadas para flatpickr
+    # Fechas ocupadas
     fechas_ocupadas = []
     for reserva in reservas:
         current = reserva.fecha_inicio
@@ -368,110 +371,157 @@ def detalle_inmueble(request, id_inmueble):
             fechas_ocupadas.append(current.strftime('%Y-%m-%d'))
             current += timedelta(days=1)
 
-    # Procesar reseña
-    if request.method == 'POST' and es_usuario and 'crear_resenia' in request.POST:
-        resenia_form = ReseniaForm(request.POST)
-        if resenia_form.is_valid():
-            resenia = resenia_form.save(commit=False)
-            resenia.usuario = request.user.perfil
-            resenia.inmueble = inmueble
-            resenia.save()
-            messages.success(request, "¡Reseña publicada!")
-            return redirect('detalle_inmueble', id_inmueble=id_inmueble)
-        else:
-            messages.error(request, "Corrige los errores en la reseña.")
-    else:
-        resenia_form = ReseniaForm()
-        comentario_form = ComentarioForm()
+    # Formularios
+    comentario_form = ComentarioForm()
+    respuesta_form = RespuestaComentarioForm()
+    resenia_form = ReseniaForm()
+
+    # Procesamiento de formularios POST
+    if request.method == 'POST':
+        perfil = getattr(request.user, "perfil", None)
+
+        if 'crear_resenia' in request.POST and es_usuario:
+            resenia_form = ReseniaForm(request.POST)
+            if resenia_form.is_valid():
+                resenia = resenia_form.save(commit=False)
+                resenia.usuario = perfil
+                resenia.inmueble = inmueble
+                resenia.save()
+                messages.success(request, "¡Reseña publicada!")
+                return redirect('detalle_inmueble', id_inmueble=id_inmueble)
+
+        elif 'responder_comentario_id' in request.POST and is_admin_or_empleado_var:
+            respuesta_form = RespuestaComentarioForm(request.POST)
+            comentario_id = request.POST.get('responder_comentario_id')
+            comentario = get_object_or_404(Comentario, id_comentario=comentario_id)
+            if respuesta_form.is_valid():
+                respuesta = respuesta_form.save(commit=False)
+                respuesta.comentario = comentario
+                respuesta.usuario = perfil
+                respuesta.save()
+                messages.success(request, "Respuesta publicada.")
+                return redirect('detalle_inmueble', id_inmueble=id_inmueble)
+
+        elif request.user.is_authenticated:
+            comentario_form = ComentarioForm(request.POST)
+            if comentario_form.is_valid():
+                comentario = comentario_form.save(commit=False)
+                comentario.usuario = perfil
+                comentario.inmueble = inmueble
+                comentario.save()
+                messages.success(request, "Comentario añadido exitosamente.")
+                return redirect('detalle_inmueble', id_inmueble=id_inmueble)
+
+    # Diccionario de respuestas
+    respuestas_dict = {
+        r.comentario.id_comentario: r for r in RespuestaComentario.objects.filter(comentario__in=comentarios)
+    }
 
     return render(request, 'inmueble.html', {
         'inmueble': inmueble,
         'resenias': resenias,
         'comentarios': comentarios,
         'comentario_form': comentario_form,
+        'respuesta_form': respuesta_form,
         'resenia_form': resenia_form,
         'reservas': reservas,
         'historial': historial,
+        'usuario_resenia': usuario_resenia,
+        'respuestas': respuestas_dict,
+        'fechas_ocupadas': fechas_ocupadas,
         'es_usuario': es_usuario,
-        'usuario_resenia': usuario_resenia,  # <--- IMPORTANTE
-        'fechas_ocupadas': fechas_ocupadas,  # Fechas ocupadas para flatpickr
+        'is_admin_or_empleado': is_admin_or_empleado_var,
+        'is_admin': is_admin_var,
     })
 
 def detalle_cochera(request, id_cochera):
-    """
-    Muestra los detalles de una cochera específica, incluyendo reseñas, comentarios,
-    reservas activas e historial de estados. Permite añadir comentarios.
-    """
     cochera = get_object_or_404(
         Cochera.objects.select_related('estado'),
         id_cochera=id_cochera
     )
-    reservas = Reserva.objects.filter(
-        cochera=cochera,
-        estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada']
-    )
-    fechas_ocupadas = []
-    for reserva in reservas:
-        # Genera todas las fechas ocupadas en ese rango
-        current = reserva.fecha_inicio
-        # Bloquea hasta el día después de fecha_fin
-        while current <= reserva.fecha_fin + timedelta(days=1):
-            fechas_ocupadas.append(current.strftime('%Y-%m-%d'))
-            current += timedelta(days=1)
     resenias = Resenia.objects.filter(cochera=cochera)
     comentarios = Comentario.objects.filter(cochera=cochera).order_by('-fecha_creacion')
-    reservas = Reserva.objects.filter(cochera=cochera, estado__nombre__in=['Confirmada', 'Pendiente']).order_by('-fecha_inicio')
+    reservas = Reserva.objects.filter(cochera=cochera, estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada'])
     historial = CocheraEstado.objects.filter(cochera=cochera).order_by('-fecha_inicio')
 
     es_usuario = request.user.is_authenticated and request.user.groups.filter(name="cliente").exists()
+    is_admin_or_empleado_var = is_admin_or_empleado(request.user)
+    is_admin_var = is_admin(request.user)
 
-    # --- Procesar reseña ---
-    if request.method == 'POST' and es_usuario and 'crear_resenia' in request.POST:
-        resenia_form = ReseniaForm(request.POST)
-        if resenia_form.is_valid():
-            resenia = resenia_form.save(commit=False)
-            resenia.usuario = request.user.perfil
-            resenia.cochera = cochera
-            resenia.save()
-            messages.success(request, "¡Reseña publicada!")
-            return redirect('detalle_cochera', id_cochera=id_cochera)
-        else:
-            messages.error(request, "Corrige los errores en la reseña.")
-    else:
-        resenia_form = ReseniaForm()
+    # Fechas ocupadas
+    fechas_ocupadas = []
+    for reserva in reservas:
+        current = reserva.fecha_inicio
+        while current <= reserva.fecha_fin + timedelta(days=1):
+            fechas_ocupadas.append(current.strftime('%Y-%m-%d'))
+            current += timedelta(days=1)
 
-    # --- Procesar comentario ---
-    if request.method == 'POST' and request.user.is_authenticated and not 'crear_resenia' in request.POST:
-        comentario_form = ComentarioForm(request.POST)
-        if comentario_form.is_valid():
-            comentario = comentario_form.save(commit=False)
-            comentario.usuario = request.user.perfil
-            comentario.cochera = cochera
-            comentario.inmueble = None
-            comentario.save()
-            messages.success(request, "Comentario añadido exitosamente.")
-            return redirect('detalle_cochera', id_cochera=id_cochera)
-        else:
-            messages.error(request, "Error al añadir el comentario.")
-    else:
-        comentario_form = ComentarioForm()
-
-    # Verificar si el usuario ha dejado una reseña antes (para mostrar en el formulario de reseña)
     usuario_resenia = None
     if request.user.is_authenticated:
-        usuario_resenia = Resenia.objects.filter(cochera=cochera, usuario=request.user.perfil).first()
+        perfil = getattr(request.user, "perfil", None)
+        usuario_resenia = Resenia.objects.filter(cochera=cochera, usuario=perfil).first()
+
+    # Formularios
+    comentario_form = ComentarioForm()
+    respuesta_form = RespuestaComentarioForm()
+    resenia_form = ReseniaForm()
+
+    # Procesamiento de formularios POST
+    if request.method == 'POST':
+        perfil = getattr(request.user, "perfil", None)
+
+        if 'crear_resenia' in request.POST and es_usuario:
+            resenia_form = ReseniaForm(request.POST)
+            if resenia_form.is_valid():
+                resenia = resenia_form.save(commit=False)
+                resenia.usuario = perfil
+                resenia.cochera = cochera
+                resenia.save()
+                messages.success(request, "¡Reseña publicada!")
+                return redirect('detalle_cochera', id_cochera=id_cochera)
+
+        elif 'responder_comentario_id' in request.POST and is_admin_or_empleado_var:
+            respuesta_form = RespuestaComentarioForm(request.POST)
+            comentario_id = request.POST.get('responder_comentario_id')
+            comentario = get_object_or_404(Comentario, id_comentario=comentario_id)
+            if respuesta_form.is_valid():
+                respuesta = respuesta_form.save(commit=False)
+                respuesta.comentario = comentario
+                respuesta.usuario = perfil
+                respuesta.save()
+                messages.success(request, "Respuesta publicada.")
+                return redirect('detalle_cochera', id_cochera=id_cochera)
+
+        elif request.user.is_authenticated:
+            comentario_form = ComentarioForm(request.POST)
+            if comentario_form.is_valid():
+                comentario = comentario_form.save(commit=False)
+                comentario.usuario = perfil
+                comentario.cochera = cochera
+                comentario.save()
+                messages.success(request, "Comentario añadido exitosamente.")
+                return redirect('detalle_cochera', id_cochera=id_cochera)
+
+    # Diccionario de respuestas
+    respuestas_dict = {
+        r.comentario.id_comentario: r for r in RespuestaComentario.objects.filter(comentario__in=comentarios)
+    }
 
     return render(request, 'cochera.html', {
         'cochera': cochera,
         'resenias': resenias,
         'comentarios': comentarios,
         'comentario_form': comentario_form,
+        'respuesta_form': respuesta_form,
         'resenia_form': resenia_form,
         'reservas': reservas,
         'historial': historial,
-        'es_usuario': es_usuario,
-        'usuario_resenia': usuario_resenia,  # Enviar la reseña del usuario al template
+        'usuario_resenia': usuario_resenia,
         'fechas_ocupadas': fechas_ocupadas,
+        'respuestas': respuestas_dict,
+        'es_usuario': es_usuario,
+        'is_admin_or_empleado': is_admin_or_empleado_var,
+        'is_admin': is_admin_var,
     })
 
 ################################################################################################################
@@ -1047,7 +1097,7 @@ def admin_cocheras_eliminar(request, id_cochera):
     })
 
 @login_required
-@user_passes_test(is_admin)
+@user_passes_test(is_admin_or_empleado)
 def admin_cocheras_historial(request, id_cochera):
     """
     Muestra el historial de estados de una cochera específica.
@@ -1057,7 +1107,7 @@ def admin_cocheras_historial(request, id_cochera):
     return render(request, 'admin/admin_cocheras_historial.html', {'cochera': cochera, 'historial': historial})
 
 @login_required
-@user_passes_test(is_admin)
+@user_passes_test(is_admin_or_empleado)
 def admin_cocheras_reservas(request, id_cochera):
     """
     Muestra el estado actual y las reservas de una cochera específica.
@@ -1130,19 +1180,25 @@ def crear_reserva(request, id_inmueble):
             if fecha_inicio >= fecha_fin:
                 messages.error(request, 'La fecha de salida debe ser posterior a la de llegada.')
                 return redirect('detalle_inmueble', id_inmueble=id_inmueble)
+
+            dias = (fecha_fin - fecha_inicio).days
+            if dias < inmueble.minimo_dias_alquiler:
+                messages.error(request, f"El mínimo de noches de alquiler para esta vivienda es {inmueble.minimo_dias_alquiler}.")
+                return redirect('detalle_inmueble', id_inmueble=id_inmueble)
             
-            # --- VALIDACIÓN DE RESERVA ACTIVA DE INMUEBLE DEL USUARIO ---
+            # --- VALIDACIÓN DE RESERVA SUPERPUESTA DEL USUARIO ---
             perfil = request.user.perfil
-            reserva_inmueble_activa = Reserva.objects.filter(
+            reserva_superpuesta_usuario = Reserva.objects.filter(
                 clienteinmueble__cliente=perfil,
                 inmueble__isnull=False,
                 estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada'],
-                fecha_fin__gte=timezone.now().date()
+                fecha_inicio__lt=fecha_fin,
+                fecha_fin__gt=fecha_inicio
             ).exists()
-            if reserva_inmueble_activa:
-                messages.error(request, "Ya tenés una reserva activa de inmueble. No podés reservar otro hasta finalizar la actual.")
+            if reserva_superpuesta_usuario:
+                messages.error(request, "Ya tenés una reserva de vivienda que se superpone con las fechas seleccionadas.")
                 return redirect('detalle_inmueble', id_inmueble=id_inmueble)
-            # -----------------------------------------------------------
+            # -----------------------------------------------------
 
             # --- VALIDACIÓN DE RESERVAS SUPERPUESTAS EN EL INMUEBLE ---
             reservas_superpuestas = Reserva.objects.filter(
@@ -1216,19 +1272,25 @@ def crear_reserva_cochera(request, id_cochera):
             if fecha_inicio >= fecha_fin:
                 messages.error(request, 'La fecha de fin debe ser posterior a la de inicio.')
                 return redirect('detalle_cochera', id_cochera=id_cochera)
-
-            # --- VALIDACIÓN DE RESERVA ACTIVA DE COCHERA DEL USUARIO ---
+                
+            dias = (fecha_fin - fecha_inicio).days
+            if dias < cochera.minimo_dias_alquiler:
+                messages.error(request, f"El mínimo de noches de alquiler para esta cochera es {cochera.minimo_dias_alquiler}.")
+                return redirect('detalle_cochera', id_cochera=id_cochera)
+            
+            # --- VALIDACIÓN DE RESERVA SUPERPUESTA DEL USUARIO ---
             perfil = request.user.perfil
-            reserva_cochera_activa = Reserva.objects.filter(
+            reserva_superpuesta_usuario = Reserva.objects.filter(
                 clienteinmueble__cliente=perfil,
                 cochera__isnull=False,
                 estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada'],
-                fecha_fin__gte=timezone.now().date()
+                fecha_inicio__lt=fecha_fin,
+                fecha_fin__gt=fecha_inicio
             ).exists()
-            if reserva_cochera_activa:
-                messages.error(request, "Ya tenés una reserva activa de cochera. No podés reservar otra hasta finalizar la actual.")
+            if reserva_superpuesta_usuario:
+                messages.error(request, "Ya tenés una reserva de cochera que se superpone con las fechas seleccionadas.")
                 return redirect('detalle_cochera', id_cochera=id_cochera)
-            # -----------------------------------------------------------
+            # -----------------------------------------------------
 
             # --- Validar que no haya reservas superpuestas ---
             reservas_superpuestas = Reserva.objects.filter(
@@ -1279,7 +1341,7 @@ def crear_reserva_cochera(request, id_cochera):
 
 @require_POST
 @login_required
-@user_passes_test(is_admin)
+@user_passes_test(is_admin_or_empleado)
 def cambiar_estado_reserva(request, id_reserva):
     """
     Maneja el cambio de estado para reservas de INMUEBLES y COCHERAS.
@@ -1350,9 +1412,20 @@ def cambiar_estado_reserva(request, id_reserva):
                         cuerpo += f"\nLa reserva ha sido pagada. Por favor, espere a que un empleado se comunique con usted.\n"
                     elif nuevo_estado == "Confirmada":
                         cuerpo += f"\nLa reserva ha sido confirmada. ¡Disfrute de su inmueble!\n"
+                    elif nuevo_estado == "Finalizada":
+                        cuerpo += f"\nLa reserva ha sido finalizada. Esperamos que haya disfrutado de su estancia.\n"
+                    elif nuevo_estado == "Cancelada":
+                        cuerpo += f"\nLa reserva ha sido cancelada. Si tiene alguna pregunta, por favor contáctenos.\n"
+                    elif nuevo_estado == "Rechazada":
+                        cuerpo += f"\nLa reserva ha sido rechazada. Si tiene alguna pregunta, por favor contáctenos.\n"
 
 
                     cuerpo += f"\nGracias por usar Alquiler Express."
+
+                    crear_notificacion(
+                        usuario=cliente_rel.cliente,
+                        mensaje=f"El estado de tu reserva #{reserva.id_reserva} ha cambiado a: {estado.nombre}" + (f" (Comentario: {comentario})" if comentario else "") + "."
+                    )
                     
                     send_mail(
                         subject=asunto,
@@ -1386,9 +1459,20 @@ def cambiar_estado_reserva(request, id_reserva):
                         cuerpo += f"\nLa reserva ha sido pagada. Por favor, espere a que un empleado se comunique con usted.\n"
                     elif nuevo_estado == "Confirmada":
                         cuerpo += f"\nLa reserva ha sido confirmada. ¡Disfrute de su cochera!\n"
+                    elif nuevo_estado == "Finalizada":
+                        cuerpo += f"\nLa reserva ha sido finalizada. Esperamos que haya disfrutado de su estancia.\n"
+                    elif nuevo_estado == "Cancelada":
+                        cuerpo += f"\nLa reserva ha sido cancelada. Si tiene alguna pregunta, por favor contáctenos.\n"
+                    elif nuevo_estado == "Rechazada":
+                        cuerpo += f"\nLa reserva ha sido rechazada. Si tiene alguna pregunta, por favor contáctenos.\n"
 
                     cuerpo += f"\nGracias por usar Alquiler Express."
                     
+                    crear_notificacion(
+                        usuario=cliente_rel.cliente,
+                        mensaje=f"El estado de tu reserva #{reserva.id_reserva} ha cambiado a: {estado.nombre}"
+                    )
+
                     send_mail(
                         subject=asunto,
                         message=cuerpo,
@@ -1396,10 +1480,6 @@ def cambiar_estado_reserva(request, id_reserva):
                         recipient_list=[email_cliente],
                         fail_silently=False,
                     )
-
-            
-
-            
             
             # Opcional: Registrar en historial (si tienes un modelo para ello)
             # HistorialEstadoReserva.objects.create(
@@ -1503,3 +1583,11 @@ def cambiar_contrasena(request):
     else:
         form = ChangePasswordForm(request.user)
     return render(request, "cambiar_contrasena.html", {"form": form})
+
+@login_required
+def eliminar_comentario(request, id_comentario):
+    if request.method == "POST" and is_admin_or_empleado(request.user):
+        comentario = get_object_or_404(Comentario, id_comentario=id_comentario)
+        comentario.delete()
+        messages.success(request, "Comentario eliminado correctamente.")
+    return redirect(request.META.get('HTTP_REFERER', 'index'))
