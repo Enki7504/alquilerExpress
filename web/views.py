@@ -1789,6 +1789,10 @@ def simulador_mercadopago(request):
             tiempo_aprobada = aprobada_estado.fecha
             ahora = timezone.now()
             if ahora - tiempo_aprobada > timedelta(hours=24):
+                # Cambiar estado a Cancelada
+                estado_cancelada = Estado.objects.get(nombre='Cancelada')
+                reserva.estado = estado_cancelada
+                reserva.save()
                 return JsonResponse({'success': False, 'error': 'El tiempo para pagar la reserva ha expirado (más de 24 horas desde la aprobación).'}, status=400)
             # ---------------------------------------------------------------------------
 
