@@ -1558,7 +1558,7 @@ def cambiar_estado_reserva(request, id_reserva):
                         mensaje_notif = (
                             f"El estado de tu reserva #{reserva.id_reserva} ha cambiado a: {estado.nombre}."
                             f" Ahora debes abonar ${reserva.precio_total}. "
-                            f'<a href="{url_pago}" target="_blank" style="color:#0d6efd;text-decoration:underline;">Pagá desde este enlace</a>'
+                            f'<a href="{url_pago}" target="_blank" style="color:#0d6efd;text-decoration:underline;">Pagar</a>'
                             + (f" (Comentario: {comentario})" if comentario else "")
                         )
                     else:
@@ -1626,7 +1626,7 @@ def cambiar_estado_reserva(request, id_reserva):
                         mensaje_notif = (
                             f"El estado de tu reserva #{reserva.id_reserva} ha cambiado a: {estado.nombre}."
                             f" Ahora debes abonar ${reserva.precio_total}. "
-                            f'<a href="{url_pago}" target="_blank" style="color:#0d6efd;text-decoration:underline;">Pagá desde este enlace</a>'
+                            f'<a href="{url_pago}" target="_blank" style="color:#0d6efd;text-decoration:underline;">Pagar</a>'
                             + (f" (Comentario: {comentario})" if comentario else "")
                         )
                     else:
