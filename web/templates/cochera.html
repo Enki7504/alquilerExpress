@@ -32,9 +32,6 @@
 
 {% block content %}
 <main class="container mt-5 pt-5">
-  <a href="{% url 'buscar_cocheras' %}" class="btn btn-outline-secondary mb-3">
-    ← Volver a la búsqueda
-  </a>
   <div id="detalle-cochera" class="row">
     <!-- Info de la cochera -->
     <div class="col-lg-8">
@@ -110,7 +107,7 @@
               <span class="h3 text-primary">${{ cochera.precio_por_dia|floatformat:"0" }}</span>
               <span class="text-muted ms-1">/ día</span>
             </div>
-            <div class="d-grid gap-2">
+            <!-- <div class="d-grid gap-2">
               <a href="{% url 'admin_cocheras_reservas' id_cochera=cochera.id_cochera %}" class="btn btn-primary">
                 <i class="bi bi-calendar-check me-2"></i> Ver Reservas
               </a>
@@ -124,8 +121,8 @@
               <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">
                 <i class="bi bi-trash me-2"></i> Eliminar Cochera
               </button>
-              {% endif %}
-            </div>
+            </div> -->
+            {% endif %}
           {% else %}
             <h3 class="h4 mb-3">Reservar</h3>
             <div class="d-flex align-items-end mb-3">
