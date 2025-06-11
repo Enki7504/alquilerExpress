@@ -136,6 +136,15 @@ class InmuebleForm(forms.ModelForm):
             'estado': forms.Select(attrs={'class': 'form-select'}),
         }
 
+    def clean_nombre(self):
+        nombre = self.cleaned_data['nombre']
+        qs = Inmueble.objects.filter(nombre=nombre)
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise forms.ValidationError("Ya existe una vivienda con este nombre.")
+        return nombre
+
     # Esto pone el estado de la cochera a "Oculto" cuando se guarda el inmueble
     def save(self, commit=True):
         inmueble = super().save(commit=False)
@@ -213,8 +222,17 @@ class CocheraForm(forms.ModelForm):
             'precio_por_dia': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
             'politica_cancelacion': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
             'estado': forms.Select(attrs={'class': 'form-select'}),
-        }
-        
+        }     
+    
+    def clean_nombre(self):
+        nombre = self.cleaned_data['nombre']
+        qs = Cochera.objects.filter(nombre=nombre)
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise forms.ValidationError("Ya existe una cochera con este nombre.")
+        return nombre
+
 # esto sirve? 
 class AdminLoginForm(forms.Form):
     email = forms.EmailField(label='Email')

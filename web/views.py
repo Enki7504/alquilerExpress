@@ -226,7 +226,6 @@ def loginAdmin_2fa(request):
             login(request, user)
             request.session.pop("username_otp", None) # Usar .pop() para evitar KeyError
             otp_obj.delete()
-            messages.success(request, "Inicio de sesión exitoso en el panel administrativo.")
             return redirect("/panel")
         else:
             messages.error(request, "Código inválido o expirado.")

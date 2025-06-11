@@ -16,7 +16,6 @@
       <div class="mb-3">
         <label for="id_first_name" class="form-label">Nombre</label>
         {{ form.first_name|add_class:"form-control" }}
-        <!-- No mostrar errores de Django aquí -->
       </div>
       <div class="mb-3">
         <label for="id_last_name" class="form-label">Apellido</label>
@@ -106,13 +105,7 @@ document.getElementById('empleadoForm').addEventListener('submit', function(e) {
         }
     })
     .catch(error => {
-       // Swal.close(); // Cierra el popup de carga si hay error
         console.error("Error en AJAX:", error);
-        /*Swal.fire({
-            icon: 'error',
-            title: 'Error de red',
-            text: 'No se pudo crear el empleado. Intenta nuevamente.',
-        })*/;
     });
 });
 

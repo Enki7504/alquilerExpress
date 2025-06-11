@@ -38,7 +38,7 @@ class Ciudad(models.Model):
 
 class Cochera(models.Model):
     id_cochera = models.AutoField(primary_key=True)
-    nombre = models.CharField(max_length=100)
+    nombre = models.CharField(max_length=100, unique=True)
     alto = models.FloatField()
     ancho = models.FloatField()
     largo = models.FloatField()
@@ -63,7 +63,7 @@ class Cochera(models.Model):
 
 class Inmueble(models.Model):
     id_inmueble = models.AutoField(primary_key=True)
-    nombre = models.CharField(max_length=100)
+    nombre = models.CharField(max_length=100, unique=True)
     ubicacion = models.TextField()
     provincia = models.ForeignKey(Provincia, on_delete=models.SET_NULL, null=True)
     ciudad = models.ForeignKey(Ciudad, on_delete=models.SET_NULL, null=True)
