@@ -196,22 +196,15 @@ document.getElementById('inmuebleForm').addEventListener('submit', function(e) {
     .then(data => {
         if (data.success) {
             // Lógica de éxito (sin cambios)
-            Swal.fire({
+                        Swal.fire({
                 title: '¡Éxito!',
                 text: 'Los cambios se guardaron correctamente',
                 icon: 'success',
-                showCancelButton: true,
-                confirmButtonText: 'Ver Vivienda',
-                cancelButtonText: 'Volver al Panel',
-                confirmButtonColor: '#3085d6',
-                cancelButtonColor: '#6c757d',
-                reverseButtons: true
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    window.location.href = `/buscar-inmuebles/{{ inmueble.id_inmueble }}/`;
-                } else {
-                    window.location.href = '/panel/inmuebles/';
-                }
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
+            }).then(() => {
+                window.location.href = '/panel/inmuebles/';
             });
         } else {
             // ¡AQUÍ ESTÁ LA NUEVA LÓGICA DE ERROR!

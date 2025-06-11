@@ -197,20 +197,11 @@ document.getElementById('cocheraForm').addEventListener('submit', function(e) {
                 title: '¡Éxito!',
                 text: 'Los cambios se guardaron correctamente',
                 icon: 'success',
-                showCancelButton: true,
-                confirmButtonText: 'Ver Cochera', // Adaptado
-                cancelButtonText: 'Volver al Panel',
-                confirmButtonColor: '#3085d6',
-                cancelButtonColor: '#6c757d',
-                reverseButtons: true
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    // Adaptado para cocheras
-                    window.location.href = `/buscar-cocheras/{{ cochera.id_cochera }}/`;
-                } else {
-                    // Adaptado para cocheras
-                    window.location.href = '/panel/cocheras/';
-                }
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
+            }).then(() => {
+                window.location.href = '/panel/cocheras/';
             });
         } else {
             // Lógica de error
