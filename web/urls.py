@@ -76,6 +76,9 @@ urlpatterns = [
     # Reseñas y comentarios
     path('comentario/eliminar/<int:id_comentario>/', views.eliminar_comentario, name='eliminar_comentario'),
 
+    # Mercado Pago
+    path('simulador-mercadopago/', views.simulador_mercadopago, name='simulador_mercadopago'),
+
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 

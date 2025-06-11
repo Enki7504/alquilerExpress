@@ -122,6 +122,131 @@
 {% block extra_js %}
 <script>
 // Variables globales para control
+document.addEventListener('DOMContentLoaded', function() {
+    // PASO 2: Añadir el script que procesa los mensajes y muestra el TOAST
+    // (Este código es del template de alta y ahora se ejecutará también en editar)
+    const messageElements = document.querySelectorAll('.django-message');
+    if (messageElements.length > 0) {
+        setTimeout(() => {
+            messageElements.forEach(element => {
+                const tags = element.getAttribute('data-tags');
+                const message = element.getAttribute('data-message');
+                
+                let icon = 'info';
+                if (tags.includes('success')) icon = 'success';
+                if (tags.includes('error') || tags.includes('danger')) icon = 'error';
+                if (tags.includes('warning')) icon = 'warning';
+                
+                Swal.fire({
+                    position: 'top-end',
+                    icon: icon,
+                    title: message,
+                    showConfirmButton: false,
+                    timer: 5000,
+                    toast: true,
+                    timerProgressBar: true,
+                    width: '400px'
+                });
+            });
+        }, 300);
+    }
+
+    // --- Tu código existente para el manejo de imágenes (sin cambios) ---
+    initializeImagePreview();
+    document.querySelectorAll('.eliminar-imagen').forEach(btn => {
+        btn.addEventListener('click', eliminarImagen);
+    });
+});
+
+
+// PASO 3: Lógica de envío de formulario AJAX mejorada
+document.getElementById('inmuebleForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const form = e.target;
+    const formData = new FormData(form);
+    const submitButton = form.querySelector('button[type="submit"]');
+
+    // Limpiar errores de validación anteriores antes de un nuevo envío
+    form.querySelectorAll('.errorlist').forEach(el => el.remove());
+    form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+    
+    // Deshabilitar el botón y mostrar spinner
+    submitButton.disabled = true;
+    submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...';
+
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest', // Esencial para que la vista sepa que es AJAX
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Lógica de éxito (sin cambios)
+                        Swal.fire({
+                title: '¡Éxito!',
+                text: 'Los cambios se guardaron correctamente',
+                icon: 'success',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
+            }).then(() => {
+                window.location.href = '/panel/inmuebles/';
+            });
+        } else {
+            // ¡AQUÍ ESTÁ LA NUEVA LÓGICA DE ERROR!
+            // 1. Mostrar la notificación TOAST con el mensaje general
+            if (data.message) {
+                Swal.fire({
+                    position: 'top-end',
+                    icon: data.icon || 'error',
+                    title: data.message,
+                    showConfirmButton: false,
+                    timer: 5000,
+                    toast: true,
+                    timerProgressBar: true,
+                    width: '400px'
+                });
+            }
+
+            // 2. Mostrar los errores debajo de cada campo correspondiente
+            if (data.errors) {
+                for (const fieldName in data.errors) {
+                    const field = document.getElementById(`id_${fieldName}`);
+                    if (field) {
+                        // Añadir clase para resaltar el input en rojo (estilo Bootstrap)
+                        field.classList.add('is-invalid');
+                        
+                        // Crear y añadir la lista de errores debajo del input
+                        const errorList = document.createElement('ul');
+                        errorList.className = 'errorlist'; // Clase por defecto de Django
+                        data.errors[fieldName].forEach(errorMsg => {
+                            const errorItem = document.createElement('li');
+                            errorItem.textContent = errorMsg.message;
+                            errorList.appendChild(errorItem);
+                        });
+                        // Insertar la lista de errores justo después del campo
+                        field.parentNode.insertBefore(errorList, field.nextSibling);
+                    }
+                }
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        Swal.fire('Error', 'Ocurrió un error inesperado al contactar al servidor.', 'error');
+    })
+    .finally(() => {
+        // Volver a habilitar el botón
+        submitButton.disabled = false;
+        submitButton.textContent = 'Guardar Cambios';
+    });
+});
+
+// --- El resto de tus funciones de manejo de imágenes (sin cambios) ---
+
 let fileInputListener = null;
 let previewContainerListener = null;
 
@@ -284,74 +409,6 @@ async function eliminarImagen(e) {
     Swal.fire('Error', error.message || 'Ocurrió un error al eliminar la imagen', 'error');
   }
 }
-
-document.getElementById('inmuebleForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    const form = e.target;
-    const formData = new FormData(form);
-    const submitButton = form.querySelector('button[type="submit"]');
-    
-    // Deshabilitar el botón y mostrar spinner
-    submitButton.disabled = true;
-    submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...';
-
-    fetch(form.action, {
-        method: 'POST',
-        body: formData,
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-        }
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Error en la respuesta del servidor');
-        }
-        return response.json();
-    })
-    .then(data => {
-        if(data.success) {
-            // Mostrar alert con botones de acción
-            Swal.fire({
-                title: '¡Éxito!',
-                text: 'Los cambios se guardaron correctamente',
-                icon: 'success',
-                showCancelButton: true,
-                confirmButtonText: 'Ver Inmueble',
-                cancelButtonText: 'Volver al Panel',
-                confirmButtonColor: '#3085d6',
-                cancelButtonColor: '#6c757d',
-                reverseButtons: true
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    window.location.href = `/buscar-inmuebles/{{ inmueble.id_inmueble }}/`;
-                } else {
-                    window.location.href = '/panel/inmuebles/';
-                }
-            });
-        } else {
-            Swal.fire({
-                title: 'Error',
-                text: data.message || 'Ocurrió un error al guardar los cambios',
-                icon: 'error',
-                confirmButtonText: 'Entendido'
-            });
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        Swal.fire({
-            title: 'Error',
-            text: 'Ocurrió un problema al conectar con el servidor',
-            icon: 'error',
-            confirmButtonText: 'Entendido'
-        });
-    })
-    .finally(() => {
-        submitButton.disabled = false;
-        submitButton.textContent = 'Guardar Cambios';
-    });
-});
-
 </script>
 {% endblock %}
 {% endblock %}

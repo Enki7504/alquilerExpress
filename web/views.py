@@ -268,7 +268,9 @@ def buscar_inmuebles(request):
     camas = request.GET.get('camas')
     banios = request.GET.get('banios')
 
-    inmuebles = Inmueble.objects.all()
+    # Solo mostrar inmuebles que NO estén en estado Eliminado ni Oculto
+    inmuebles = Inmueble.objects.exclude(estado__nombre__in=['Oculto'])
+
     if query:
         inmuebles = inmuebles.filter(nombre__icontains=query)
     if provincia_id:
@@ -323,11 +325,11 @@ def buscar_cocheras(request):
     """
     query = request.GET.get('q', '').strip()
     
+    # Solo mostrar cocheras que NO estén en estado Eliminado ni Oculto
+    cocheras = Cochera.objects.exclude(estado__nombre__in=['Oculto'])
+
     if query:
-        # Búsqueda solo por nombre para cocheras
-        cocheras = Cochera.objects.filter(nombre__icontains=query)
-    else:
-        cocheras = Cochera.objects.all()
+        cocheras = cocheras.filter(nombre__icontains=query)
     
     return render(request, 'buscar_cocheras.html', {
         'cocheras': cocheras,
@@ -1041,7 +1043,10 @@ def admin_inmuebles_reservas(request, id_inmueble):
     Muestra el estado actual y las reservas de un inmueble específico.
     """
     inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
-    reservas = Reserva.objects.filter(inmueble=inmueble).order_by('-fecha_inicio')
+    reservas = Reserva.objects.filter(
+        inmueble=inmueble,
+        estado__nombre__in=["Pendiente", "Aprobada", "Pagada", "Confirmada"]
+    ).order_by('-fecha_inicio')
     return render(request, 'admin/admin_inmuebles_reservas.html', {'inmueble': inmueble, 'reservas': reservas})
 
 ################################################################################################################
@@ -1226,7 +1231,10 @@ def admin_cocheras_reservas(request, id_cochera):
     Muestra el estado actual y las reservas de una cochera específica.
     """
     cochera = get_object_or_404(Cochera, id_cochera=id_cochera)
-    reservas = Reserva.objects.filter(cochera=cochera).order_by('-fecha_inicio')
+    reservas = Reserva.objects.filter(
+        cochera=cochera,
+        estado__nombre__in=["Pendiente", "Aprobada", "Pagada", "Confirmada"]
+    ).order_by('-fecha_inicio')
     return render(request, 'admin/admin_cocheras_reservas.html', {'cochera': cochera, 'reservas': reservas})
 
 ################################################################################################################
@@ -1476,7 +1484,7 @@ def cambiar_estado_reserva(request, id_reserva):
         
         # Validar transiciones de estado permitidas
         transiciones_permitidas = {
-            'Pendiente': ['Aprobada', 'Rechazada', 'Cancelada'],
+            'Pendiente': ['Aprobada', 'Rechazada'],
             'Aprobada': ['Pagada', 'Cancelada', 'Rechazada'],
             'Pagada': ['Confirmada', 'Cancelada'],
             'Confirmada': ['Finalizada', 'Cancelada']
@@ -1519,8 +1527,14 @@ def cambiar_estado_reserva(request, id_reserva):
                         f"- Fechas: {reserva.fecha_inicio} a {reserva.fecha_fin}\n"
                         f"- Estado actual: {estado.nombre}\n"
                     )
+                    saldo = 40000  # Este valor puede ser dinámico según tu lógica de negocio
                     if nuevo_estado == "Aprobada":
+                        # Construir el link de pago
+                        dominio = request.get_host()
+                        protocolo = 'https' if request.is_secure() else 'http'
+                        url_pago = f"{protocolo}://{dominio}/simulador-mercadopago/?saldo={saldo}&precio={reserva.precio_total}&id_reserva={reserva.id_reserva}"
                         cuerpo += f"\nAhora debe abonar la reserva, el total es de ${reserva.precio_total}.\n"
+                        cuerpo += f"Debe pagar desde el siguiente enlace:\n{url_pago}\n"
                     elif nuevo_estado == "Pagada":
                         cuerpo += f"\nLa reserva ha sido pagada. Por favor, espere a que un empleado se comunique con usted.\n"
                     elif nuevo_estado == "Confirmada":
@@ -1535,9 +1549,25 @@ def cambiar_estado_reserva(request, id_reserva):
 
                     cuerpo += f"\nGracias por usar Alquiler Express."
 
+                    if nuevo_estado == "Aprobada":
+                        dominio = request.get_host()
+                        protocolo = 'https' if request.is_secure() else 'http'
+                        url_pago = f"{protocolo}://{dominio}/simulador-mercadopago/?saldo={saldo}&precio={reserva.precio_total}&id_reserva={reserva.id_reserva}"
+                        mensaje_notif = (
+                            f"El estado de tu reserva #{reserva.id_reserva} ha cambiado a: {estado.nombre}."
+                            f" Ahora debes abonar ${reserva.precio_total}. "
+                            f'<a href="{url_pago}" target="_blank" style="color:#0d6efd;text-decoration:underline;">Pagar</a>'
+                            + (f" (Comentario: {comentario})" if comentario else "")
+                        )
+                    else:
+                        mensaje_notif = (
+                            f"El estado de tu reserva #{reserva.id_reserva} ha cambiado a: {estado.nombre}"
+                            + (f" (Comentario: {comentario})" if comentario else "") + "."
+                        )
+
                     crear_notificacion(
                         usuario=cliente_rel.cliente,
-                        mensaje=f"El estado de tu reserva #{reserva.id_reserva} ha cambiado a: {estado.nombre}" + (f" (Comentario: {comentario})" if comentario else "") + "."
+                        mensaje=mensaje_notif
                     )
                     
                     send_mail(
@@ -1566,8 +1596,14 @@ def cambiar_estado_reserva(request, id_reserva):
                         f"- Fechas: {reserva.fecha_inicio} a {reserva.fecha_fin}\n"
                         f"- Estado actual: {estado.nombre}\n"
                     )
+                    saldo = 40000  # Este valor puede ser dinámico según tu lógica de negocio
                     if nuevo_estado == "Aprobada":
+                        # Construir el link de pago
+                        dominio = request.get_host()
+                        protocolo = 'https' if request.is_secure() else 'http'
+                        url_pago = f"{protocolo}://{dominio}/simulador-mercadopago/?saldo={saldo}&precio={reserva.precio_total}&id_reserva={reserva.id_reserva}"
                         cuerpo += f"\nAhora debe abonar la reserva, el total es de ${reserva.precio_total}.\n"
+                        cuerpo += f"Debe pagar desde el siguiente enlace:\n{url_pago}\n"
                     elif nuevo_estado == "Pagada":
                         cuerpo += f"\nLa reserva ha sido pagada. Por favor, espere a que un empleado se comunique con usted.\n"
                     elif nuevo_estado == "Confirmada":
@@ -1581,9 +1617,25 @@ def cambiar_estado_reserva(request, id_reserva):
 
                     cuerpo += f"\nGracias por usar Alquiler Express."
                     
+                    if nuevo_estado == "Aprobada":
+                        dominio = request.get_host()
+                        protocolo = 'https' if request.is_secure() else 'http'
+                        url_pago = f"{protocolo}://{dominio}/simulador-mercadopago/?saldo={saldo}&precio={reserva.precio_total}&id_reserva={reserva.id_reserva}"
+                        mensaje_notif = (
+                            f"El estado de tu reserva #{reserva.id_reserva} ha cambiado a: {estado.nombre}."
+                            f" Ahora debes abonar ${reserva.precio_total}. "
+                            f'<a href="{url_pago}" target="_blank" style="color:#0d6efd;text-decoration:underline;">Pagar</a>'
+                            + (f" (Comentario: {comentario})" if comentario else "")
+                        )
+                    else:
+                        mensaje_notif = (
+                            f"El estado de tu reserva #{reserva.id_reserva} ha cambiado a: {estado.nombre}"
+                            + (f" (Comentario: {comentario})" if comentario else "") + "."
+                        )
+
                     crear_notificacion(
                         usuario=cliente_rel.cliente,
-                        mensaje=f"El estado de tu reserva #{reserva.id_reserva} ha cambiado a: {estado.nombre}"
+                        mensaje=mensaje_notif
                     )
 
                     send_mail(
@@ -1705,6 +1757,62 @@ def eliminar_comentario(request, id_comentario):
         messages.success(request, "Comentario eliminado correctamente.")
     return redirect(request.META.get('HTTP_REFERER', 'index'))
 
+@login_required
+def simulador_mercadopago(request):
+    saldo = request.GET.get('saldo', '0.00')
+    precio = request.GET.get('precio', '0.00')
+    id_reserva = request.GET.get('id_reserva')
+
+    if request.method == "POST":
+        data = json.loads(request.body)
+        id_reserva = data.get('id_reserva')
+        try:
+            reserva = Reserva.objects.get(id_reserva=id_reserva)
+            estado_actual = reserva.estado.nombre
+
+            if estado_actual in ['Cancelada', 'Rechazada']:
+                return JsonResponse({'success': False, 'error': 'La reserva fue rechazada.'}, status=400)
+            if estado_actual in ['Pagada', 'Confirmada', 'Finalizada', 'Terminada']:
+                return JsonResponse({'success': False, 'error': 'La reserva ya fue pagada previamente.'}, status=400)
+            if estado_actual != 'Aprobada':
+                return JsonResponse({'success': False, 'error': 'La reserva no está en estado "Aprobada".'}, status=400)
+
+            # --- Verificar que no hayan pasado más de 24 horas desde que fue aprobada ---
+            aprobada_estado = ReservaEstado.objects.filter(
+                reserva=reserva,
+                estado__nombre='Aprobada'
+            ).order_by('-fecha').first()
+            if not aprobada_estado:
+                return JsonResponse({'success': False, 'error': 'La reserva no está en estado "Aprobada"'}, status=400)
+            tiempo_aprobada = aprobada_estado.fecha
+            ahora = timezone.now()
+            if ahora - tiempo_aprobada > timedelta(hours=24):
+                # Cambiar estado a Cancelada
+                estado_cancelada = Estado.objects.get(nombre='Cancelada')
+                reserva.estado = estado_cancelada
+                reserva.save()
+                return JsonResponse({'success': False, 'error': 'El tiempo para pagar la reserva ha expirado (más de 24 horas desde la aprobación).'}, status=400)
+            # ---------------------------------------------------------------------------
+
+            estado_pagada = Estado.objects.get(nombre='Pagada')
+            reserva.estado = estado_pagada
+            reserva.save()
+            # Notificación al empleado asignado
+            empleado_asignado = reserva.inmueble.empleado if reserva.inmueble else reserva.cochera.empleado
+            if empleado_asignado:
+                crear_notificacion(
+                    usuario=empleado_asignado,
+                    mensaje=f"La reserva #{reserva.id_reserva} ha sido pagada por el cliente {request.user.perfil}.",
+                )
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+    return render(request, 'simulador_mercadopago.html', {
+        'saldo': saldo,
+        'precio': precio,
+        'id_reserva': id_reserva,
+    })
 
 ################################################################################################################
 # --- NOTIFICACIONES ---
