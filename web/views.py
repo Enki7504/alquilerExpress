@@ -267,7 +267,9 @@ def buscar_inmuebles(request):
     camas = request.GET.get('camas')
     banios = request.GET.get('banios')
 
-    inmuebles = Inmueble.objects.all()
+    # Solo mostrar inmuebles que NO estén en estado Eliminado ni Oculto
+    inmuebles = Inmueble.objects.exclude(estado__nombre__in=['Oculto'])
+
     if query:
         inmuebles = inmuebles.filter(nombre__icontains=query)
     if provincia_id:
@@ -322,11 +324,11 @@ def buscar_cocheras(request):
     """
     query = request.GET.get('q', '').strip()
     
+    # Solo mostrar cocheras que NO estén en estado Eliminado ni Oculto
+    cocheras = Cochera.objects.exclude(estado__nombre__in=['Oculto'])
+
     if query:
-        # Búsqueda solo por nombre para cocheras
-        cocheras = Cochera.objects.filter(nombre__icontains=query)
-    else:
-        cocheras = Cochera.objects.all()
+        cocheras = cocheras.filter(nombre__icontains=query)
     
     return render(request, 'buscar_cocheras.html', {
         'cocheras': cocheras,
