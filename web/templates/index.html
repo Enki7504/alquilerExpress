@@ -115,7 +115,7 @@
                     <li class="notification-item {% if not notificacion.leido %}unread{% endif %}">
                       <div class="d-flex justify-content-between align-items-start">
                         <div class="notification-content">
-                          <div class="notification-message">{{ notificacion.mensaje }}</div>
+                          <div class="notification-message">{{ notificacion.mensaje|safe }}</div>
                           <small class="text-muted notification-time">{{ notificacion.fecha_creacion|timesince }}</small>
                         </div>
                         <form action="{% url 'eliminar_notificacion' notificacion.id %}" method="post" class="d-inline">
