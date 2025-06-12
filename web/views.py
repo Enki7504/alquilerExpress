@@ -2061,7 +2061,7 @@ def pagar_reserva(request, id_reserva):
                 return JsonResponse({'success': False, 'error': 'El tiempo para pagar la reserva ha expirado (más de 24 horas desde la aprobación).'}, status=400)
             # ---------------------------------------------------------------------------
 
-            estado_pagada = Estado.objects.get(nombre='Pagada')
+            estado_pagada = Estado.objects.get(nombre='Confirmada')
             reserva.estado = estado_pagada
             reserva.save()
             # Notificación al empleado asignado
