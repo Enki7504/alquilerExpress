@@ -61,6 +61,12 @@ urlpatterns = [
     path('crear-reserva-cochera/<int:id_cochera>/', views.crear_reserva_cochera, name='crear_reserva_cochera'),
     path('panel/reserva-inmueble/<int:id_reserva>/cambiar-estado/', views.cambiar_estado_reserva, name='cambiar_estado_reserva_inmueble'),
     path('panel/reserva-cochera/<int:id_reserva>/cambiar-estado/', views.cambiar_estado_reserva, name='cambiar_estado_reserva'),
+    
+    # Reservas del usuario autenticado
+    path('reservas/', views.reservas_usuario, name='reservas_usuario'),
+    path('reservas/<int:id_reserva>/detalle/', views.ver_detalle_reserva, name='ver_detalle_reserva'),
+    path('reservas/<int:id_reserva>/cancelar/', views.cancelar_reserva, name='cancelar_reserva'),
+    path('reservas/<int:id_reserva>/pagar/', views.pagar_reserva, name='pagar_reserva'),
 
     # URL para cargar ciudades cuando se selecciona una provincia
     path('ajax/cargar-ciudades/', views.cargar_ciudades, name='ajax_cargar_ciudades'),

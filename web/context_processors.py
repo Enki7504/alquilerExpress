@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AnonymousUser
 from .models import Notificacion
+from .views import is_client
 
 def notifications(request):
     if request.user.is_authenticated:
@@ -11,3 +12,6 @@ def notifications(request):
         except Exception:
             return {}
     return {}
+
+def is_client_context(request):
+    return {'is_client': is_client(request.user)}

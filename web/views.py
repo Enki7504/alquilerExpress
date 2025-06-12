@@ -60,6 +60,7 @@ from .models import (
     Provincia,
     Cochera,
     RespuestaComentario,
+    Huesped
 )
 
 # Importaciones de utilidades locales
@@ -593,6 +594,9 @@ def is_admin_or_empleado(user):
     """Verifica si el usuario es un superusuario o pertenece al grupo 'empleado'."""
     return user.is_authenticated and (user.is_staff or user.groups.filter(name="empleado").exists())
 
+def is_client(user):
+    """Verifica si el usuario es un cliente."""
+    return user.is_authenticated and user.groups.filter(name="cliente").exists()
 
 ################################################################################################################
 # --- Vistas del Panel de Administración --- Gestion de Usuarios  --- 
@@ -1291,7 +1295,8 @@ def crear_reserva(request, id_inmueble):
     if request.method == 'POST':
         fecha_inicio = request.POST.get('fecha_inicio')
         fecha_fin = request.POST.get('fecha_fin')
-        
+       
+
         if not fecha_inicio or not fecha_fin:
             messages.error(request, 'Debes ingresar ambas fechas.')
             return redirect('detalle_inmueble', id_inmueble=id_inmueble)
@@ -1357,6 +1362,24 @@ def crear_reserva(request, id_inmueble):
                     inmueble=inmueble,
                     reserva=reserva
                 )
+
+            # --- GUARDAR HUÉSPEDES ---
+            huespedes_json = request.POST.get('huespedes_json')
+            if huespedes_json:
+                try:
+                    lista_huespedes = json.loads(huespedes_json)
+                    for h in lista_huespedes:
+                        Huesped.objects.create(
+                            reserva=reserva,
+                            nombre=h['nombre'],
+                            apellido=h['apellido'],
+                            dni=h['dni'],
+                            fecha_nacimiento=h['fecha_nac']
+                        )
+                except Exception as e:
+                    # Puedes loguear el error si lo deseas
+                    pass
+            # --- FIN GUARDADO HUÉSPEDES ---
 
             # Enviar notificación a todos los empleados
             # usando enviar_mail_a_empleados_sobre_reserva(id_reserva) de utils.py
@@ -1834,3 +1857,42 @@ def admin_notificar_imprevisto(request):
     else:
         form = NotificarImprevistoForm()
     return render(request, "admin/admin_notificar_imprevisto.html", {"form": form})
+
+
+################################################################################################################
+# --- DETALLE DE RESERVAS  ---
+################################################################################################################
+
+@login_required
+def reservas_usuario(request):
+    """
+    Muestra todas las reservas del usuario autenticado.
+    """
+    reservas = Reserva.objects.filter(clienteinmueble__cliente=request.user.perfil).distinct().order_by('-fecha_inicio')
+    return render(request, 'reservas.html', {
+        'reservas': reservas
+    })
+
+def ver_detalle_reserva(request, id_reserva):
+    reserva = get_object_or_404(Reserva, id_reserva=id_reserva)
+    huespedes = reserva.huespedes.all()
+    return render(request, 'reservas_detalle.html', {
+        'reserva': reserva,
+        'huespedes': huespedes,
+    })
+
+@require_POST
+@login_required
+def cancelar_reserva(request, id_reserva):
+    reserva = get_object_or_404(Reserva, id_reserva=id_reserva)
+    estado_cancelada = Estado.objects.get(nombre="Cancelada")
+    reserva.estado = estado_cancelada
+    reserva.save()
+    messages.success(request, "La reserva fue cancelada correctamente.")
+    return redirect('admin_reserva_detalle', id_reserva=id_reserva)
+
+@login_required
+def pagar_reserva(request, id_reserva):
+    # Aquí irá la lógica de pago en el futuro
+    messages.info(request, "La funcionalidad de pago estará disponible próximamente.")
+    return redirect('admin_reserva_detalle', id_reserva=id_reserva)

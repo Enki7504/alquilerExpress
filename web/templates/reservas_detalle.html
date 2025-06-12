@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Detalle de Reserva #{{ reserva.id_reserva }}{% endblock %}
+
+{% block content %}
+<style>
+  .bg-azul-alquiler {
+    background-color: #005A87 !important;
+  }
+</style>
+<div class="container mt-4" style="padding-top: 100px;">
+  <div class="card shadow-sm">
+    <div class="card-header bg-azul-alquiler text-white">
+      <h4 class="mb-0">Reserva #{{ reserva.id_reserva }}</h4>
+    </div>
+    <div class="card-body">
+      <div class="row mb-3">
+        <div class="col-md-9">
+          <div class="mb-2">
+            <strong>Inmueble:</strong>
+            <span class="ms-1">{{ reserva.inmueble }}</span>
+          </div>
+          <div class="mb-2">
+            <strong>Cliente:</strong>
+            <span class="ms-1">
+              {% with relacion=reserva.clienteinmueble_set.first %}
+                {% if relacion and relacion.cliente %}
+                  {{ relacion.cliente.usuario.get_full_name|default:relacion.cliente.usuario.username }}
+                {% else %}
+                  <em>Cliente no disponible</em>
+                {% endif %}
+              {% endwith %}
+            </span>
+          </div>
+          <div class="mb-2">
+            <strong>Fechas:</strong>
+            <span class="ms-1">{{ reserva.fecha_inicio|date:"d/m/Y" }} - {{ reserva.fecha_fin|date:"d/m/Y" }}</span>
+          </div>
+          <div class="mb-2">
+            <strong>Precio total:</strong>
+            <span class="ms-1">${{ reserva.precio_total }}</span>
+          </div>
+          <div class="mb-2">
+            <strong>Estado:</strong>
+            <span class="badge 
+              {% if reserva.estado.nombre == 'Confirmada' %}bg-success
+              {% elif reserva.estado.nombre == 'Cancelada' %}bg-danger
+              {% elif reserva.estado.nombre == 'Rechazada' %}bg-secondary
+              {% elif reserva.estado.nombre == 'Pagada' %}bg-info
+              {% elif reserva.estado.nombre == 'Aprobada' %}bg-primary
+              {% elif reserva.estado.nombre == 'Pendiente' %}bg-warning
+              {% elif reserva.estado.nombre == 'Finalizada' %}bg-dark
+              {% else %}bg-warning{% endif %}">
+              {{ reserva.estado.nombre }}
+            </span>
+          </div>
+        </div>
+        <div class="col-md-3 d-flex align-items-center justify-content-md-end justify-content-start mt-3 mt-md-0">
+
+        </div>
+      </div>
+      <div class="mb-3">
+        <strong>Huéspedes:</strong>
+        <ul class="list-group mt-2">
+          {% for h in huespedes %}
+            <li class="list-group-item">
+              <div class="d-flex align-items-center flex-wrap gap-3">
+                <!-- Icono -->
+                <span class="me-2">
+                  <i class="bi bi-person-fill text-primary fs-4"></i>
+                </span>
+                <!-- Nombre y apellido -->
+                <span class="fw-semibold">{{ h.nombre }} {{ h.apellido }}</span>
+                <!-- DNI -->
+                <span class="badge bg-light text-dark border fw-normal">
+                  DNI: <span class="fw-semibold">{{ h.dni }}</span>
+                </span>
+                <!-- Fecha de nacimiento -->
+                <span class="badge bg-light text-dark border fw-normal">
+                  Nac: <span class="fw-semibold">{{ h.fecha_nacimiento|date:"d/m/Y" }}</span>
+                </span>
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+      <!-- Botones de acción -->
+      <div class="mt-4 d-flex flex-wrap gap-2 align-items-center">
+        {% if reserva.estado.nombre != "Cancelada" and reserva.estado.nombre != "Finalizada" %}
+          {% if reserva.estado.nombre == "Aprobada" %}
+            <a href="{% url 'pagar_reserva' reserva.id_reserva %}" class="btn btn-success d-flex align-items-center h-100">
+              <i class="bi bi-cash-coin me-1"></i> Pagar reserva
+            </a>
+          {% endif %}
+          <form method="post" action="{% url 'cancelar_reserva' reserva.id_reserva %}" onsubmit="return confirm('¿Seguro que deseas cancelar la reserva?');" class="m-0">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger d-flex align-items-center h-100">
+              <i class="bi bi-x-circle me-1"></i> Cancelar reserva
+            </button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
