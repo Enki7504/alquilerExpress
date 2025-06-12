@@ -2014,6 +2014,19 @@ def cancelar_reserva(request, id_reserva):
     estado_cancelada = Estado.objects.get(nombre="Cancelada")
     reserva.estado = estado_cancelada
     reserva.save()
+
+    # Notificar al empleado a cargo
+    empleado = None
+    if reserva.inmueble and reserva.inmueble.empleado:
+        empleado = reserva.inmueble.empleado
+    elif reserva.cochera and reserva.cochera.empleado:
+        empleado = reserva.cochera.empleado
+
+    if empleado:
+        crear_notificacion(
+            usuario=empleado,
+            mensaje=f"El cliente canceló la reserva #{reserva.id_reserva}."
+        )
     mensaje = "La reserva fue cancelada correctamente."
     # Si es una petición AJAX, devolvé JSON
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
