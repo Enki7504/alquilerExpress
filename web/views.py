@@ -1661,7 +1661,7 @@ def cambiar_estado_reserva(request, id_reserva):
                         mensaje_notif = (
                             f"El estado de tu reserva #{reserva.id_reserva} ha cambiado a: {estado.nombre}."
                             f" Ahora debes abonar ${reserva.precio_total}. "
-                            f'<a href="{url_pago}" target="_blank" style="color:#0d6efd;text-decoration:underline;">Pagar</a>'
+                            f"Accedé al apartado 'Mis Reservas' para pagar."
                             + (f" (Comentario: {comentario})" if comentario else "")
                         )
                     else:
@@ -1675,13 +1675,13 @@ def cambiar_estado_reserva(request, id_reserva):
                         mensaje=mensaje_notif
                     )
                     
-                    send_mail(
-                        subject=asunto,
-                        message=cuerpo,
-                        from_email=settings.DEFAULT_FROM_EMAIL,
-                        recipient_list=[email_cliente],
-                        fail_silently=False,
-                    )
+                    # send_mail(
+                    #     subject=asunto,
+                    #     message=cuerpo,
+                    #     from_email=settings.DEFAULT_FROM_EMAIL,
+                    #     recipient_list=[email_cliente],
+                    #     fail_silently=False,
+                    # )
             elif reserva.cochera:
                 cliente_rel = ClienteInmueble.objects.filter(reserva=reserva).first()
                 if cliente_rel and cliente_rel.cliente.usuario.email:
@@ -1733,7 +1733,7 @@ def cambiar_estado_reserva(request, id_reserva):
                         mensaje_notif = (
                             f"El estado de tu reserva #{reserva.id_reserva} ha cambiado a: {estado.nombre}."
                             f" Ahora debes abonar ${reserva.precio_total} dentro de las próximas 24 horas. "
-                            f'<a href="{url_pago}" target="_blank" style="color:#0d6efd;text-decoration:underline;">Pagar</a>'
+                            f"Accedé al apartado 'Mis Reservas' para pagar."
                             + (f" (Comentario: {comentario})" if comentario else "")
                         )
                     else:
