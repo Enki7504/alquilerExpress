@@ -66,6 +66,7 @@
                 <button class="btn btn-sm btn-danger" onclick="cambiarEstado('{{ reserva.id_reserva }}', 'Cancelada')">Cancelar Alquiler</button>
               {% endif %}
               <a href="{% url 'detalle_inmueble' inmueble.id_inmueble %}" class="btn btn-sm btn-info">Ver Vivienda</a>
+              <a href="{% url 'ver_detalle_reserva' reserva.id_reserva %}" class="btn btn-sm btn-secondary">Ver Detalle</a>
             </td>
           </tr>
           {% empty %}

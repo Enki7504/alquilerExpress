@@ -17,7 +17,8 @@ from .models import (
     CocheraImagen,
     Provincia,
     Ciudad,
-    Notificacion
+    Notificacion,
+    Huesped
 )
 
 # --- Inlines para mostrar imágenes asociadas ---
@@ -70,9 +71,8 @@ class CocheraAdmin(admin.ModelAdmin):
 
 @admin.register(Reserva)
 class ReservaAdmin(admin.ModelAdmin):
-    list_display = ('id_reserva', 'fecha_inicio', 'fecha_fin', 'precio_total', 'estado')
-    list_filter = ('estado',)
-    search_fields = ('estado__nombre', 'descripcion')
+    list_display = ('id_reserva', 'inmueble', 'cochera', 'fecha_inicio', 'fecha_fin', 'estado')
+    search_fields = ('id_reserva', 'inmueble__nombre', 'cochera__nombre')
 
 @admin.register(ReservaEstado)
 class ReservaEstadoAdmin(admin.ModelAdmin):
@@ -123,3 +123,12 @@ class NotificacionAdmin(admin.ModelAdmin):
             'delete': self.has_delete_permission(request),
             'view': self.has_view_permission(request),
         }
+
+class HuespedInline(admin.TabularInline):
+    model = Huesped
+    extra = 0
+
+@admin.register(Huesped)
+class HuespedAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'apellido', 'dni', 'fecha_nacimiento', 'reserva')
+    search_fields = ('nombre', 'apellido', 'dni', 'reserva__id_reserva')

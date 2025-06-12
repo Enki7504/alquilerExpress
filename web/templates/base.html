@@ -35,6 +35,11 @@
         <a href="{% url 'buscar_inmuebles' %}" class="btn btn-outline-secondary me-2">Viviendas</a>
         <a href="{% url 'buscar_cocheras' %}" class="btn btn-outline-secondary me-2">Cocheras</a>
         {% if user.is_authenticated %}
+          {% if is_client %}
+            <a href="{% url 'reservas_usuario' %}" class="btn btn-outline-primary me-2">
+              <i class="bi bi-calendar-check"></i> Mis reservas
+            </a>
+          {% endif %}
           <!-- Notificaciones -->
           <div class="dropdown me-2">
             <button class="btn btn-outline-secondary position-relative dropdown-toggle"
