@@ -154,6 +154,38 @@
                   <label for="fecha_fin" class="form-label">Fecha de salida</label>
                   <input type="text" class="form-control" id="fecha_fin" name="fecha_fin" required autocomplete="off">
                 </div>
+                <!-- Formulario oculto para agregar huésped -->
+                <div class="mb-3">
+                  <ul id="lista-huespedes" class="list-group mb-2" data-max-huespedes="{{ inmueble.cantidad_huespedes }}"></ul>
+                  <button type="button" class="btn btn-outline-primary btn-sm w-100" id="btn-agregar-huesped">
+                    <i class="bi bi-person-plus"></i> Agregar huésped
+                  </button>
+                </div>
+                <div id="form-huesped" class="card card-body mb-3" style="display:none; max-width: 500px;">
+                  <div class="mb-3">
+                    <label for="huesped-nombre" class="form-label">Nombre</label>
+                    <input type="text" class="form-control" id="huesped-nombre" placeholder="Nombre">
+                  </div>
+                  <div class="mb-3">
+                    <label for="huesped-apellido" class="form-label">Apellido</label>
+                    <input type="text" class="form-control" id="huesped-apellido" placeholder="Apellido">
+                  </div>
+                  <div class="mb-3">
+                    <label for="huesped-dni" class="form-label">DNI</label>
+                    <input type="text" class="form-control" id="huesped-dni" placeholder="DNI">
+                  </div>
+                  <div class="mb-3">
+                    <label for="huesped-fecha-nac" class="form-label">Fecha de nacimiento</label>
+                    <input type="date" class="form-control" id="huesped-fecha-nac" placeholder="Fecha de nacimiento">
+                  </div>
+                  <div class="mt-2 text-end">
+                    <button type="button" class="btn btn-naranja btn-sm" id="btn-aceptar-huesped">Aceptar</button>
+                    <button type="button" class="btn btn-azul btn-secondary btn-sm" id="btn-cancelar-huesped">Cancelar</button>
+                  </div>
+                </div>
+                <!-- Campo oculto para enviar los huéspedes como JSON -->
+                <input type="hidden" name="huespedes_json" id="huespedes-json">
+
                 <button type="submit" class="btn btn-primary btn-azul w-100 py-2">
                   <i class="bi bi-calendar-check me-2"></i> Reservar ahora
                 </button>
@@ -430,91 +462,297 @@
 {% endblock %}
 
 {% block extra_js %}
-  {{ fechas_ocupadas|json_script:"fechasOcupadasJSON" }}
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      var fechasOcupadas = JSON.parse(document.getElementById('fechasOcupadasJSON').textContent);
-      flatpickr("#fecha_inicio", {
-        disable: fechasOcupadas,
-        dateFormat: "Y-m-d",
-        minDate: "today"
-      });
-      flatpickr("#fecha_fin", {
-        disable: fechasOcupadas,
-        dateFormat: "Y-m-d",
-        minDate: "today"
-      });
+{{ fechas_ocupadas|json_script:"fechasOcupadasJSON" }}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+// Convertir los mensajes de Django a SweetAlert
+const messageElements = document.querySelectorAll('.django-message');
+
+messageElements.forEach(element => {
+    const tags = element.getAttribute('data-tags');
+    const message = element.getAttribute('data-message');
+    
+    // Mapear las etiquetas de Django a iconos de SweetAlert
+    let icon = 'info';
+    if (tags.includes('success')) icon = 'success';
+    if (tags.includes('error') || tags.includes('danger')) icon = 'error';
+    if (tags.includes('warning')) icon = 'warning';
+    
+    // Mostrar la notificación tipo toast
+    Swal.fire({
+        position: 'top-end',
+        icon: icon,
+        title: message,
+        showConfirmButton: false,
+        timer: 3000,
+        toast: true,
+        timerProgressBar: true
     });
+});
 
-     document.addEventListener('DOMContentLoaded', function() {
-      // Manejo del botón "Responder"
-      document.querySelectorAll('.btn-responder-comentario').forEach(btn => {
-        btn.addEventListener('click', function() {
-          const id = this.getAttribute('data-comentario');
-          // Oculta todos los formularios de respuesta
-          document.querySelectorAll('.form-respuesta-comentario').forEach(form => {
-            form.style.display = 'none';
-          });
-          // Restaura todos los botones "Responder" a su estado original
-          document.querySelectorAll('.btn-responder-comentario').forEach(b => {
-            b.classList.remove('btn-primary');
-            b.classList.add('btn-outline-primary');
-          });
-          // Muestra el formulario de respuesta para este comentario específico
-          const formRespuesta = document.getElementById('form-respuesta-' + id);
-          if (formRespuesta) {
-            formRespuesta.style.display = 'block';
-          }
-          // Marca el botón "Responder" de este comentario
-          const btnResponder = document.getElementById('btn-responder-' + id);
-          if (btnResponder) {
-            btnResponder.classList.remove('btn-outline-primary');
-            btnResponder.classList.add('btn-primary');
-          }
-        });
-      });
+document.addEventListener('DOMContentLoaded', function() {
+  var fechasOcupadas = JSON.parse(document.getElementById('fechasOcupadasJSON').textContent);
+  flatpickr("#fecha_inicio", {
+    disable: fechasOcupadas,
+    dateFormat: "Y-m-d",
+    minDate: "today"
+  });
+  flatpickr("#fecha_fin", {
+    disable: fechasOcupadas,
+    dateFormat: "Y-m-d",
+    minDate: "today"
+  });
+});
 
-      // Manejo del botón "Cancelar"
-      document.querySelectorAll('.btn-cancelar-respuesta').forEach(btn => {
-        btn.addEventListener('click', function() {
-          const id = this.getAttribute('data-comentario');
-          // Oculta el formulario de respuesta
-          const formRespuesta = document.getElementById('form-respuesta-' + id);
-          if (formRespuesta) {
-            formRespuesta.style.display = 'none';
-          }
-          // Restaura el botón "Responder" a su estado original
-          const btnResponder = document.getElementById('btn-responder-' + id);
-          if (btnResponder) {
-            btnResponder.classList.remove('btn-primary');
-            btnResponder.classList.add('btn-outline-primary');
-          }
-        });
+document.addEventListener('DOMContentLoaded', function() {
+  // Manejo del botón "Responder"
+  document.querySelectorAll('.btn-responder-comentario').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const id = this.getAttribute('data-comentario');
+      // Oculta todos los formularios de respuesta
+      document.querySelectorAll('.form-respuesta-comentario').forEach(form => {
+        form.style.display = 'none';
       });
-
-      // Confirmación para eliminar comentario (sin cambios)
-      document.querySelectorAll('.btn-eliminar-comentario').forEach(btn => {
-        btn.addEventListener('click', async function() {
-          const id = this.getAttribute('data-comentario');
-          const result = await Swal.fire({
-            title: '¿Eliminar comentario?',
-            text: "¿Está seguro que desea eliminar este comentario?",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
-            confirmButtonText: 'Confirmar',
-            cancelButtonText: 'Cancelar'
-          });
-          if (result.isConfirmed) {
-            const formEliminar = document.getElementById('form-eliminar-' + id);
-            if (formEliminar) {
-              formEliminar.submit();
-            }
-          }
-        });
+      // Restaura todos los botones "Responder" a su estado original
+      document.querySelectorAll('.btn-responder-comentario').forEach(b => {
+        b.classList.remove('btn-primary');
+        b.classList.add('btn-outline-primary');
       });
+      // Muestra el formulario de respuesta para este comentario específico
+      const formRespuesta = document.getElementById('form-respuesta-' + id);
+      if (formRespuesta) {
+        formRespuesta.style.display = 'block';
+      }
+      // Marca el botón "Responder" de este comentario
+      const btnResponder = document.getElementById('btn-responder-' + id);
+      if (btnResponder) {
+        btnResponder.classList.remove('btn-outline-primary');
+        btnResponder.classList.add('btn-primary');
+      }
     });
-  </script>
+  });
+
+  // Manejo del botón "Cancelar"
+  document.querySelectorAll('.btn-cancelar-respuesta').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const id = this.getAttribute('data-comentario');
+      // Oculta el formulario de respuesta
+      const formRespuesta = document.getElementById('form-respuesta-' + id);
+      if (formRespuesta) {
+        formRespuesta.style.display = 'none';
+      }
+      // Restaura el botón "Responder" a su estado original
+      const btnResponder = document.getElementById('btn-responder-' + id);
+      if (btnResponder) {
+        btnResponder.classList.remove('btn-primary');
+        btnResponder.classList.add('btn-outline-primary');
+      }
+    });
+  });
+
+  // Confirmación para eliminar comentario (sin cambios)
+  document.querySelectorAll('.btn-eliminar-comentario').forEach(btn => {
+    btn.addEventListener('click', async function() {
+      const id = this.getAttribute('data-comentario');
+      const result = await Swal.fire({
+        title: '¿Eliminar comentario?',
+        text: "¿Está seguro que desea eliminar este comentario?",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Confirmar',
+        cancelButtonText: 'Cancelar'
+      });
+      if (result.isConfirmed) {
+        const formEliminar = document.getElementById('form-eliminar-' + id);
+        if (formEliminar) {
+          formEliminar.submit();
+        }
+      }
+    });
+  });
+});
+
+let huespedes = [];
+
+document.getElementById('btn-agregar-huesped').onclick = function() {
+  const maxHuespedes = parseInt(document.getElementById('lista-huespedes').dataset.maxHuespedes);
+  if (huespedes.length >= maxHuespedes) {
+    Swal.fire({
+      position: 'top-end',
+      icon: 'warning',
+      title: `No puedes agregar más de ${maxHuespedes} huésped${maxHuespedes > 1 ? 'es' : ''} para esta Vivienda.`,
+      showConfirmButton: false,
+      timer: 2000,
+      toast: true,
+      timerProgressBar: true
+    });
+    return;
+  }
+  document.getElementById('form-huesped').style.display = 'block';
+};
+
+document.getElementById('btn-cancelar-huesped').onclick = function() {
+  document.getElementById('form-huesped').style.display = 'none';
+  limpiarFormHuesped();
+};
+
+document.getElementById('btn-aceptar-huesped').onclick = function() {
+  // Limpiar errores previos
+  document.querySelectorAll('#form-huesped .error-message').forEach(el => el.remove());
+
+  // Validar cantidad máxima de huéspedes
+  const maxHuespedes = parseInt(document.getElementById('lista-huespedes').dataset.maxHuespedes);
+  if (huespedes.length >= maxHuespedes) {
+    Swal.fire({
+      icon: 'warning',
+      title: `No puedes agregar más de ${maxHuespedes} huésped${maxHuespedes > 1 ? 'es' : ''} para esta vivienda.`
+    });
+    return;
+  }
+
+  const nombre = document.getElementById('huesped-nombre').value.trim();
+  const apellido = document.getElementById('huesped-apellido').value.trim();
+  const dni = document.getElementById('huesped-dni').value.trim();
+  const fecha_nac = document.getElementById('huesped-fecha-nac').value;
+
+  let valido = true;
+
+  // Validar campos vacíos
+  if (!nombre) {
+    mostrarError('huesped-nombre', 'El nombre es obligatorio.');
+    valido = false;
+  }
+  if (!apellido) {
+    mostrarError('huesped-apellido', 'El apellido es obligatorio.');
+    valido = false;
+  }
+  if (!dni) {
+    mostrarError('huesped-dni', 'El DNI es obligatorio.');
+    valido = false;
+  }
+  if (!fecha_nac) {
+    mostrarError('huesped-fecha-nac', 'La fecha de nacimiento es obligatoria.');
+    valido = false;
+  }
+
+  // Validar nombre y apellido: solo letras
+  const soloLetras = /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/;
+  if (nombre && !soloLetras.test(nombre)) {
+    mostrarError('huesped-nombre', 'El nombre debe contener solo letras.');
+    valido = false;
+  }
+  if (apellido && !soloLetras.test(apellido)) {
+    mostrarError('huesped-apellido', 'El apellido debe contener solo letras.');
+    valido = false;
+  }
+
+  // Validar DNI: exactamente 8 dígitos
+  if (dni && !dni.match(/^\d{8}$/)) {
+    mostrarError('huesped-dni', 'El DNI debe tener exactamente 8 números.');
+    valido = false;
+  }
+
+  // Validar fecha de nacimiento: mayor de 18 años
+  if (fecha_nac) {
+    const fechaNacimiento = new Date(fecha_nac);
+    const hoy = new Date();
+    let edad = hoy.getFullYear() - fechaNacimiento.getFullYear();
+    const m = hoy.getMonth() - fechaNacimiento.getMonth();
+    if (m < 0 || (m === 0 && hoy.getDate() < fechaNacimiento.getDate())) {
+      edad--;
+    }
+    if (edad < 18) {
+      mostrarError('huesped-fecha-nac', 'El huésped debe ser mayor de 18 años.');
+      valido = false;
+    }
+  }
+
+  if (!valido) return;
+
+  huespedes.push({nombre, apellido, dni, fecha_nac});
+  actualizarListaHuespedes();
+  Swal.fire({
+    position: 'top-end',
+    icon: 'success',
+    title: 'Huésped agregado',
+    showConfirmButton: false,
+    timer: 2000,
+    toast: true,
+    timerProgressBar: true
+  });
+  document.getElementById('form-huesped').style.display = 'none';
+  limpiarFormHuesped();
+};
+
+function actualizarListaHuespedes() {
+  const ul = document.getElementById('lista-huespedes');
+  ul.innerHTML = '';
+  huespedes.forEach((h, idx) => {
+    const li = document.createElement('li');
+    li.className = 'list-group-item py-3';
+    li.innerHTML = `
+      <div class="row align-items-center">
+        <div class="col-1 text-center">
+          <i class="bi bi-person-fill text-primary fs-4"></i>
+        </div>
+        <div class="col-8">
+          <div><strong>${h.nombre} ${h.apellido}</strong></div>
+          <div class="text-muted small">
+            DNI: <span class="fw-semibold">${h.dni}</span> &nbsp;|&nbsp; Nac: <span class="fw-semibold">${h.fecha_nac}</span>
+          </div>
+        </div>
+        <div class="col-3 text-end">
+          <button type="button" class="btn btn-outline-danger btn-sm" onclick="eliminarHuesped(${idx})" title="Eliminar huésped">
+            <i class="bi bi-trash"></i>
+          </button>
+        </div>
+      </div>
+    `;
+    ul.appendChild(li);
+  });
+  document.getElementById('huespedes-json').value = JSON.stringify(huespedes);
+}
+
+function eliminarHuesped(idx) {
+  huespedes.splice(idx, 1);
+  actualizarListaHuespedes();
+  Swal.fire({
+    position: 'top-end',
+    icon: 'info',
+    title: 'Huésped eliminado',
+    showConfirmButton: false,
+    timer: 2000,
+    toast: true,
+    timerProgressBar: true
+  });
+}
+
+function limpiarFormHuesped() {
+  document.getElementById('huesped-nombre').value = '';
+  document.getElementById('huesped-apellido').value = '';
+  document.getElementById('huesped-dni').value = '';
+  document.getElementById('huesped-fecha-nac').value = '';
+}
+
+// Función para mostrar error debajo del campo
+function mostrarError(inputId, mensaje) {
+  const input = document.getElementById(inputId);
+  if (input && !input.parentNode.querySelector('.error-message')) {
+    const errorElement = document.createElement('div');
+    errorElement.className = 'error-message text-danger mt-1 small';
+    errorElement.textContent = mensaje;
+    input.parentNode.appendChild(errorElement);
+  }
+}
+
+// Limpiar errores al modificar un campo
+['huesped-nombre', 'huesped-apellido', 'huesped-dni', 'huesped-fecha-nac'].forEach(id => {
+  document.getElementById(id).addEventListener('input', function() {
+    const errorElement = this.parentNode.querySelector('.error-message');
+    if (errorElement) errorElement.remove();
+  });
+});
+</script>
 {% endblock %}

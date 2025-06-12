@@ -77,6 +77,13 @@
     <link rel="icon" type="image/png" href="{% static 'img/logo-alquiler-express-3.png' %}">
 </head>
 <body>
+  <div id="django-messages" style="display: none;">
+    {% if messages %}
+      {% for message in messages %}
+        <div class="django-message" data-tags="{{ message.tags }}" data-message="{{ message }}"></div>
+      {% endfor %}
+    {% endif %}
+  </div>
   <!-- Navbar igual a base_search.html, pero SIN el campo de búsqueda -->
   <nav class="navbar navbar-expand-lg navbar-light bg-white fixed-top shadow-sm px-4">
     <div class="navbar__container container-fluid d-flex align-items-center justify-content-between">
@@ -93,6 +100,11 @@
         <a href="{% url 'buscar_inmuebles' %}" class="btn btn-outline-secondary me-2">Inmuebles</a>
         <a href="{% url 'buscar_cocheras' %}" class="btn btn-outline-secondary me-2">Cocheras</a>
         {% if user.is_authenticated %}
+          {% if is_client %}
+            <a href="{% url 'reservas_usuario' %}" class="btn btn-outline-primary me-2">
+              <i class="bi bi-calendar-check"></i> Mis reservas
+            </a>
+          {% endif %}
           <!-- Notificaciones -->
           <div class="dropdown me-2">
             <button class="btn btn-outline-secondary position-relative dropdown-toggle"
@@ -264,5 +276,30 @@
 
   <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const messageElements = document.querySelectorAll('.django-message');
+
+messageElements.forEach(element => {
+    const tags = element.getAttribute('data-tags');
+    const message = element.getAttribute('data-message');
+    
+    // Mapear las etiquetas de Django a iconos de SweetAlert
+    let icon = 'info';
+    if (tags.includes('success')) icon = 'success';
+    if (tags.includes('error') || tags.includes('danger')) icon = 'error';
+    if (tags.includes('warning')) icon = 'warning';
+    
+    // Mostrar la notificación tipo toast
+    Swal.fire({
+        position: 'top-end',
+        icon: icon,
+        title: message,
+        showConfirmButton: false,
+        timer: 3000,
+        toast: true,
+        timerProgressBar: true
+    });
+});
+  </script>
 </body>
 </html>

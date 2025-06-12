@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Mis Reservas{% endblock %}
+
+{% block content %}
+<div class="container pt-4" style="margin-top: 70px;">
+  <h2 class="mb-4">Mis Reservas</h2>
+  {% if reservas %}
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Inmueble</th>
+            <th>Fecha de llegada</th>
+            <th>Fecha de salida</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for reserva in reservas %}
+          <tr>
+            <td>{{ reserva.id_reserva }}</td>
+            <td>{{ reserva.inmueble }}</td>
+            <td>{{ reserva.fecha_inicio|date:"d/m/Y" }}</td>
+            <td>{{ reserva.fecha_fin|date:"d/m/Y" }}</td>
+            <td>
+              <span class="badge 
+                {% if reserva.estado.nombre == 'Confirmada' %}bg-success
+                {% elif reserva.estado.nombre == 'Cancelada' %}bg-danger
+                {% elif reserva.estado.nombre == 'Rechazada' %}bg-secondary
+                {% elif reserva.estado.nombre == 'Pagada' %}bg-info
+                {% elif reserva.estado.nombre == 'Aprobada' %}bg-primary
+                {% elif reserva.estado.nombre == 'Pendiente' %}bg-warning
+                {% elif reserva.estado.nombre == 'Finalizada' %}bg-dark
+                {% else %}bg-warning{% endif %}">
+                {{ reserva.estado.nombre }}
+              </span>
+            </td>
+            <td>
+              <a href="{% url 'ver_detalle_reserva' reserva.id_reserva %}" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-eye"></i> Ver Detalles
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="alert alert-info">No tienes reservas registradas.</div>
+  {% endif %}
+</div>
+{% endblock %}

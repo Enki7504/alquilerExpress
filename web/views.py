@@ -60,6 +60,7 @@ from .models import (
     Provincia,
     Cochera,
     RespuestaComentario,
+    Huesped
 )
 
 # Importaciones de utilidades locales
@@ -269,7 +270,7 @@ def buscar_inmuebles(request):
     banios = request.GET.get('banios')
 
     # Solo mostrar inmuebles que NO estén en estado Eliminado ni Oculto
-    inmuebles = Inmueble.objects.exclude(estado__nombre__in=['Oculto'])
+    inmuebles = Inmueble.objects.exclude(estado__nombre__in=['Oculto','Eliminado'])
 
     if query:
         inmuebles = inmuebles.filter(nombre__icontains=query)
@@ -326,7 +327,7 @@ def buscar_cocheras(request):
     query = request.GET.get('q', '').strip()
     
     # Solo mostrar cocheras que NO estén en estado Eliminado ni Oculto
-    cocheras = Cochera.objects.exclude(estado__nombre__in=['Oculto'])
+    cocheras = Cochera.objects.exclude(estado__nombre__in=['Oculto','Eliminado'])
 
     if query:
         cocheras = cocheras.filter(nombre__icontains=query)
@@ -591,6 +592,9 @@ def is_admin_or_empleado(user):
     """Verifica si el usuario es un superusuario o pertenece al grupo 'empleado'."""
     return user.is_authenticated and (user.is_staff or user.groups.filter(name="empleado").exists())
 
+def is_client(user):
+    """Verifica si el usuario es un cliente."""
+    return user.is_authenticated and user.groups.filter(name="cliente").exists()
 
 ################################################################################################################
 # --- Vistas del Panel de Administración --- Gestion de Usuarios  --- 
@@ -904,6 +908,7 @@ def admin_inmuebles_editar(request, id_inmueble):
     if request.method == "POST":
         form = InmuebleForm(request.POST, request.FILES, instance=inmueble)
         if form.is_valid():
+            form.instance.nombre = inmueble.nombre
             inmueble = form.save()
             # Guardar nuevas imágenes
             imagenes = request.FILES.getlist('imagenes')
@@ -1092,6 +1097,7 @@ def admin_cocheras_editar(request, id_cochera):
     if request.method == "POST":
         form = CocheraForm(request.POST, request.FILES, instance=cochera)
         if form.is_valid():
+            form.instance.nombre = cochera.nombre
             cochera = form.save()
             # Guardar nuevas imágenes
             imagenes = request.FILES.getlist('imagenes')
@@ -1289,7 +1295,8 @@ def crear_reserva(request, id_inmueble):
     if request.method == 'POST':
         fecha_inicio = request.POST.get('fecha_inicio')
         fecha_fin = request.POST.get('fecha_fin')
-        
+       
+
         if not fecha_inicio or not fecha_fin:
             messages.error(request, 'Debes ingresar ambas fechas.')
             return redirect('detalle_inmueble', id_inmueble=id_inmueble)
@@ -1355,6 +1362,24 @@ def crear_reserva(request, id_inmueble):
                     inmueble=inmueble,
                     reserva=reserva
                 )
+
+            # --- GUARDAR HUÉSPEDES ---
+            huespedes_json = request.POST.get('huespedes_json')
+            if huespedes_json:
+                try:
+                    lista_huespedes = json.loads(huespedes_json)
+                    for h in lista_huespedes:
+                        Huesped.objects.create(
+                            reserva=reserva,
+                            nombre=h['nombre'],
+                            apellido=h['apellido'],
+                            dni=h['dni'],
+                            fecha_nacimiento=h['fecha_nac']
+                        )
+                except Exception as e:
+                    # Puedes loguear el error si lo deseas
+                    pass
+            # --- FIN GUARDADO HUÉSPEDES ---
 
             # Enviar notificación a todos los empleados
             # usando enviar_mail_a_empleados_sobre_reserva(id_reserva) de utils.py
@@ -1469,6 +1494,7 @@ def cambiar_estado_reserva(request, id_reserva):
     """
     reserva = get_object_or_404(Reserva, id_reserva=id_reserva)
     
+    reserva = get_object_or_404(Reserva, id_reserva=id_reserva)
     try:
         data = json.loads(request.body)
         nuevo_estado = data.get('estado')
@@ -1490,15 +1516,17 @@ def cambiar_estado_reserva(request, id_reserva):
             'Confirmada': ['Finalizada', 'Cancelada']
         }
         
-        if (reserva.estado and 
-            reserva.estado.nombre in transiciones_permitidas and 
-            nuevo_estado in transiciones_permitidas[reserva.estado.nombre]):
+        estado_actual = reserva.estado.nombre if reserva.estado else None
+        if (estado_actual in transiciones_permitidas and 
+            nuevo_estado in transiciones_permitidas[estado_actual]):
             
+            # Si pasa a Aprobada, setea aprobada_en
+            if nuevo_estado == "Aprobada":
+                reserva.aprobada_en = timezone.now()
             reserva.estado = estado
             reserva.save()
 
             # Registrar en el historial (reservaEstado)
-
             ReservaEstado.objects.create(
                 reserva=reserva,
                 estado=estado,
@@ -1832,3 +1860,52 @@ def admin_notificar_imprevisto(request):
     else:
         form = NotificarImprevistoForm()
     return render(request, "admin/admin_notificar_imprevisto.html", {"form": form})
+
+
+################################################################################################################
+# --- DETALLE DE RESERVAS  ---
+################################################################################################################
+
+@login_required
+def reservas_usuario(request):
+    """
+    Muestra todas las reservas del usuario autenticado.
+    """
+    reservas = Reserva.objects.filter(clienteinmueble__cliente=request.user.perfil).distinct().order_by('-fecha_inicio')
+    return render(request, 'reservas.html', {
+        'reservas': reservas
+    })
+
+def ver_detalle_reserva(request, id_reserva):
+    reserva = get_object_or_404(Reserva, id_reserva=id_reserva)
+    huespedes = reserva.huespedes.all()
+    tiempo_restante = None
+
+    if reserva.estado.nombre == "Aprobada" and reserva.aprobada_en:
+        limite = reserva.aprobada_en + timedelta(hours=24)
+        ahora = timezone.now()
+        tiempo_restante = (limite - ahora).total_seconds()
+        if tiempo_restante < 0:
+            tiempo_restante = 0
+
+    return render(request, 'reservas_detalle.html', {
+        'reserva': reserva,
+        'huespedes': huespedes,
+        'tiempo_restante': tiempo_restante,
+    })
+
+@require_POST
+@login_required
+def cancelar_reserva(request, id_reserva):
+    reserva = get_object_or_404(Reserva, id_reserva=id_reserva)
+    estado_cancelada = Estado.objects.get(nombre="Cancelada")
+    reserva.estado = estado_cancelada
+    reserva.save()
+    messages.success(request, "La reserva fue cancelada correctamente.")
+    return redirect('admin_reserva_detalle', id_reserva=id_reserva)
+
+@login_required
+def pagar_reserva(request, id_reserva):
+    # Aquí irá la lógica de pago en el futuro
+    messages.info(request, "La funcionalidad de pago estará disponible próximamente.")
+    return redirect('admin_reserva_detalle', id_reserva=id_reserva)
