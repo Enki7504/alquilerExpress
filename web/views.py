@@ -470,6 +470,17 @@ def detalle_inmueble(request, id_inmueble):
         ).exists()
         puede_reseñar = tiene_reserva_finalizada
 
+    # Datos del cliente autenticado para precargar como primer huésped
+    datos_cliente = None
+    if request.user.is_authenticated and hasattr(request.user, "perfil"):
+        perfil = request.user.perfil
+        datos_cliente = {
+            "nombre": perfil.usuario.first_name,
+            "apellido": perfil.usuario.last_name,
+            "dni": perfil.dni,
+            "fecha_nac": perfil.fecha_nacimiento.strftime("%Y-%m-%d") if perfil.fecha_nacimiento else "",
+        }
+
     return render(request, 'inmueble.html', {
         'inmueble': inmueble,
         'resenias': resenias,
@@ -486,6 +497,7 @@ def detalle_inmueble(request, id_inmueble):
         'is_admin_or_empleado': is_admin_or_empleado_var,
         'is_admin': is_admin_var,
         'puede_reseñar': puede_reseñar,
+        'datos_cliente': datos_cliente, 
     })
 
 def detalle_cochera(request, id_cochera):
@@ -2047,4 +2059,3 @@ def agregar_tarjeta(request):
     else:
         form = TarjetaForm()
     return render(request, 'agregar_tarjeta.html', {'form': form})
-
