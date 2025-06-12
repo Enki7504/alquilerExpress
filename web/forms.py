@@ -8,6 +8,7 @@ from .models import Perfil, Comentario, Inmueble, Estado, Cochera, Ciudad, Provi
 from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
+from django.db.models import Q
 
 class ComentarioForm(forms.ModelForm):
     class Meta:
@@ -129,6 +130,13 @@ class InmuebleForm(forms.ModelForm):
             self.fields['ciudad'].queryset = Ciudad.objects.filter(provincia=self.instance.provincia).order_by('nombre')
         else:
             self.fields['ciudad'].queryset = Ciudad.objects.none()
+        if self.instance.pk and self.instance.cochera:
+            cocheras = Cochera.objects.filter(
+                Q(estado__nombre="Disponible") | Q(pk=self.instance.cochera.pk)
+            )
+        else:
+            cocheras = Cochera.objects.filter(estado__nombre="Disponible")
+        self.fields['cochera'].queryset = cocheras
 
     class Meta:
         model = Inmueble
@@ -147,7 +155,7 @@ class InmuebleForm(forms.ModelForm):
             'cantidad_camas': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
             'cantidad_huespedes': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
             'precio_por_dia': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
-            'cochera': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'cochera': forms.Select(attrs={'class': 'form-select', 'id': 'cocheraSelect'}),
             'estado': forms.Select(attrs={'class': 'form-select'}),
         }
 
@@ -163,12 +171,30 @@ class InmuebleForm(forms.ModelForm):
     # Esto pone el estado de la cochera a "Oculto" cuando se guarda el inmueble
     def save(self, commit=True):
         inmueble = super().save(commit=False)
-        cochera = self.cleaned_data.get('cochera')
-        if cochera:
-            # Cambiar el estado de la cochera a "Oculto"
+        cochera_nueva = self.cleaned_data.get('cochera')
+        cochera_anterior = None
+
+        # Si el inmueble ya existe y tenía cochera asignada, la guardamos
+        if self.instance.pk:
+            inmueble_db = Inmueble.objects.get(pk=self.instance.pk)
+            cochera_anterior = inmueble_db.cochera
+
+        # Si se desasigna la cochera (se deja vacío)
+        if cochera_anterior and cochera_anterior != cochera_nueva:
+            # Cambiar el estado de la cochera anterior a "Disponible"
+            estado_disponible = Estado.objects.get(nombre="Disponible")
+            cochera_anterior.estado = estado_disponible
+            cochera_anterior.save()
+
+        # Si se asigna una nueva cochera
+        if cochera_nueva:
+            # Cambiar el estado de la cochera nueva a "Oculto"
             estado_oculto = Estado.objects.get(nombre="Oculto")
-            cochera.estado = estado_oculto
-            cochera.save()
+            cochera_nueva.estado = estado_oculto
+            cochera_nueva.save()
+
+        inmueble.cochera = cochera_nueva
+
         if commit:
             inmueble.save()
             self.save_m2m()

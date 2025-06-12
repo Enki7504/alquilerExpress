@@ -1,11 +1,11 @@
-from datetime import timedelta
+from datetime import date, timedelta
 
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.core.mail import send_mail
 from django.conf import settings
-from .models import ClienteInmueble, Reserva, Notificacion, Perfil
+from .models import ClienteInmueble, Reserva, Notificacion, Perfil, Estado
 
 #comando para ejecutar el script en consola
 # python manage.py shell
@@ -116,3 +116,96 @@ def crear_notificacion(usuario, mensaje):
     )
     print(f"Notificación creada para {usuario.usuario.username}: {mensaje}")
     return notificacion
+
+# Actuliza estado de un inmueble o cochera, recibe id_reserva
+def cambiar_estado_inmueble(id_reserva):
+    """
+    Actuliza el estado del inmueble o cochera asociado.
+    """
+    try:
+        reserva = Reserva.objects.get(id_reserva=id_reserva)
+        
+        # Cambiar el estado del inmueble o cochera
+
+        if reserva.inmueble:
+            if hay_reserva_confirmada_hoy(id_reserva):
+                # Buscar o crear el estado
+                estado_obj, _ = Estado.objects.get_or_create(nombre="Ocupado")
+            else:
+                # Buscar o crear el estado
+                estado_obj, _ = Estado.objects.get_or_create(nombre="Disponible")
+            inmueble = reserva.inmueble
+            inmueble.estado = estado_obj
+            inmueble.save()
+            print(f"Estado del inmueble #{inmueble.id_inmueble} cambiado a {estado_obj.nombre}.")
+        elif reserva.cochera:
+            cochera = reserva.cochera
+            if hay_reserva_confirmada_hoy(id_reserva):
+                # Buscar o crear el estado
+                estado_obj, _ = Estado.objects.get_or_create(nombre="Ocupado")
+            else:
+                # Buscar o crear el estado
+                estado_obj, _ = Estado.objects.get_or_create(nombre="Disponible")
+            cochera.estado = estado_obj
+            cochera.save()
+            print(f"Estado de la cochera #{cochera.id_cochera} cambiado a {estado_obj.nombre}.")
+        else:
+            print("Reserva no tiene asociado ni inmueble ni cochera.")
+            return False
+        return True
+    except Exception as e:
+        print("Error al cambiar estado de reserva:", e)
+        return False
+    
+def hay_reserva_confirmada_hoy(id_reserva):
+    """
+    Dado el id_reserva, busca si el inmueble y/o cochera asociados tienen una reserva en estado 'Confirmada'
+    que se superponga con ayer, hoy o mañana (date.today() - 1, date.today(), date.today() + 1).
+    Retorna True si existe, False si no.
+    """
+    try:
+        reserva = Reserva.objects.get(id_reserva=id_reserva)
+        hoy = date.today()
+        dias_a_verificar = [hoy - timedelta(days=1), hoy, hoy + timedelta(days=1)]
+
+        # Buscar en inmueble
+        if reserva.inmueble:
+            existe_inmueble = Reserva.objects.filter(
+                inmueble=reserva.inmueble,
+                estado__nombre="Confirmada"
+            ).exclude(id_reserva=reserva.id_reserva).filter(
+                # Al menos uno de los días está dentro del rango de la reserva
+                *(
+                    [
+                        (
+                            models.Q(fecha_inicio__lte=dia) &
+                            models.Q(fecha_fin__gte=dia)
+                        ) for dia in dias_a_verificar
+                    ]
+                )
+            ).exists()
+            if existe_inmueble:
+                return True
+
+        # Buscar en cochera
+        if reserva.cochera:
+            existe_cochera = Reserva.objects.filter(
+                cochera=reserva.cochera,
+                estado__nombre="Confirmada"
+            ).exclude(id_reserva=reserva.id_reserva).filter(
+                *(
+                    [
+                        (
+                            models.Q(fecha_inicio__lte=dia) &
+                            models.Q(fecha_fin__gte=dia)
+                        ) for dia in dias_a_verificar
+                    ]
+                )
+            ).exists()
+            if existe_cochera:
+                return True
+
+        return False
+    except Exception as e:
+        print("Error al buscar reserva confirmada:", e)
+        return False
