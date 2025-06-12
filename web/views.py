@@ -1319,11 +1319,19 @@ def admin_cocheras_eliminar(request, id_cochera):
 @user_passes_test(is_admin_or_empleado)
 def admin_cocheras_historial(request, id_cochera):
     """
-    Muestra el historial de estados de una cochera específica.
+    Muestra el historial de estados y reservas finalizadas/canceladas/rechazadas de una cochera específica.
     """
     cochera = get_object_or_404(Cochera, id_cochera=id_cochera)
     historial = CocheraEstado.objects.filter(cochera=cochera).order_by('-fecha_inicio')
-    return render(request, 'admin/admin_cocheras_historial.html', {'cochera': cochera, 'historial': historial})
+    reservas = Reserva.objects.filter(
+        cochera=cochera,
+        estado__nombre__in=['Cancelada', 'Rechazada', 'Finalizada']
+    ).order_by('-fecha_inicio')
+    return render(request, 'admin/admin_cocheras_historial.html', {
+        'cochera': cochera,
+        'historial': historial,
+        'reservas': reservas,
+    })
 
 @login_required
 @user_passes_test(is_admin_or_empleado)

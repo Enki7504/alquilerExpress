@@ -1,3 +1,4 @@
+<!-- filepath: c:\Users\Taiel\Desktop\alquilerExpress\web\templates\admin\admin_cocheras_historial.html -->
 {% extends 'admin/admin_base.html' %}
 {% load static %}
 
@@ -6,34 +7,55 @@
 {% block admin_content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
   <h1 class="h2">Historial de la Cochera: {{ cochera.nombre }}</h1>
-  <a href="{% url 'admin_cocheras' %}" class="btn btn-outline-secondary">Volver</a>
 </div>
 
-<div class="card shadow-sm">
+<div class="card shadow-sm mb-4">
   <div class="card-body">
+    <h5 class="card-title">Reservas Finalizadas, Canceladas y Rechazadas</h5>
     <div class="table-responsive">
       <table class="table table-hover">
         <thead>
           <tr>
+            <th>ID</th>
+            <th>Cliente</th>
+            <th>Fechas</th>
             <th>Estado</th>
-            <th>Fecha Inicio</th>
-            <th>Fecha Fin</th>
+            <th>Acciones</th>
           </tr>
         </thead>
         <tbody>
-          {% if historial %}
-            {% for registro in historial %}
-              <tr>
-                <td>{{ registro.estado.nombre }}</td>
-                <td>{{ registro.fecha_inicio|date:"d/m/Y" }}</td>
-                <td>{{ registro.fecha_fin|date:"d/m/Y" | default:"Activo" }}</td>
-              </tr>
-            {% endfor %}
-          {% else %}
-            <tr>
-              <td colspan="3" class="text-center">Aun no se concretaron alquileres para esta Cochera.</td>
-            </tr>
-          {% endif %}
+          {% for reserva in reservas %}
+          <tr>
+            <td>{{ reserva.id_reserva }}</td>
+            <td>
+              {% with relacion=reserva.clienteinmueble_set.first %}
+                {% if relacion and relacion.cliente %}
+                  {{ relacion.cliente.usuario.get_full_name|default:relacion.cliente.usuario.username }}
+                {% else %}
+                  Cliente no disponible
+                {% endif %}
+              {% endwith %}
+            </td>
+            <td>{{ reserva.fecha_inicio|date:"d/m/Y" }} - {{ reserva.fecha_fin|date:"d/m/Y" }}</td>
+            <td>
+              <span class="badge 
+                {% if reserva.estado.nombre == 'Finalizada' %}bg-dark
+                {% elif reserva.estado.nombre == 'Cancelada' %}bg-danger
+                {% elif reserva.estado.nombre == 'Rechazada' %}bg-secondary
+                {% else %}bg-warning{% endif %}">
+                {{ reserva.estado.nombre }}
+              </span>
+            </td>
+            <td>
+              <a href="{% url 'detalle_cochera' cochera.id_cochera %}" class="btn btn-sm btn-info">Ver Cochera</a>
+              <a href="{% url 'ver_detalle_reserva' reserva.id_reserva %}" class="btn btn-sm btn-secondary">Ver Detalle</a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="text-center">No hay reservas en el historial</td>
+          </tr>
+          {% endfor %}
         </tbody>
       </table>
     </div>
