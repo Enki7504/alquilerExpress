@@ -23,7 +23,7 @@
       <div class="row g-3">
         <div class="col-md-4">
           {{ form.nombre.label_tag }}
-          {{ form.nombre }}
+          <input type="text" name="nombre" id="id_nombre" class="form-control" value="{{ form.nombre.value }}" disabled>
           {{ form.nombre.errors }}
         </div>
         <div class="col-md-4">
