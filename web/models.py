@@ -222,3 +222,14 @@ class Huesped(models.Model):
 
     def __str__(self):
         return f"{self.nombre} {self.apellido} (DNI: {self.dni})"
+
+class Tarjeta(models.Model):
+    id_tarjeta = models.AutoField(primary_key=True)
+    numero = models.CharField(max_length=16)
+    nombre = models.CharField(max_length=100)
+    vencimiento = models.CharField(max_length=5)  # MM/AA
+    cvv = models.CharField(max_length=4)
+    saldo = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    def __str__(self):
+        return f"**** **** **** {self.numero[-4:]} ({self.nombre})"

@@ -60,7 +60,8 @@ from .models import (
     Provincia,
     Cochera,
     RespuestaComentario,
-    Huesped
+    Huesped,
+    Tarjeta
 )
 
 # Importaciones de utilidades locales
@@ -1604,7 +1605,7 @@ def cambiar_estado_reserva(request, id_reserva):
                         # Construir el link de pago
                         dominio = request.get_host()
                         protocolo = 'https' if request.is_secure() else 'http'
-                        url_pago = f"{protocolo}://{dominio}/simulador-mercadopago/?saldo={saldo}&precio={reserva.precio_total}&id_reserva={reserva.id_reserva}"
+                        url_pago = f"{protocolo}://{dominio}/reservas/{reserva.id_reserva}/pagar/"
                         cuerpo += f"\nAhora debe abonar la reserva, el total es de ${reserva.precio_total}.\n"
                         cuerpo += f"Debe pagar desde el siguiente enlace:\n{url_pago}\n"
                     elif nuevo_estado == "Pagada":
@@ -1624,7 +1625,7 @@ def cambiar_estado_reserva(request, id_reserva):
                     if nuevo_estado == "Aprobada":
                         dominio = request.get_host()
                         protocolo = 'https' if request.is_secure() else 'http'
-                        url_pago = f"{protocolo}://{dominio}/simulador-mercadopago/?saldo={saldo}&precio={reserva.precio_total}&id_reserva={reserva.id_reserva}"
+                        url_pago = f"{protocolo}://{dominio}/reservas/{reserva.id_reserva}/pagar/"
                         mensaje_notif = (
                             f"El estado de tu reserva #{reserva.id_reserva} ha cambiado a: {estado.nombre}."
                             f" Ahora debes abonar ${reserva.precio_total}. "
@@ -1673,7 +1674,7 @@ def cambiar_estado_reserva(request, id_reserva):
                         # Construir el link de pago
                         dominio = request.get_host()
                         protocolo = 'https' if request.is_secure() else 'http'
-                        url_pago = f"{protocolo}://{dominio}/simulador-mercadopago/?saldo={saldo}&precio={reserva.precio_total}&id_reserva={reserva.id_reserva}"
+                        url_pago = f"{protocolo}://{dominio}/reservas/{reserva.id_reserva}/pagar/"
                         cuerpo += f"\nAhora debe abonar la reserva, el total es de ${reserva.precio_total}.\n"
                         cuerpo += f"Debe pagar desde el siguiente enlace:\n{url_pago}\n"
                     elif nuevo_estado == "Pagada":
@@ -1692,7 +1693,7 @@ def cambiar_estado_reserva(request, id_reserva):
                     if nuevo_estado == "Aprobada":
                         dominio = request.get_host()
                         protocolo = 'https' if request.is_secure() else 'http'
-                        url_pago = f"{protocolo}://{dominio}/simulador-mercadopago/?saldo={saldo}&precio={reserva.precio_total}&id_reserva={reserva.id_reserva}"
+                        url_pago = f"{protocolo}://{dominio}/reservas/{reserva.id_reserva}/pagar/"
                         mensaje_notif = (
                             f"El estado de tu reserva #{reserva.id_reserva} ha cambiado a: {estado.nombre}."
                             f" Ahora debes abonar ${reserva.precio_total}. "
@@ -1829,7 +1830,7 @@ def eliminar_comentario(request, id_comentario):
         messages.success(request, "Comentario eliminado correctamente.")
     return redirect(request.META.get('HTTP_REFERER', 'index'))
 
-@login_required
+
 def simulador_mercadopago(request):
     saldo = request.GET.get('saldo', '0.00')
     precio = request.GET.get('precio', '0.00')
@@ -1920,6 +1921,7 @@ def reservas_usuario(request):
         'reservas': reservas
     })
 
+@login_required
 def ver_detalle_reserva(request, id_reserva):
     reserva = get_object_or_404(Reserva, id_reserva=id_reserva)
     huespedes = reserva.huespedes.all()
@@ -1931,11 +1933,13 @@ def ver_detalle_reserva(request, id_reserva):
         tiempo_restante = (limite - ahora).total_seconds()
         if tiempo_restante < 0:
             tiempo_restante = 0
+    es_admin_o_empleado = is_admin_or_empleado(request.user)
 
     return render(request, 'reservas_detalle.html', {
         'reserva': reserva,
         'huespedes': huespedes,
         'tiempo_restante': tiempo_restante,
+        'is_admin_or_empleado': es_admin_o_empleado,
     })
 
 @require_POST
@@ -1945,12 +1949,86 @@ def cancelar_reserva(request, id_reserva):
     estado_cancelada = Estado.objects.get(nombre="Cancelada")
     reserva.estado = estado_cancelada
     reserva.save()
-    messages.success(request, "La reserva fue cancelada correctamente.")
-    return redirect('admin_reserva_detalle', id_reserva=id_reserva)
+    mensaje = "La reserva fue cancelada correctamente."
+    # Si es una petición AJAX, devolvé JSON
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({
+            'success': True,
+            'mensaje': mensaje
+        })
+    # Redirección tradicional
+    messages.success(request, mensaje)
+    return redirect('reservas_usuario')
 
-@login_required
 def pagar_reserva(request, id_reserva):
-    # Aquí irá la lógica de pago en el futuro
-    messages.info(request, "La funcionalidad de pago estará disponible próximamente.")
-    return redirect('admin_reserva_detalle', id_reserva=id_reserva)
+    reserva = get_object_or_404(Reserva, id_reserva=id_reserva)
+    tarjetas = Tarjeta.objects.all()  # <-- Todas las tarjetas, sin filtro por usuario
+    saldo = tarjetas[0].saldo if tarjetas else 0
+    precio = reserva.precio_total
+    if request.method == "POST":
+        data = json.loads(request.body)
+        id_reserva = data.get('id_reserva')
+        try:
+            reserva = Reserva.objects.get(id_reserva=id_reserva)
+            estado_actual = reserva.estado.nombre
+
+            if estado_actual in ['Cancelada', 'Rechazada']:
+                return JsonResponse({'success': False, 'error': 'La reserva fue rechazada.'}, status=400)
+            if estado_actual in ['Pagada', 'Confirmada', 'Finalizada', 'Terminada']:
+                return JsonResponse({'success': False, 'error': 'La reserva ya fue pagada previamente.'}, status=400)
+            if estado_actual != 'Aprobada':
+                return JsonResponse({'success': False, 'error': 'La reserva no está en estado "Aprobada".'}, status=400)
+
+            # --- Verificar que no hayan pasado más de 24 horas desde que fue aprobada ---
+            aprobada_estado = ReservaEstado.objects.filter(
+                reserva=reserva,
+                estado__nombre='Aprobada'
+            ).order_by('-fecha').first()
+            if not aprobada_estado:
+                return JsonResponse({'success': False, 'error': 'La reserva no está en estado "Aprobada"'}, status=400)
+            tiempo_aprobada = aprobada_estado.fecha
+            ahora = timezone.now()
+            if ahora - tiempo_aprobada > timedelta(hours=24):
+                # Cambiar estado a Cancelada
+                estado_cancelada = Estado.objects.get(nombre='Cancelada')
+                reserva.estado = estado_cancelada
+                reserva.save()
+                return JsonResponse({'success': False, 'error': 'El tiempo para pagar la reserva ha expirado (más de 24 horas desde la aprobación).'}, status=400)
+            # ---------------------------------------------------------------------------
+
+            estado_pagada = Estado.objects.get(nombre='Pagada')
+            reserva.estado = estado_pagada
+            reserva.save()
+            # Notificación al empleado asignado
+            empleado_asignado = reserva.inmueble.empleado if reserva.inmueble else reserva.cochera.empleado
+            if empleado_asignado:
+                crear_notificacion(
+                    usuario=empleado_asignado,
+                    mensaje=f"La reserva #{reserva.id_reserva} ha sido pagada por el cliente {request.user.perfil}.",
+                )
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=400)
+    return render(request, 'simulador_mercadopago.html', {
+        'saldo': saldo,
+        'precio': precio,
+        'id_reserva': id_reserva,
+        'tarjetas': tarjetas,
+    })
+
+
+
+def agregar_tarjeta(request):
+    from .forms import TarjetaForm
+    if request.method == 'POST':
+        form = TarjetaForm(request.POST)
+        if form.is_valid():
+            tarjeta = form.save(commit=False)
+            tarjeta.saldo = 0  # Saldo inicial ficticio
+            tarjeta.save()
+            messages.success(request, "Tarjeta agregada correctamente.")
+            return redirect('pagar_reserva', id_reserva=request.GET.get('id_reserva'))
+    else:
+        form = TarjetaForm()
+    return render(request, 'agregar_tarjeta.html', {'form': form})
 

@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from datetime import date
 
 from .models import Cochera, Comentario, Estado, Inmueble, Perfil, Resenia, RespuestaComentario
-from .models import Perfil, Comentario, Inmueble, Estado, Cochera, Ciudad, Provincia
+from .models import Perfil, Comentario, Inmueble, Estado, Cochera, Ciudad, Provincia, Tarjeta
 from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
@@ -567,3 +567,14 @@ class NotificarImprevistoForm(forms.Form):
         widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
         required=True
     )
+
+class TarjetaForm(forms.ModelForm):
+    class Meta:
+        model = Tarjeta
+        fields = ['numero', 'nombre', 'vencimiento', 'cvv']
+        widgets = {
+            'numero': forms.TextInput(attrs={'class': 'form-control', 'maxlength': 16, 'placeholder': 'Número de tarjeta'}),
+            'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre en la tarjeta'}),
+            'vencimiento': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'MM/AA'}),
+            'cvv': forms.PasswordInput(attrs={'class': 'form-control', 'maxlength': 4, 'placeholder': 'CVV'}),
+        }
