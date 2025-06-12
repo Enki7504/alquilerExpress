@@ -910,6 +910,7 @@ def admin_inmuebles_editar(request, id_inmueble):
     if request.method == "POST":
         form = InmuebleForm(request.POST, request.FILES, instance=inmueble)
         if form.is_valid():
+            form.instance.nombre = inmueble.nombre
             inmueble = form.save()
             # Guardar nuevas imágenes
             imagenes = request.FILES.getlist('imagenes')
@@ -1098,6 +1099,7 @@ def admin_cocheras_editar(request, id_cochera):
     if request.method == "POST":
         form = CocheraForm(request.POST, request.FILES, instance=cochera)
         if form.is_valid():
+            form.instance.nombre = cochera.nombre
             cochera = form.save()
             # Guardar nuevas imágenes
             imagenes = request.FILES.getlist('imagenes')

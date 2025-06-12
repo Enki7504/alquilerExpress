@@ -23,7 +23,7 @@
       <div class="row g-3">
         <div class="col-md-4">
           {{ form.nombre.label_tag }}
-          <input type="text" name="nombre" id="id_nombre" class="form-control" value="{{ form.nombre.value }}" disabled>
+          <input type="text" name="nombre" id="id_nombre" class="form-control bg-light text-muted" value="{{ form.nombre.value }}" readonly style="pointer-events: none; opacity: 0.7;">
           {{ form.nombre.errors }}
         </div>
         <div class="col-md-4">
