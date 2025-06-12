@@ -10,6 +10,7 @@ urlpatterns = [
     path('logout/', views.logout_view, name='logout'),
     path("loginAdmin/", views.loginAdmin, name="loginAdmin"), # lo dejo para poder testear el login de admin solo, pero se puede eliminar
     path("loginAdmin/2fa/", views.loginAdmin_2fa, name="loginAdmin_2fa"),
+    path('loginAdmin/2fa/reenviar/', views.loginAdmin_2fa_reenviar, name='loginAdmin_2fa_reenviar'),
     path('register/', views.register, name='register'),
     # Busquedas
     path('buscar-inmuebles/', views.buscar_inmuebles, name='buscar_inmuebles'),
