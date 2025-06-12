@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+import random
 from django.contrib.auth.models import User
 from django.db import models
 from django.utils import timezone
@@ -178,11 +179,19 @@ class CocheraImagen(models.Model):
 class LoginOTP(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     codigo = models.CharField(max_length=6)
-    creado_en = models.DateTimeField(auto_now_add=True)
+    creado_en = models.DateTimeField(default=timezone.now)
 
     def is_valido(self):
-        # Verifica si el código es válido (dentro de 1 minuto)
-        return timezone.now() < self.creado_en + timedelta(minutes=1)
+        return (timezone.now() - self.creado_en).total_seconds() < 60
+
+    @staticmethod
+    def generar_para_usuario(user):
+        codigo = f"{random.randint(0, 999999):06d}"
+        otp_obj, _ = LoginOTP.objects.update_or_create(
+            user=user,
+            defaults={"codigo": codigo, "creado_en": timezone.now()},
+        )
+        return otp_obj
 
 class Notificacion(models.Model):
     usuario = models.ForeignKey(Perfil, on_delete=models.CASCADE)

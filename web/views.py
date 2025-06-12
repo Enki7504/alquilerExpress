@@ -209,32 +209,66 @@ def loginAdmin_2fa(request):
     Vista para la verificación de dos factores (2FA) para administradores/empleados.
     Verifica el código OTP ingresado por el usuario.
     """
+    tiempo_restante = 59
+    error = None
+
+    if "username_otp" in request.session:
+        try:
+            user = User.objects.get(username=request.session["username_otp"])
+            otp_obj = LoginOTP.objects.get(user=user)
+            expiracion = otp_obj.creado_en + timedelta(minutes=1)
+            ahora = timezone.now()
+            tiempo_restante = int((expiracion - ahora).total_seconds())
+            if tiempo_restante <= 0:
+                error = "El tiempo para ingresar el código ha expirado. Vuelva a iniciar sesión."
+                tiempo_restante = 0 
+        except (User.DoesNotExist, LoginOTP.DoesNotExist):
+            tiempo_restante = 0
+
     if request.method == "POST":
         codigo_ingresado = request.POST.get("codigo")
-        username = request.session.get("username_otp")
 
-        if not username:
-            messages.error(request, 'Sesión 2FA inválida o expirada. Por favor, inicia sesión de nuevo.')
-            return redirect("login") # Redirigir a login en lugar de loginAdmin
-
-        try:
-            user = User.objects.get(username=username)
-            otp_obj = LoginOTP.objects.get(user=user)
-        except (User.DoesNotExist, LoginOTP.DoesNotExist):
-            # Si no encuentra el usuario o el OTP, significa que no hay sesión válida para 2FA
-            messages.error(request, 'Sesión 2FA inválida o expirada. Por favor, inicia sesión de nuevo.')
-            return redirect("login")
-
-        if otp_obj.is_valido() and otp_obj.codigo == codigo_ingresado:
+        if tiempo_restante <= 0:
+            error = "El tiempo para ingresar el código ha expirado. Vuelva a iniciar sesión."
+        elif not otp_obj.is_valido():
+            error = "El código ha expirado. Vuelva a iniciar sesión."
+        elif otp_obj.codigo != codigo_ingresado:
+            error = "Código inválido."
+        else:
             login(request, user)
-            request.session.pop("username_otp", None) # Usar .pop() para evitar KeyError
+            request.session.pop("username_otp", None)
             otp_obj.delete()
             return redirect("/panel")
-        else:
-            messages.error(request, "Código inválido o expirado.")
-            return render(request, "loginAdmin_2fa.html", {"error": "Código inválido o expirado"})
 
-    return render(request, "loginAdmin_2fa.html")
+        return render(request, "loginAdmin_2fa.html", {
+            "error": error,
+            "tiempo_restante": max(tiempo_restante, 0)
+        })
+
+    return render(request, "loginAdmin_2fa.html", {
+        "error": None,
+        "tiempo_restante": tiempo_restante
+    })
+
+def loginAdmin_2fa_reenviar(request):
+    if request.method == "POST":
+        username = request.session.get("username_otp")
+        if not username:
+            return JsonResponse({"success": False, "error": "Sesión inválida."})
+        try:
+            user = User.objects.get(username=username)
+            nuevo_codigo = LoginOTP.generar_para_usuario(user)
+            send_mail(
+                "Código de verificación",
+                f"Tu código para ingresar al panel administrativo es: {nuevo_codigo.codigo}",
+                settings.DEFAULT_FROM_EMAIL,
+                [user.email],
+                fail_silently=False,
+            )
+            return JsonResponse({"success": True, "tiempo_restante": 60})
+        except Exception as e:
+            return JsonResponse({"success": False, "error": str(e)})
+    return JsonResponse({"success": False, "error": "Método no permitido."})
 
 def verify_admin_link(request, uidb64, token):
     """
