@@ -23,7 +23,15 @@
           {% for reserva in reservas %}
           <tr>
             <td>{{ reserva.id_reserva }}</td>
-            <td>{{ reserva.inmueble }}</td>
+            <td>
+              {% if reserva.inmueble %}
+                {{ reserva.inmueble }}
+              {% elif reserva.cochera %}
+                {{ reserva.cochera }}
+              {% else %}
+                -
+              {% endif %}
+            </td>
             <td>{{ reserva.fecha_inicio|date:"d/m/Y" }}</td>
             <td>{{ reserva.fecha_fin|date:"d/m/Y" }}</td>
             <td>
