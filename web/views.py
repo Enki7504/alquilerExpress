@@ -1496,6 +1496,7 @@ def cambiar_estado_reserva(request, id_reserva):
     """
     reserva = get_object_or_404(Reserva, id_reserva=id_reserva)
     
+    reserva = get_object_or_404(Reserva, id_reserva=id_reserva)
     try:
         data = json.loads(request.body)
         nuevo_estado = data.get('estado')
@@ -1517,15 +1518,17 @@ def cambiar_estado_reserva(request, id_reserva):
             'Confirmada': ['Finalizada', 'Cancelada']
         }
         
-        if (reserva.estado and 
-            reserva.estado.nombre in transiciones_permitidas and 
-            nuevo_estado in transiciones_permitidas[reserva.estado.nombre]):
+        estado_actual = reserva.estado.nombre if reserva.estado else None
+        if (estado_actual in transiciones_permitidas and 
+            nuevo_estado in transiciones_permitidas[estado_actual]):
             
+            # Si pasa a Aprobada, setea aprobada_en
+            if nuevo_estado == "Aprobada":
+                reserva.aprobada_en = timezone.now()
             reserva.estado = estado
             reserva.save()
 
             # Registrar en el historial (reservaEstado)
-
             ReservaEstado.objects.create(
                 reserva=reserva,
                 estado=estado,
@@ -1878,9 +1881,19 @@ def reservas_usuario(request):
 def ver_detalle_reserva(request, id_reserva):
     reserva = get_object_or_404(Reserva, id_reserva=id_reserva)
     huespedes = reserva.huespedes.all()
+    tiempo_restante = None
+
+    if reserva.estado.nombre == "Aprobada" and reserva.aprobada_en:
+        limite = reserva.aprobada_en + timedelta(hours=24)
+        ahora = timezone.now()
+        tiempo_restante = (limite - ahora).total_seconds()
+        if tiempo_restante < 0:
+            tiempo_restante = 0
+
     return render(request, 'reservas_detalle.html', {
         'reserva': reserva,
         'huespedes': huespedes,
+        'tiempo_restante': tiempo_restante,
     })
 
 @require_POST

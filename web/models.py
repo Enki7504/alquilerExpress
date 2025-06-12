@@ -93,6 +93,7 @@ class Reserva(models.Model):
     inmueble = models.ForeignKey(Inmueble, null=True, blank=True, on_delete=models.SET_NULL)
     cochera = models.ForeignKey(Cochera, null=True, blank=True, on_delete=models.SET_NULL)
     descripcion = models.TextField()
+    aprobada_en = models.DateTimeField(null=True, blank=True)
     
     def cliente(self):
         rel = ClienteInmueble.objects.filter(reserva=self).first()

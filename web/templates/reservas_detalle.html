@@ -89,9 +89,23 @@
       <div class="mt-4 d-flex flex-wrap gap-2 align-items-center">
         {% if reserva.estado.nombre != "Cancelada" and reserva.estado.nombre != "Finalizada" %}
           {% if reserva.estado.nombre == "Aprobada" %}
-            <a href="{% url 'pagar_reserva' reserva.id_reserva %}" class="btn btn-success d-flex align-items-center h-100">
-              <i class="bi bi-cash-coin me-1"></i> Pagar reserva
-            </a>
+            {% if tiempo_restante and tiempo_restante > 0 %}
+              <div class="alert alert-info d-flex align-items-center gap-2 mb-0 rounded-pill shadow-sm border-0 py-2 px-3" id="timer-pago" style="background: #e3f6fd; font-size: 1rem;">
+                <i class="bi bi-clock-history text-primary" style="font-size: 1.2rem;"></i>
+                <span class="fw-semibold">
+                  <span class="d-none d-md-inline">Tiempo restante para pagar:</span>
+                  <span id="timer" class="ms-1 text-dark" style="font-family: monospace; font-size: 1.1rem;"></span>
+                </span>
+              </div>
+              <a href="{% url 'pagar_reserva' reserva.id_reserva %}" class="btn btn-success d-flex align-items-center h-100" id="pagar-btn">
+                <i class="bi bi-cash-coin me-1"></i> Pagar reserva
+              </a>
+            {% else %}
+              <div class="alert alert-danger d-flex align-items-center gap-2 mb-3">
+                <i class="bi bi-clock-history fs-5"></i>
+                <span>El tiempo para pagar la reserva ha expirado.</span>
+              </div>
+            {% endif %}
           {% endif %}
           <form method="post" action="{% url 'cancelar_reserva' reserva.id_reserva %}" onsubmit="return confirm('¿Seguro que deseas cancelar la reserva?');" class="m-0">
             {% csrf_token %}
@@ -104,4 +118,31 @@
     </div>
   </div>
 </div>
+
+{% if tiempo_restante and tiempo_restante > 0 %}
+<script>
+  let tiempo = Number("{{ tiempo_restante|floatformat:0 }}");
+  function actualizarTimer() {
+    if (tiempo <= 0) {
+      document.getElementById('timer').innerText = "Tiempo agotado";
+      const btn = document.getElementById('pagar-btn');
+      if (btn) {
+        btn.classList.add('disabled');
+        btn.setAttribute('aria-disabled', 'true');
+        btn.onclick = function(e){ e.preventDefault(); };
+      }
+      return;
+    }
+    let horas = Math.floor(tiempo / 3600);
+    let minutos = Math.floor((tiempo % 3600) / 60);
+    let segundos = Math.floor(tiempo % 60);
+    document.getElementById('timer').innerText =
+      `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}:${segundos.toString().padStart(2, '0')}`;
+    tiempo--;
+    setTimeout(actualizarTimer, 1000);
+  }
+  actualizarTimer();
+</script>
+{% endif %}
+
 {% endblock %}
