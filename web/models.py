@@ -8,6 +8,7 @@ class Perfil(models.Model):
     id_perfil = models.AutoField(primary_key=True)
     usuario = models.OneToOneField(User, on_delete=models.CASCADE)
     dni = models.CharField(max_length=20)
+    fecha_nacimiento = models.DateField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.usuario.first_name} {self.usuario.last_name} - DNI: {self.dni}"

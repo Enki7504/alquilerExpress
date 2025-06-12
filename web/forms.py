@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
+from datetime import date
 
 from .models import Cochera, Comentario, Estado, Inmueble, Perfil, Resenia, RespuestaComentario
 from .models import Perfil, Comentario, Inmueble, Estado, Cochera, Ciudad, Provincia
@@ -27,10 +28,15 @@ class ComentarioForm(forms.ModelForm):
 class RegistroUsuarioForm(UserCreationForm):
     dni = forms.CharField(max_length=20, required=True, label="DNI")
     email = forms.EmailField(required=True, label="Correo electrónico")
+    fecha_nacimiento = forms.DateField(
+        label="Fecha de nacimiento",
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+        required=True
+    )
 
     class Meta:
         model = User
-        fields = ("email", "first_name", "last_name", "password1", "password2")  # Quitar "dni" de aquí
+        fields = ("email", "first_name", "last_name", "fecha_nacimiento", "dni", "password1", "password2")
 
     def clean_email(self):
         email = self.cleaned_data["email"]
@@ -44,6 +50,14 @@ class RegistroUsuarioForm(UserCreationForm):
             raise forms.ValidationError("Este DNI ya está registrado.")
         return dni
 
+    def clean_fecha_nacimiento(self):
+        fecha = self.cleaned_data["fecha_nacimiento"]
+        hoy = date.today()
+        edad = hoy.year - fecha.year - ((hoy.month, hoy.day) < (fecha.month, fecha.day))
+        if edad < 18:
+            raise forms.ValidationError("Debes ser mayor de 18 años.")
+        return fecha
+
     def save(self, commit=True):
         user = super().save(commit=False)
         email = self.cleaned_data["email"]
@@ -52,9 +66,10 @@ class RegistroUsuarioForm(UserCreationForm):
         if commit:
             user.save()
             dni = self.cleaned_data["dni"]
+            fecha_nacimiento = self.cleaned_data["fecha_nacimiento"]
             # Solo crear el perfil si no existe
             if not Perfil.objects.filter(usuario=user).exists():
-                Perfil.objects.create(usuario=user, dni=dni)
+                Perfil.objects.create(usuario=user, dni=dni, fecha_nacimiento=fecha_nacimiento)
             # Asignar grupo cliente
             grupo_cliente, _ = Group.objects.get_or_create(name="cliente")
             user.groups.add(grupo_cliente)
@@ -379,6 +394,11 @@ class EmpleadoAdminCreationForm(forms.Form):
             )
         ]
     )
+    fecha_nacimiento = forms.DateField(
+        label="Fecha de nacimiento",
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+        required=True
+    )
 
     def clean_email(self):
         email = self.cleaned_data['email']
@@ -392,6 +412,14 @@ class EmpleadoAdminCreationForm(forms.Form):
             raise forms.ValidationError("Ya existe un usuario con este DNI.")
         return dni
 
+    def clean_fecha_nacimiento(self):
+        fecha = self.cleaned_data["fecha_nacimiento"]
+        hoy = date.today()
+        edad = hoy.year - fecha.year - ((hoy.month, hoy.day) < (fecha.month, fecha.day))
+        if edad < 18:
+            raise forms.ValidationError("El empleado debe ser mayor de 18 años.")
+        return fecha
+    
 class ClienteAdminCreationForm(forms.Form):
     first_name = forms.CharField(
         label="Nombre",
@@ -424,6 +452,11 @@ class ClienteAdminCreationForm(forms.Form):
             )
         ]
     )
+    fecha_nacimiento = forms.DateField(
+        label="Fecha de nacimiento",
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+        required=True
+    )
 
     def clean_email(self):
         email = self.cleaned_data["email"]
@@ -436,6 +469,14 @@ class ClienteAdminCreationForm(forms.Form):
         if Perfil.objects.filter(dni=dni).exists():
             raise forms.ValidationError("Ya existe un usuario con este DNI.")
         return dni
+    
+    def clean_fecha_nacimiento(self):
+        fecha = self.cleaned_data["fecha_nacimiento"]
+        hoy = date.today()
+        edad = hoy.year - fecha.year - ((hoy.month, hoy.day) < (fecha.month, fecha.day))
+        if edad < 18:
+            raise forms.ValidationError("El cliente debe ser mayor de 18 años.")
+        return fecha
 
 class ChangePasswordForm(forms.Form):
     current_password = forms.CharField(

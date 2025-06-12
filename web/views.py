@@ -629,7 +629,11 @@ def admin_alta_empleados(request):
             firstlogin_empleado, _ = Group.objects.get_or_create(name="firstloginempleado")
             user.groups.add(grupo_empleado)
             user.groups.add(firstlogin_empleado)
-            Perfil.objects.create(usuario=user, dni=data["dni"])
+            Perfil.objects.create(
+                usuario=user,
+                dni=form.cleaned_data['dni'],
+                fecha_nacimiento=form.cleaned_data['fecha_nacimiento']
+            )
             # Enviar mail con la contraseña
             try:
                 send_mail(
@@ -702,7 +706,11 @@ def admin_alta_cliente(request):
             firstlogin_cliente, _ = Group.objects.get_or_create(name="firstlogincliente")
             user.groups.add(grupo_cliente)
             user.groups.add(firstlogin_cliente)
-            Perfil.objects.create(usuario=user, dni=data["dni"])
+            Perfil.objects.create(
+                usuario=user,
+                dni=form.cleaned_data['dni'],
+                fecha_nacimiento=form.cleaned_data['fecha_nacimiento']
+            )
             # Enviar mail con la contraseña
             try:
                 send_mail(
