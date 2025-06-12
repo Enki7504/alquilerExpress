@@ -67,7 +67,8 @@ from .models import (
 # Importaciones de utilidades locales
 from .utils import (
     email_link_token,
-    crear_notificacion
+    crear_notificacion,
+    cambiar_estado_inmueble
 )
 
 # para enviar correos a empleados sobre reservas
@@ -1394,7 +1395,7 @@ def crear_reserva(request, id_inmueble):
 
             # Enviar notificación a todos los empleados
             # usando enviar_mail_a_empleados_sobre_reserva(id_reserva) de utils.py
-            enviar_mail_a_empleados_sobre_reserva(reserva.id_reserva)            
+            # enviar_mail_a_empleados_sobre_reserva(reserva.id_reserva)            
             
             messages.success(request, 'Reserva creada exitosamente!')
             return redirect('detalle_inmueble', id_inmueble=id_inmueble)
@@ -1485,7 +1486,7 @@ def crear_reserva_cochera(request, id_cochera):
 
             # Enviar notificación a todos los empleados
             # usando enviar_mail_a_empleados_sobre_reserva(id_reserva) de utils.py
-            enviar_mail_a_empleados_sobre_reserva(reserva.id_reserva)    
+            # enviar_mail_a_empleados_sobre_reserva(reserva.id_reserva)    
             
             messages.success(request, 'Reserva creada exitosamente!')
             return redirect('detalle_cochera', id_cochera=id_cochera)
@@ -1585,6 +1586,8 @@ def cambiar_estado_reserva(request, id_reserva):
                     elif nuevo_estado == "Rechazada":
                         cuerpo += f"\nLa reserva ha sido rechazada. Si tiene alguna pregunta, por favor contáctenos.\n"
 
+                    # Actualiza el estado del inmueble si es necesario
+                    cambiar_estado_inmueble(reserva.id_reserva)
 
                     cuerpo += f"\nGracias por usar Alquiler Express."
 
@@ -1655,6 +1658,9 @@ def cambiar_estado_reserva(request, id_reserva):
                         cuerpo += f"\nLa reserva ha sido rechazada. Si tiene alguna pregunta, por favor contáctenos.\n"
 
                     cuerpo += f"\nGracias por usar Alquiler Express."
+
+                    # Actualiza el estado de la cochera si es necesario
+                    cambiar_estado_inmueble(reserva.id_reserva)
                     
                     if nuevo_estado == "Aprobada":
                         dominio = request.get_host()

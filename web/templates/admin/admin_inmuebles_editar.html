@@ -82,11 +82,10 @@
           {{ form.politica_cancelacion.errors }}
         </div>
         <div class="col-md-4">
-          <div id="cocheraSelectDiv" class="{% if form.cochera.value %}block{% else %}none{% endif %}">
-            {{ form.cochera.label_tag }}
-            {{ form.cochera }}
-            {{ form.cochera.errors }}
-          </div>
+          {{ form.cochera.label_tag }}
+          {{ form.cochera }}
+          {{ form.cochera.errors }}
+          <small class="text-muted">Dejar vacío para desasignar cochera.</small>
         </div>
         <div class="col-md-4">
           {{ form.estado.label_tag }}
@@ -196,7 +195,7 @@ document.getElementById('inmuebleForm').addEventListener('submit', function(e) {
     .then(data => {
         if (data.success) {
             // Lógica de éxito (sin cambios)
-                        Swal.fire({
+            Swal.fire({
                 title: '¡Éxito!',
                 text: 'Los cambios se guardaron correctamente',
                 icon: 'success',
