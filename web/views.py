@@ -1109,7 +1109,7 @@ def admin_inmuebles_eliminar(request, id_inmueble):
 @user_passes_test(is_admin_or_empleado)
 def admin_inmuebles_historial(request, id_inmueble):
     """
-    Muestra el historial de estados de un inmueble específico.
+    Muestra el historial de estados y reservas finalizadas/canceladas/rechazadas de un inmueble específico.
     """
     inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
     historial = InmuebleEstado.objects.filter(inmueble=inmueble).order_by('-fecha_inicio')
@@ -1126,7 +1126,28 @@ def admin_inmuebles_reservas(request, id_inmueble):
         inmueble=inmueble,
         estado__nombre__in=["Pendiente", "Aprobada", "Pagada", "Confirmada"]
     ).order_by('-fecha_inicio')
-    return render(request, 'admin/admin_inmuebles_reservas.html', {'inmueble': inmueble, 'reservas': reservas})
+    return render(request, 'admin/admin_inmuebles_reservas.html', {
+        'inmueble': inmueble, 
+        'reservas': reservas
+    })
+
+@login_required
+@user_passes_test(is_admin_or_empleado)
+def admin_inmuebles_historial(request, id_inmueble):
+    """
+    Muestra el historial de estados y reservas finalizadas/canceladas/rechazadas de un inmueble específico.
+    """
+    inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
+    historial = InmuebleEstado.objects.filter(inmueble=inmueble).order_by('-fecha_inicio')
+    reservas = Reserva.objects.filter(
+        inmueble=inmueble,
+        estado__nombre__in=['Cancelada', 'Rechazada', 'Finalizada']
+    ).order_by('-fecha_inicio')
+    return render(request, 'admin/admin_inmuebles_historial.html', {
+        'inmueble': inmueble,
+        'historial': historial,
+        'reservas': reservas,
+    })
 
 ################################################################################################################
 # --- Vistas de Gestión de Cocheras ---
