@@ -84,6 +84,7 @@ urlpatterns = [
 
     # Mercado Pago
     path('simulador-mercadopago/', views.simulador_mercadopago, name='simulador_mercadopago'),
+    path('tarjetas/agregar/', views.agregar_tarjeta, name='agregar_tarjeta'),
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

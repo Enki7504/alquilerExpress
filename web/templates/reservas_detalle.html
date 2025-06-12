@@ -97,9 +97,11 @@
                   <span id="timer" class="ms-1 text-dark" style="font-family: monospace; font-size: 1.1rem;"></span>
                 </span>
               </div>
-              <a href="{% url 'pagar_reserva' reserva.id_reserva %}" class="btn btn-success d-flex align-items-center h-100" id="pagar-btn">
-                <i class="bi bi-cash-coin me-1"></i> Pagar reserva
-              </a>
+              {% if not is_admin_or_empleado %}
+                <a href="{% url 'pagar_reserva' reserva.id_reserva %}" class="btn btn-success d-flex align-items-center h-100" id="pagar-btn">
+                  <i class="bi bi-cash-coin me-1"></i> Pagar reserva
+                </a>
+              {% endif %}
             {% else %}
               <div class="alert alert-danger d-flex align-items-center gap-2 mb-3">
                 <i class="bi bi-clock-history fs-5"></i>
@@ -107,42 +109,95 @@
               </div>
             {% endif %}
           {% endif %}
-          <form method="post" action="{% url 'cancelar_reserva' reserva.id_reserva %}" onsubmit="return confirm('¿Seguro que deseas cancelar la reserva?');" class="m-0">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-danger d-flex align-items-center h-100">
-              <i class="bi bi-x-circle me-1"></i> Cancelar reserva
-            </button>
-          </form>
+          {% if not is_admin_or_empleado %}
+            <form id="cancelarReservaForm" method="post" action="{% url 'cancelar_reserva' reserva.id_reserva %}" class="m-0">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-danger d-flex align-items-center h-100">
+                <i class="bi bi-x-circle me-1"></i> Cancelar reserva
+              </button>
+            </form>
+          {% endif %}
         {% endif %}
       </div>
     </div>
   </div>
 </div>
 
-{% if tiempo_restante and tiempo_restante > 0 %}
-<script>
-  let tiempo = Number("{{ tiempo_restante|floatformat:0 }}");
-  function actualizarTimer() {
-    if (tiempo <= 0) {
-      document.getElementById('timer').innerText = "Tiempo agotado";
-      const btn = document.getElementById('pagar-btn');
-      if (btn) {
-        btn.classList.add('disabled');
-        btn.setAttribute('aria-disabled', 'true');
-        btn.onclick = function(e){ e.preventDefault(); };
+  {% if tiempo_restante and tiempo_restante > 0 %}
+    <script>
+      console.log('Tiempo restante:', "{{ tiempo_restante|floatformat:0 }}");
+      let tiempo = Number("{{ tiempo_restante|floatformat:0 }}");
+      function actualizarTimer() {
+        if (tiempo <= 0) {
+          document.getElementById('timer').innerText = "Tiempo agotado";
+          const btn = document.getElementById('pagar-btn');
+          if (btn) {
+            btn.classList.add('disabled');
+            btn.setAttribute('aria-disabled', 'true');
+            btn.onclick = function(e){ e.preventDefault(); };
+          }
+          return;
+        }
+        let horas = Math.floor(tiempo / 3600);
+        let minutos = Math.floor((tiempo % 3600) / 60);
+        let segundos = Math.floor(tiempo % 60);
+        document.getElementById('timer').innerText =
+          `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}:${segundos.toString().padStart(2, '0')}`;
+        tiempo--;
+        setTimeout(actualizarTimer, 1000);
       }
-      return;
-    }
-    let horas = Math.floor(tiempo / 3600);
-    let minutos = Math.floor((tiempo % 3600) / 60);
-    let segundos = Math.floor(tiempo % 60);
-    document.getElementById('timer').innerText =
-      `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}:${segundos.toString().padStart(2, '0')}`;
-    tiempo--;
-    setTimeout(actualizarTimer, 1000);
-  }
-  actualizarTimer();
-</script>
-{% endif %}
-
+      actualizarTimer();
+    </script>
+  {% endif %}
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script>
+    console.log('Cargando script de cancelar reserva');
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('DOM completamente cargado y analizado');
+      const cancelarForm = document.getElementById('cancelarReservaForm');
+      console.log('Formulario de cancelar reserva:', cancelarForm);
+      if (cancelarForm) {
+        console.log('Se hizo submit y se interceptó el evento');
+        cancelarForm.addEventListener('submit', function(e) {
+          e.preventDefault();
+          console.log('Se hizo submit y se interceptó el evento');
+          Swal.fire({
+            title: '¿Seguro que deseas cancelar la reserva?',
+            text: "Esta acción no se puede deshacer.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Sí, cancelar',
+            cancelButtonText: 'No, volver'
+          }).then((result) => {
+            if (result.isConfirmed) {
+              fetch(this.action, {
+                method: 'POST',
+                headers: {
+                  'X-Requested-With': 'XMLHttpRequest',
+                  'X-CSRFToken': document.querySelector('input[name="csrfmiddlewaretoken"]').value
+                }
+              })
+              .then(res => res.json())
+              .then(data => {
+                if (data.success) {
+                  Swal.fire({
+                    icon: 'success',
+                    title: 'Cancelada',
+                    text: data.mensaje,
+                    timer: 2500,
+                    timerProgressBar: true,
+                    showConfirmButton: false
+                  }).then(() => {
+                    window.location.href = "{% url 'reservas_usuario' %}";
+                  });
+                }
+              });
+            }
+          });
+        });
+      }
+    });
+  </script>
 {% endblock %}

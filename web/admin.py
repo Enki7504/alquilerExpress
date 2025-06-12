@@ -18,7 +18,8 @@ from .models import (
     Provincia,
     Ciudad,
     Notificacion,
-    Huesped
+    Huesped,
+    Tarjeta
 )
 
 # --- Inlines para mostrar imágenes asociadas ---
@@ -132,3 +133,8 @@ class HuespedInline(admin.TabularInline):
 class HuespedAdmin(admin.ModelAdmin):
     list_display = ('nombre', 'apellido', 'dni', 'fecha_nacimiento', 'reserva')
     search_fields = ('nombre', 'apellido', 'dni', 'reserva__id_reserva')
+
+@admin.register(Tarjeta)
+class TarjetaAdmin(admin.ModelAdmin):
+    list_display = ('id_tarjeta', 'nombre', 'numero', 'vencimiento', 'saldo')
+    search_fields = ('nombre', 'numero')
