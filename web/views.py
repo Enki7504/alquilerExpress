@@ -208,7 +208,7 @@ def loginAdmin_2fa(request):
     Vista para la verificación de dos factores (2FA) para administradores/empleados.
     Verifica el código OTP ingresado por el usuario.
     """
-    tiempo_restante = 59
+    tiempo_restante = 70
     error = None
 
     if "username_otp" in request.session:
