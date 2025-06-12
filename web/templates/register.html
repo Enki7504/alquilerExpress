@@ -29,6 +29,11 @@
         <div class="form-text">Tu apellido real.</div>
       </div>
       <div class="mb-3">
+        <label for="id_fecha_nacimiento" class="form-label">Fecha de nacimiento</label>
+        {{ form.fecha_nacimiento|add_class:"form-control" }}
+        <div class="form-text">Debes ser mayor de 18 años.</div>
+      </div>
+      <div class="mb-3">
         <label for="id_dni" class="form-label">DNI</label>
         {{ form.dni|add_class:"form-control" }}
         <div class="form-text">Solo números, sin puntos ni espacios.</div>
