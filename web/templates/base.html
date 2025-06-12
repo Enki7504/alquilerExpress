@@ -145,7 +145,7 @@
       if (response.ok) {
         // Eliminar visualmente la notificación
         const li = btn.closest('li.notification-item');
-        if (li) li.remove();
+        if (li) li.remove();;
         // Mostrar el toast
         Swal.fire({
           position: 'top-end',
