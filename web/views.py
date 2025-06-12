@@ -1795,7 +1795,6 @@ def eliminar_notificacion(request, notificacion_id):
         usuario=request.user.perfil
     )
     notificacion.delete()
-    messages.success(request, "Notificación eliminada.")
     return redirect(request.META.get('HTTP_REFERER', 'index'))
 
 @require_POST
