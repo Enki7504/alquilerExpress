@@ -152,8 +152,8 @@
                 </div>
                 <!-- Formulario oculto para agregar huésped -->
                 <div class="mb-3">
-                  <ul id="lista-huespedes" class="list-group mb-2"></ul>
-                  <button type="button" class="btn btn-outline-primary btn-sm" id="btn-agregar-huesped">
+                  <ul id="lista-huespedes" class="list-group mb-2" data-max-huespedes="{{ inmueble.cantidad_huespedes }}"></ul>
+                  <button type="button" class="btn btn-outline-primary btn-sm w-100" id="btn-agregar-huesped">
                     <i class="bi bi-person-plus"></i> Agregar huésped
                   </button>
                 </div>
@@ -606,6 +606,19 @@ document.addEventListener('DOMContentLoaded', function() {
 let huespedes = [];
 
 document.getElementById('btn-agregar-huesped').onclick = function() {
+  const maxHuespedes = parseInt(document.getElementById('lista-huespedes').dataset.maxHuespedes);
+  if (huespedes.length >= maxHuespedes) {
+    Swal.fire({
+      position: 'top-end',
+      icon: 'warning',
+      title: `No puedes agregar más de ${maxHuespedes} huésped${maxHuespedes > 1 ? 'es' : ''} para esta Vivienda.`,
+      showConfirmButton: false,
+      timer: 2000,
+      toast: true,
+      timerProgressBar: true
+    });
+    return;
+  }
   document.getElementById('form-huesped').style.display = 'block';
 };
 
@@ -615,18 +628,89 @@ document.getElementById('btn-cancelar-huesped').onclick = function() {
 };
 
 document.getElementById('btn-aceptar-huesped').onclick = function() {
+  // Limpiar errores previos
+  document.querySelectorAll('#form-huesped .error-message').forEach(el => el.remove());
+
+  // Validar cantidad máxima de huéspedes
+  const maxHuespedes = parseInt(document.getElementById('lista-huespedes').dataset.maxHuespedes);
+  if (huespedes.length >= maxHuespedes) {
+    Swal.fire({
+      icon: 'warning',
+      title: `No puedes agregar más de ${maxHuespedes} huésped${maxHuespedes > 1 ? 'es' : ''} para esta vivienda.`
+    });
+    return;
+  }
+
   const nombre = document.getElementById('huesped-nombre').value.trim();
   const apellido = document.getElementById('huesped-apellido').value.trim();
   const dni = document.getElementById('huesped-dni').value.trim();
   const fecha_nac = document.getElementById('huesped-fecha-nac').value;
 
-  if (!nombre || !apellido || !dni || !fecha_nac) {
-    Swal.fire({icon:'warning',title:'Completa todos los campos del huésped'});
-    return;
+  let valido = true;
+
+  // Validar campos vacíos
+  if (!nombre) {
+    mostrarError('huesped-nombre', 'El nombre es obligatorio.');
+    valido = false;
   }
+  if (!apellido) {
+    mostrarError('huesped-apellido', 'El apellido es obligatorio.');
+    valido = false;
+  }
+  if (!dni) {
+    mostrarError('huesped-dni', 'El DNI es obligatorio.');
+    valido = false;
+  }
+  if (!fecha_nac) {
+    mostrarError('huesped-fecha-nac', 'La fecha de nacimiento es obligatoria.');
+    valido = false;
+  }
+
+  // Validar nombre y apellido: solo letras
+  const soloLetras = /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/;
+  if (nombre && !soloLetras.test(nombre)) {
+    mostrarError('huesped-nombre', 'El nombre debe contener solo letras.');
+    valido = false;
+  }
+  if (apellido && !soloLetras.test(apellido)) {
+    mostrarError('huesped-apellido', 'El apellido debe contener solo letras.');
+    valido = false;
+  }
+
+  // Validar DNI: exactamente 8 dígitos
+  if (dni && !dni.match(/^\d{8}$/)) {
+    mostrarError('huesped-dni', 'El DNI debe tener exactamente 8 números.');
+    valido = false;
+  }
+
+  // Validar fecha de nacimiento: mayor de 18 años
+  if (fecha_nac) {
+    const fechaNacimiento = new Date(fecha_nac);
+    const hoy = new Date();
+    let edad = hoy.getFullYear() - fechaNacimiento.getFullYear();
+    const m = hoy.getMonth() - fechaNacimiento.getMonth();
+    if (m < 0 || (m === 0 && hoy.getDate() < fechaNacimiento.getDate())) {
+      edad--;
+    }
+    if (edad < 18) {
+      mostrarError('huesped-fecha-nac', 'El huésped debe ser mayor de 18 años.');
+      valido = false;
+    }
+  }
+
+  if (!valido) return;
 
   huespedes.push({nombre, apellido, dni, fecha_nac});
   actualizarListaHuespedes();
+  Swal.fire({
+    position: 'top-end',
+    icon: 'success',
+    title: 'Huésped agregado',
+    showConfirmButton: false,
+    timer: 2000,
+    toast: true,
+    timerProgressBar: true
+  });
   document.getElementById('form-huesped').style.display = 'none';
   limpiarFormHuesped();
 };
@@ -636,9 +720,25 @@ function actualizarListaHuespedes() {
   ul.innerHTML = '';
   huespedes.forEach((h, idx) => {
     const li = document.createElement('li');
-    li.className = 'list-group-item d-flex justify-content-between align-items-center';
-    li.innerHTML = `${h.nombre} ${h.apellido} - DNI: ${h.dni} - Nac: ${h.fecha_nac}
-      <button type="button" class="btn btn-danger btn-sm" onclick="eliminarHuesped(${idx})"><i class="bi bi-trash"></i></button>`;
+    li.className = 'list-group-item py-3';
+    li.innerHTML = `
+      <div class="row align-items-center">
+        <div class="col-1 text-center">
+          <i class="bi bi-person-fill text-primary fs-4"></i>
+        </div>
+        <div class="col-8">
+          <div><strong>${h.nombre} ${h.apellido}</strong></div>
+          <div class="text-muted small">
+            DNI: <span class="fw-semibold">${h.dni}</span> &nbsp;|&nbsp; Nac: <span class="fw-semibold">${h.fecha_nac}</span>
+          </div>
+        </div>
+        <div class="col-3 text-end">
+          <button type="button" class="btn btn-outline-danger btn-sm" onclick="eliminarHuesped(${idx})" title="Eliminar huésped">
+            <i class="bi bi-trash"></i>
+          </button>
+        </div>
+      </div>
+    `;
     ul.appendChild(li);
   });
   document.getElementById('huespedes-json').value = JSON.stringify(huespedes);
@@ -647,6 +747,15 @@ function actualizarListaHuespedes() {
 function eliminarHuesped(idx) {
   huespedes.splice(idx, 1);
   actualizarListaHuespedes();
+  Swal.fire({
+    position: 'top-end',
+    icon: 'info',
+    title: 'Huésped eliminado',
+    showConfirmButton: false,
+    timer: 2000,
+    toast: true,
+    timerProgressBar: true
+  });
 }
 
 function limpiarFormHuesped() {
@@ -655,5 +764,24 @@ function limpiarFormHuesped() {
   document.getElementById('huesped-dni').value = '';
   document.getElementById('huesped-fecha-nac').value = '';
 }
-  </script>
+
+// Función para mostrar error debajo del campo
+function mostrarError(inputId, mensaje) {
+  const input = document.getElementById(inputId);
+  if (input && !input.parentNode.querySelector('.error-message')) {
+    const errorElement = document.createElement('div');
+    errorElement.className = 'error-message text-danger mt-1 small';
+    errorElement.textContent = mensaje;
+    input.parentNode.appendChild(errorElement);
+  }
+}
+
+// Limpiar errores al modificar un campo
+['huesped-nombre', 'huesped-apellido', 'huesped-dni', 'huesped-fecha-nac'].forEach(id => {
+  document.getElementById(id).addEventListener('input', function() {
+    const errorElement = this.parentNode.querySelector('.error-message');
+    if (errorElement) errorElement.remove();
+  });
+});
+</script>
 {% endblock %}

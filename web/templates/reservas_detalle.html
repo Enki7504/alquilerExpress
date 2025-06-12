@@ -64,13 +64,22 @@
         <strong>Huéspedes:</strong>
         <ul class="list-group mt-2">
           {% for h in huespedes %}
-            <li class="list-group-item d-flex flex-column flex-md-row justify-content-between align-items-md-center">
-              <div>
-                <i class="bi bi-person-fill text-primary me-2"></i>
-                <span class="ms-2">Nombre: {{ h.nombre }}</span>
-                <span class="ms-2">Apellido: {{ h.apellido }}</span>
-                <span class="ms-2">DNI: {{ h.dni }}</span>
-                <span class="ms-2">Nacimiento: {{ h.fecha_nacimiento|date:"d/m/Y" }}</span>
+            <li class="list-group-item">
+              <div class="d-flex align-items-center flex-wrap gap-3">
+                <!-- Icono -->
+                <span class="me-2">
+                  <i class="bi bi-person-fill text-primary fs-4"></i>
+                </span>
+                <!-- Nombre y apellido -->
+                <span class="fw-semibold">{{ h.nombre }} {{ h.apellido }}</span>
+                <!-- DNI -->
+                <span class="badge bg-light text-dark border fw-normal">
+                  DNI: <span class="fw-semibold">{{ h.dni }}</span>
+                </span>
+                <!-- Fecha de nacimiento -->
+                <span class="badge bg-light text-dark border fw-normal">
+                  Nac: <span class="fw-semibold">{{ h.fecha_nacimiento|date:"d/m/Y" }}</span>
+                </span>
               </div>
             </li>
           {% endfor %}
