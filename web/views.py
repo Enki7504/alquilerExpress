@@ -209,7 +209,7 @@ def loginAdmin_2fa(request):
     Vista para la verificación de dos factores (2FA) para administradores/empleados.
     Verifica el código OTP ingresado por el usuario.
     """
-    tiempo_restante = 59
+    tiempo_restante = 70
     error = None
 
     if "username_otp" in request.session:
@@ -437,10 +437,10 @@ def detalle_inmueble(request, id_inmueble):
                 respuesta.comentario = comentario
                 respuesta.usuario = perfil
                 respuesta.save()
-                # Enviar notificación al usuario del comentario
+                # Notificación interna al cliente (no email)
                 crear_notificacion(
                     usuario=comentario.usuario,
-                    mensaje=f"Tu comentario en el inmueble {inmueble.nombre} ha sido respondido.",
+                    mensaje=f"Tu comentario en '{inmueble.nombre}' fue respondido: \"{respuesta.texto}\""
                 )
                 messages.success(request, "Respuesta publicada.")
                 return redirect('detalle_inmueble', id_inmueble=id_inmueble)
@@ -452,6 +452,12 @@ def detalle_inmueble(request, id_inmueble):
                 comentario.usuario = perfil
                 comentario.inmueble = inmueble
                 comentario.save()
+                # Notificar al empleado asignado al inmueble
+                if inmueble.empleado:
+                    crear_notificacion(
+                        usuario=inmueble.empleado,
+                        mensaje=f"Nuevo comentario en '{inmueble.nombre}': \"{comentario.descripcion}\""
+                    )
                 messages.success(request, "Comentario añadido exitosamente.")
                 return redirect('detalle_inmueble', id_inmueble=id_inmueble)
 
@@ -1800,7 +1806,6 @@ def eliminar_notificacion(request, notificacion_id):
         usuario=request.user.perfil
     )
     notificacion.delete()
-    messages.success(request, "Notificación eliminada.")
     return redirect(request.META.get('HTTP_REFERER', 'index'))
 
 @require_POST
