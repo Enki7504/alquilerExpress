@@ -1665,7 +1665,8 @@ def cambiar_estado_reserva(request, id_reserva):
                         protocolo = 'https' if request.is_secure() else 'http'
                         url_pago = f"{protocolo}://{dominio}/reservas/{reserva.id_reserva}/pagar/"
                         cuerpo += f"\nAhora debe abonar la reserva, el total es de ${reserva.precio_total}.\n"
-                        cuerpo += f"Debe pagar desde el siguiente enlace:\n{url_pago}\n"
+                        cuerpo += f"Debe pagar dentro de las próximas 24 horas\n"
+                        cuerpo += f"Para pagar presione el siguiente enlace:\n{url_pago}\n"
                     elif nuevo_estado == "Pagada":
                         cuerpo += f"\nLa reserva ha sido pagada. Por favor, espere a que un empleado se comunique con usted.\n"
                     elif nuevo_estado == "Confirmada":
@@ -1689,7 +1690,7 @@ def cambiar_estado_reserva(request, id_reserva):
                         mensaje_notif = (
                             f"El estado de tu reserva #{reserva.id_reserva} ha cambiado a: {estado.nombre}."
                             f" Ahora debes abonar ${reserva.precio_total}. "
-                            f'<a href="{url_pago}" target="_blank" style="color:#0d6efd;text-decoration:underline;">Pagar</a>'
+                            f"Accedé al apartado 'Mis Reservas' para pagar."
                             + (f" (Comentario: {comentario})" if comentario else "")
                         )
                     else:
@@ -1703,13 +1704,13 @@ def cambiar_estado_reserva(request, id_reserva):
                         mensaje=mensaje_notif
                     )
                     
-                    send_mail(
-                        subject=asunto,
-                        message=cuerpo,
-                        from_email=settings.DEFAULT_FROM_EMAIL,
-                        recipient_list=[email_cliente],
-                        fail_silently=False,
-                    )
+                    # send_mail(
+                    #     subject=asunto,
+                    #     message=cuerpo,
+                    #     from_email=settings.DEFAULT_FROM_EMAIL,
+                    #     recipient_list=[email_cliente],
+                    #     fail_silently=False,
+                    # )
             elif reserva.cochera:
                 cliente_rel = ClienteInmueble.objects.filter(reserva=reserva).first()
                 if cliente_rel and cliente_rel.cliente.usuario.email:
@@ -1736,7 +1737,8 @@ def cambiar_estado_reserva(request, id_reserva):
                         protocolo = 'https' if request.is_secure() else 'http'
                         url_pago = f"{protocolo}://{dominio}/reservas/{reserva.id_reserva}/pagar/"
                         cuerpo += f"\nAhora debe abonar la reserva, el total es de ${reserva.precio_total}.\n"
-                        cuerpo += f"Debe pagar desde el siguiente enlace:\n{url_pago}\n"
+                        cuerpo += f"Debe pagar dentro de las próximas 24 horas\n"
+                        cuerpo += f"Para pagar presione el siguiente enlace:\n{url_pago}\n"
                     elif nuevo_estado == "Pagada":
                         cuerpo += f"\nLa reserva ha sido pagada. Por favor, espere a que un empleado se comunique con usted.\n"
                     elif nuevo_estado == "Confirmada":
@@ -1759,8 +1761,8 @@ def cambiar_estado_reserva(request, id_reserva):
                         url_pago = f"{protocolo}://{dominio}/reservas/{reserva.id_reserva}/pagar/"
                         mensaje_notif = (
                             f"El estado de tu reserva #{reserva.id_reserva} ha cambiado a: {estado.nombre}."
-                            f" Ahora debes abonar ${reserva.precio_total}. "
-                            f'<a href="{url_pago}" target="_blank" style="color:#0d6efd;text-decoration:underline;">Pagar</a>'
+                            f" Ahora debes abonar ${reserva.precio_total} dentro de las próximas 24 horas. "
+                            f"Accedé al apartado 'Mis Reservas' para pagar."
                             + (f" (Comentario: {comentario})" if comentario else "")
                         )
                     else:
@@ -1774,13 +1776,14 @@ def cambiar_estado_reserva(request, id_reserva):
                         mensaje=mensaje_notif
                     )
 
-                    send_mail(
-                        subject=asunto,
-                        message=cuerpo,
-                        from_email=settings.DEFAULT_FROM_EMAIL,
-                        recipient_list=[email_cliente],
-                        fail_silently=False,
-                    )
+                    
+                    # send_mail(
+                    #     subject=asunto,
+                    #     message=cuerpo,
+                    #     from_email=settings.DEFAULT_FROM_EMAIL,
+                    #     recipient_list=[email_cliente],
+                    #     fail_silently=False,
+                    # )
             
             # Opcional: Registrar en historial (si tienes un modelo para ello)
             # HistorialEstadoReserva.objects.create(
