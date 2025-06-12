@@ -364,7 +364,19 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 
+// Precargar el primer huésped con los datos del cliente autenticado
 let huespedes = [];
+{% if datos_cliente %}
+huespedes.push({
+  nombre: "{{ datos_cliente.nombre|escapejs }}",
+  apellido: "{{ datos_cliente.apellido|escapejs }}",
+  dni: "{{ datos_cliente.dni|escapejs }}",
+  fecha_nac: "{{ datos_cliente.fecha_nac|escapejs }}"
+});
+{% endif %}
+
+// Mostrar el primer huésped en la lista al cargar la página
+actualizarListaHuespedes();
 
 document.getElementById('btn-agregar-huesped').onclick = function() {
   const maxHuespedes = parseInt(document.getElementById('lista-huespedes').dataset.maxHuespedes);
@@ -438,23 +450,25 @@ document.getElementById('btn-aceptar-huesped').onclick = function() {
     valido = false;
   }
 
-  // Validar DNI: exactamente 8 dígitos
-  if (dni && !dni.match(/^\d{8}$/)) {
-    mostrarError('huesped-dni', 'El DNI debe tener exactamente 8 números.');
+  // Validar DNI: 7 u 8 dígitos
+  if (dni && !dni.match(/^\d{7,8}$/)) {
+    mostrarError('huesped-dni', 'El DNI debe tener 7 u 8 números.');
     valido = false;
   }
 
-  // Validar fecha de nacimiento: mayor de 18 años
+  // Validar DNI: que no sea repetido
+  if (dni && huespedes.some(h => h.dni === dni)) {
+  mostrarError('huesped-dni', 'Ya agregaste un huésped con ese DNI.');
+  valido = false;
+}
+
+  // Fecha de nacimiento valida
   if (fecha_nac) {
     const fechaNacimiento = new Date(fecha_nac);
     const hoy = new Date();
-    let edad = hoy.getFullYear() - fechaNacimiento.getFullYear();
-    const m = hoy.getMonth() - fechaNacimiento.getMonth();
-    if (m < 0 || (m === 0 && hoy.getDate() < fechaNacimiento.getDate())) {
-      edad--;
-    }
-    if (edad < 18) {
-      mostrarError('huesped-fecha-nac', 'El huésped debe ser mayor de 18 años.');
+    hoy.setHours(0,0,0,0); // Ignorar hora
+    if (fechaNacimiento > hoy) {
+      mostrarError('huesped-fecha-nac', 'La fecha de nacimiento no puede ser posterior a hoy.');
       valido = false;
     }
   }
