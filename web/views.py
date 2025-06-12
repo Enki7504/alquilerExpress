@@ -436,6 +436,11 @@ def detalle_inmueble(request, id_inmueble):
                 respuesta.comentario = comentario
                 respuesta.usuario = perfil
                 respuesta.save()
+                # Notificación interna al cliente (no email)
+                crear_notificacion(
+                    usuario=comentario.usuario,
+                    mensaje=f"Tu comentario en '{inmueble.nombre}' fue respondido: \"{respuesta.texto}\""
+                )
                 messages.success(request, "Respuesta publicada.")
                 return redirect('detalle_inmueble', id_inmueble=id_inmueble)
 
@@ -446,6 +451,12 @@ def detalle_inmueble(request, id_inmueble):
                 comentario.usuario = perfil
                 comentario.inmueble = inmueble
                 comentario.save()
+                # Notificar al empleado asignado al inmueble
+                if inmueble.empleado:
+                    crear_notificacion(
+                        usuario=inmueble.empleado,
+                        mensaje=f"Nuevo comentario en '{inmueble.nombre}': \"{comentario.descripcion}\""
+                    )
                 messages.success(request, "Comentario añadido exitosamente.")
                 return redirect('detalle_inmueble', id_inmueble=id_inmueble)
 
