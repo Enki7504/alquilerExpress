@@ -363,6 +363,20 @@ function eliminarNotificacion(btn, url, csrfToken) {
       }
     });
   }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    // Que chequee si hay reservas en estado "Aprobada" y si pasaron 24 horas o mas pasa a "Cancelada"
+    fetch('{% url "cancelar_reservas_vencidas" %}', {
+      method: 'GET',
+      credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+      if(data.success && data.canceladas > 0){
+        console.log(`Reservas canceladas automáticamente: ${data.canceladas}`);
+      }
+    });
+  });
   </script>
 </body>
 </html>
