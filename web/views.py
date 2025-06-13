@@ -1088,15 +1088,13 @@ def admin_inmuebles_eliminar(request, id_inmueble):
                     fail_silently=True,
                 )
 
-        # Eliminar el inmueble (cambiar estado)
-        estado_eliminado, _ = Estado.objects.get_or_create(nombre='Eliminado')
-        inmueble.estado = estado_eliminado
-        inmueble.save()
+        # Eliminar el inmueble de la DB
+        inmueble.delete()
 
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({'success': True, 'message': 'Vivienda marcada como eliminada. Reservas pendientes a futuro canceladas.'})
+            return JsonResponse({'success': True, 'message': 'Vivienda eliminada. Reservas pendientes a futuro canceladas.'})
 
-        messages.success(request, 'Vivienda marcada como eliminada. Reservas pendientes a futuro canceladas.')
+        messages.success(request, 'Vivienda eliminada. Reservas pendientes a futuro canceladas.')
         return redirect('admin_inmuebles')
 
     # Si es GET, muestra la confirmación
@@ -1298,15 +1296,13 @@ def admin_cocheras_eliminar(request, id_cochera):
                     fail_silently=True,
                 )
 
-        # Eliminar la cochera (cambiar estado)
-        estado_eliminado, _ = Estado.objects.get_or_create(nombre='Eliminado')
-        cochera.estado = estado_eliminado
-        cochera.save()
+        # Eliminar la cochera de la DB
+        cochera.delete()
 
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({'success': True, 'message': 'Cochera marcada como eliminada. Reservas pendientes a futuro canceladas.'})
+            return JsonResponse({'success': True, 'message': 'Cochera eliminada. Reservas pendientes a futuro canceladas.'})
 
-        messages.success(request, 'Cochera marcada como eliminada. Reservas pendientes a futuro canceladas.')
+        messages.success(request, 'Cochera eliminada. Reservas pendientes a futuro canceladas.')
         return redirect('admin_cocheras')
 
     # Si es GET, muestra la confirmación
