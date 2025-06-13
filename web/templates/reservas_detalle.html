@@ -110,12 +110,14 @@
             {% endif %}
           {% endif %}
           {% if not is_admin_or_empleado %}
-            <form id="cancelarReservaForm" method="post" action="{% url 'cancelar_reserva' reserva.id_reserva %}" class="m-0">
-              {% csrf_token %}
-              <button type="submit" class="btn btn-danger d-flex align-items-center h-100">
-                <i class="bi bi-x-circle me-1"></i> Cancelar reserva
-              </button>
-            </form>
+            {% if tiempo_restante and tiempo_restante > 0 %}
+              <form id="cancelarReservaForm" method="post" action="{% url 'cancelar_reserva' reserva.id_reserva %}" class="m-0">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger d-flex align-items-center h-100">
+                  <i class="bi bi-x-circle me-1"></i> Cancelar reserva
+                </button>
+              </form>
+            {% endif %}
           {% endif %}
         {% endif %}
       </div>

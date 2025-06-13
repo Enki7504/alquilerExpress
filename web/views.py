@@ -2109,3 +2109,19 @@ def agregar_tarjeta(request):
     else:
         form = TarjetaForm()
     return render(request, 'agregar_tarjeta.html', {'form': form})
+
+##################
+
+
+def cancelar_reservas_vencidas(request):
+    ahora = timezone.now()
+    estado_aprobada = Estado.objects.get(nombre="Aprobada")
+    estado_cancelada, _ = Estado.objects.get_or_create(nombre="Cancelada")
+    reservas = Reserva.objects.filter(estado=estado_aprobada, aprobada_en__isnull=False)
+    count = 0
+    for reserva in reservas:
+        if (ahora - reserva.aprobada_en).total_seconds() >= 24 * 3600:
+            reserva.estado = estado_cancelada
+            reserva.save()
+            count += 1
+    return JsonResponse({'success': True, 'canceladas': count})
