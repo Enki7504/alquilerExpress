@@ -564,7 +564,7 @@ def detalle_cochera(request, id_cochera):
                 # Enviar notificación al usuario del comentario
                 crear_notificacion(
                     usuario=comentario.usuario,
-                    mensaje=f"Tu comentario en el inmueble {inmueble.nombre} ha sido respondido.",
+                    mensaje=f"Tu comentario en el inmueble {cochera.nombre} ha sido respondido.",
                 )
                 messages.success(request, "Respuesta publicada.")
                 return redirect('detalle_cochera', id_cochera=id_cochera)
