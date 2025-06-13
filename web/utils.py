@@ -5,6 +5,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.core.mail import send_mail
 from django.conf import settings
+from django.db import models
 from .models import ClienteInmueble, Reserva, Notificacion, Perfil, Estado
 
 #comando para ejecutar el script en consola

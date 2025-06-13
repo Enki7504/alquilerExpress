@@ -52,12 +52,12 @@
                 {% csrf_token %}
                 <select name="empleado" class="form-select form-select-sm d-inline w-auto align-middle" onchange="this.form.submit()">
                   {% for empleado in empleados %}
-                    <option value="{{ empleado.usuario.id }}">
+                    <option value="{{ empleado.usuario.id }}" {% if cochera.empleado and cochera.empleado.usuario.id == empleado.usuario.id %}selected{% endif %}>
                       {{ empleado.usuario.get_full_name }}
                     </option>
                   {% endfor %}
                   {% for admin in admins %}
-                    <option value="{{ admin.usuario.id }}" style="color: #F26A1B;">
+                    <option value="{{ admin.usuario.id }}" style="color: #F26A1B;" {% if cochera.empleado and cochera.empleado.usuario.id == admin.usuario.id %}selected{% endif %}>
                       {{ admin.usuario.get_full_name }}
                     </option>
                   {% endfor %}

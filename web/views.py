@@ -896,12 +896,17 @@ def cambiar_empleado_inmueble(request, id_inmueble):
         inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
         empleado_id = request.POST.get("empleado")
         if empleado_id:
-            empleado = Perfil.objects.get(id_perfil=empleado_id)
-            inmueble.empleado = empleado
+            try:
+                empleado_perfil = Perfil.objects.get(usuario__id=empleado_id)
+                inmueble.empleado = empleado_perfil
+                inmueble.save()
+                messages.success(request, "Empleado asignado actualizado.")
+            except Perfil.DoesNotExist:
+                messages.error(request, "El usuario seleccionado no tiene perfil y no puede ser asignado.")
         else:
             inmueble.empleado = None
-        inmueble.save()
-        messages.success(request, "Empleado asignado actualizado.")
+            inmueble.save()
+            messages.success(request, "Empleado desasignado.")
     return redirect('admin_inmuebles')
 
 @login_required
@@ -934,12 +939,17 @@ def cambiar_empleado_cochera(request, id_cochera):
         cochera = get_object_or_404(Cochera, id_cochera=id_cochera)
         empleado_id = request.POST.get("empleado")
         if empleado_id:
-            empleado = Perfil.objects.get(id_perfil=empleado_id)
-            cochera.empleado = empleado
+            try:
+                perfil = Perfil.objects.get(usuario__id=empleado_id)
+                cochera.empleado = perfil
+                cochera.save()
+                messages.success(request, "Empleado asignado actualizado.")
+            except Perfil.DoesNotExist:
+                messages.error(request, "El usuario seleccionado no tiene perfil y no puede ser asignado.")
         else:
             cochera.empleado = None
-        cochera.save()
-        messages.success(request, "Empleado asignado actualizado.")
+            cochera.save()
+            messages.success(request, "Empleado desasignado.")
     return redirect('admin_cocheras')
 
 ################################################################################################################
@@ -1487,7 +1497,15 @@ def crear_reserva(request, id_inmueble):
 
             # Enviar notificación a todos los empleados
             # usando enviar_mail_a_empleados_sobre_reserva(id_reserva) de utils.py
-            # enviar_mail_a_empleados_sobre_reserva(reserva.id_reserva)            
+            # enviar_mail_a_empleados_sobre_reserva(reserva.id_reserva)     
+            # 
+
+            # Notificar al empleado asignado al inmueble
+            if inmueble.empleado:
+                crear_notificacion(
+                    usuario=inmueble.empleado,
+                    mensaje=f"Nueva reserva #{reserva.id_reserva} pendiente para la vivienda {inmueble.nombre} del {fecha_inicio} al {fecha_fin}.",
+                )
             
             messages.success(request, 'Reserva creada exitosamente!')
             return redirect('detalle_inmueble', id_inmueble=id_inmueble)
@@ -1575,6 +1593,12 @@ def crear_reserva_cochera(request, id_cochera):
                     cochera=cochera,
                     reserva=reserva
                 )
+
+            # Notificar al empleado asignado a la cochera
+            crear_notificacion(
+                usuario=cochera.empleado,
+                mensaje=f"Nueva reserva #{reserva.id_reserva} pendiente para la cochera {cochera.nombre} del {fecha_inicio} al {fecha_fin}.",
+            )
 
             # Enviar notificación a todos los empleados
             # usando enviar_mail_a_empleados_sobre_reserva(id_reserva) de utils.py
