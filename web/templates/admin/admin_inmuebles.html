@@ -51,10 +51,14 @@
               <form method="post" action="{% url 'cambiar_empleado_inmueble' inmueble.id_inmueble %}" style="display:inline;">
                 {% csrf_token %}
                 <select name="empleado" class="form-select form-select-sm d-inline w-auto align-middle" onchange="this.form.submit()">
-                  <option value="">Sin asignar</option>
                   {% for empleado in empleados %}
-                    <option value="{{ empleado.id_perfil }}" {% if inmueble.empleado and inmueble.empleado.id_perfil == empleado.id_perfil %}selected{% endif %}>
-                      {{ empleado.usuario.get_full_name|default:empleado.usuario.username }}
+                    <option value="{{ empleado.usuario.id }}">
+                      {{ empleado.usuario.get_full_name }}
+                    </option>
+                  {% endfor %}
+                  {% for admin in admins %}
+                    <option value="{{ admin.usuario.id }}" style="color: #F26A1B;">
+                      {{ admin.usuario.get_full_name }}
                     </option>
                   {% endfor %}
                 </select>

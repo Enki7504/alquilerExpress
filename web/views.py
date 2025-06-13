@@ -880,10 +880,13 @@ def admin_inmuebles(request):
         )
     
     empleados = Perfil.objects.filter(usuario__groups__name="empleado")
+    admins = Perfil.objects.filter(usuario__is_staff=True).distinct()
+
     return render(request, 'admin/admin_inmuebles.html', {
         'inmuebles': inmuebles,
         'query': query,
         'empleados': empleados,
+        'admins': admins
     })
 
 @login_required
@@ -916,10 +919,12 @@ def admin_cocheras(request):
             Q(nombre__icontains=query) | Q(descripcion__icontains=query))
     
     empleados = Perfil.objects.filter(usuario__groups__name="empleado")
+    admins = Perfil.objects.filter(usuario__is_staff=True).distinct()
     return render(request, 'admin/admin_cocheras.html', {
         'cocheras': cocheras,
         'query': query,
         'empleados': empleados,
+        'admins': admins
     })
 
 @login_required

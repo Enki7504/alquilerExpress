@@ -508,9 +508,11 @@ function actualizarListaHuespedes() {
           </div>
         </div>
         <div class="col-3 text-end">
+          ${idx === 0 ? '' : `
           <button type="button" class="btn btn-outline-danger btn-sm" onclick="eliminarHuesped(${idx})" title="Eliminar huésped">
             <i class="bi bi-trash"></i>
           </button>
+          `}
         </div>
       </div>
     `;
