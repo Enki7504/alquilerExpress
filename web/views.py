@@ -1461,6 +1461,11 @@ def crear_reserva(request, id_inmueble):
             reserva=reserva
         )
 
+        crear_notificacion(
+            usuario=perfil,
+            mensaje=f"Tu reserva #{reserva.id_reserva} fue registrada. En menos de 72 horas será revisada por un empleado. Recibirás una notificación cuando sea aprobada o rechazada."
+        )
+
         messages.success(request, "Reserva creada exitosamente.")
         return redirect("detalle_inmueble", id_inmueble=id_inmueble)
 

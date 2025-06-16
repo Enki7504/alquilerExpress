@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'web',
     "widget_tweaks",
+    "django_celery_beat"
 ]
 
 MIDDLEWARE = [
@@ -140,3 +141,8 @@ EMAIL_HOST_USER = 'ventasgoats@gmail.com'  # tu dirección de Gmail
 EMAIL_HOST_PASSWORD = 'wnpl jnfr ohrp dwio'  # contraseña de aplicación
 
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER  # opcional, para que el "remitente" sea ese
+
+# Celery settings
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'

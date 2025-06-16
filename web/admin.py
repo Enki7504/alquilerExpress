@@ -72,7 +72,7 @@ class CocheraAdmin(admin.ModelAdmin):
 
 @admin.register(Reserva)
 class ReservaAdmin(admin.ModelAdmin):
-    list_display = ('id_reserva', 'inmueble', 'cochera', 'fecha_inicio', 'fecha_fin', 'estado')
+    list_display = ('id_reserva', 'inmueble', 'cochera', 'fecha_inicio', 'fecha_fin', 'estado', 'creada_en')
     search_fields = ('id_reserva', 'inmueble__nombre', 'cochera__nombre')
 
 @admin.register(ReservaEstado)
