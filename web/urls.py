@@ -87,9 +87,6 @@ urlpatterns = [
     path('simulador-mercadopago/', views.simulador_mercadopago, name='simulador_mercadopago'),
     path('tarjetas/agregar/', views.agregar_tarjeta, name='agregar_tarjeta'),
 
-    # Chequea reservas vencidas
-    path('reservas/cancelar-vencidas/', views.cancelar_reservas_vencidas, name='cancelar_reservas_vencidas'),
-
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 
