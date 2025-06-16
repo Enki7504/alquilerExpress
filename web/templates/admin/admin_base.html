@@ -10,114 +10,156 @@
 {% endblock %}
 
 {% block content %}
-  <div class="container-fluid" style="margin-top: 70px;">
-    <div class="row">
-      <!-- Sidebar Organizado en Secciones -->
-      <nav class="col-md-3 col-lg-2 d-md-block sidebar">
-        <div class="position-sticky pt-3">
-          <!-- Sección de Gestión de Usuarios -->
-          {% if user.is_staff %}
-          <div class="sidebar-section">
-            <div class="sidebar-section-title">
-              <i class="bi bi-people-fill"></i> Gestión de Usuarios
-            </div>
-            <ul class="nav flex-column">
-              <li class="nav-item">
-                <a class="nav-link {% if request.resolver_match.url_name == 'admin_alta_empleados' %}active{% endif %}" 
-                   href="{% url 'admin_alta_empleados' %}">
-                  <i class="bi bi-person-plus"></i> Registrar Empleados
-                </a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link {% if request.resolver_match.url_name == 'admin_alta_cliente' %}active{% endif %}" 
-                   href="#">
-                  <i class="bi bi-person-plus"></i> Registrar Clientes
-                </a>
-              </li>
-            </ul>
-          </div>
-          {% endif %}
+<!-- Contenedor para mensajes flotantes -->
+<div id="floating-messages"></div>
 
-          <!-- Sección de Gestión de Propiedades -->
-          {% if user.is_staff %}
-          <div class="sidebar-section">
-            <div class="sidebar-section-title">
-              <i class="bi bi-buildings"></i> Gestión de Propiedades
-            </div>
-            <ul class="nav flex-column">
-              <li class="nav-item">
-                <a class="nav-link {% if request.resolver_match.url_name == 'admin_inmuebles' or request.resolver_match.url_name == 'admin_inmuebles_alta' or 'admin_inmuebles_' in request.resolver_match.url_name %}active{% endif %}"
-                  href="{% url 'admin_inmuebles' %}">
-                  <i class="bi bi-house-add"></i> Gestión de Inmuebles
-                </a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link {% if request.resolver_match.url_name == 'admin_cocheras' or request.resolver_match.url_name == 'admin_cocheras_alta' or 'admin_cocheras_' in request.resolver_match.url_name %}active{% endif %}"
-                  href="{% url 'admin_cocheras' %}">
-                  <i class="bi bi-car-front"></i> Gestión de Cocheras
-                </a>
-              </li>
-            </ul>
+<div class="container-fluid" style="margin-top: 70px;">
+  <div class="row">
+    <!-- Sidebar Organizado en Secciones -->
+    <nav class="col-md-3 col-lg-2 d-md-block sidebar">
+      <div class="position-sticky pt-3">
+        <!-- Sección de Gestión de Usuarios -->
+        {% if user.is_staff or user|has_group:"empleado" %}
+        <div class="sidebar-section">
+          <div class="sidebar-section-title">
+            <i class="bi bi-people-fill"></i> Gestión de Usuarios
           </div>
-          {% endif %}
-
-          <!-- Sección de Estadísticas -->
-          {% if user.is_staff or user|has_group:"empleado" %}
-          <div class="sidebar-section">
-            <div class="sidebar-section-title">
-              <i class="bi bi-bar-chart-line"></i> Estadísticas
-            </div>
-            <ul class="nav flex-column">
-              <li class="nav-item">
-                <a class="nav-link {% if request.resolver_match.url_name == 'admin_estadisticas_empleados' %}active{% endif %}" 
-                   href="{% url 'admin_estadisticas_empleados' %}">
-                  <i class="bi bi-people"></i> Estadísticas de Empleados
-                </a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link {% if 'admin_estadisticas_usuarios' in request.resolver_match.url_name %}active{% endif %}" 
-                   href="{% url 'admin_estadisticas_usuarios' %}">
-                  <i class="bi bi-graph-up"></i> Estadísticas de Usuarios
-                </a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link {% if request.resolver_match.url_name == 'admin_estadisticas_inmuebles' %}active{% endif %}" 
-                   href="{% url 'admin_estadisticas_inmuebles' %}">
-                  <i class="bi bi-building"></i> Estadísticas de Inmuebles
-                </a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link {% if request.resolver_match.url_name == 'admin_estadisticas_cocheras' %}active{% endif %}" 
-                   href="{% url 'admin_estadisticas_cocheras' %}">
-                  <i class="bi bi-car-front-fill"></i> Estadísticas de Cocheras
-                </a>
-              </li>
-            </ul>
-          </div>
-          {% endif %}
+          <ul class="nav flex-column">
+            {% if user.is_staff %}
+            <li class="nav-item">
+              <a class="nav-link {% if request.resolver_match.url_name == 'admin_alta_empleados' %}active{% endif %}" 
+                  href="{% url 'admin_alta_empleados' %}">
+                <i class="bi bi-person-plus"></i> Registrar Empleados
+              </a>
+            </li>
+            {% endif %}
+            <li class="nav-item">
+              <a class="nav-link {% if request.resolver_match.url_name == 'admin_alta_cliente' %}active{% endif %}" 
+                  href="{% url 'admin_alta_cliente' %}">
+                <i class="bi bi-person-plus"></i> Registrar Clientes
+              </a>
+            </li>
+          </ul>
         </div>
-      </nav>
-      
-      <!-- Contenido principal -->
-      <main id="contenido-principal" class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4">
-        {% block admin_content %}
-          <!-- Contenido por defecto (página de inicio del admin) -->
-          <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-            <h1 class="h2">Panel de Administración</h1>
+        {% endif %}
+
+        <!-- Sección de Gestión de Propiedades -->
+        {% if user.is_staff or user|has_group:"empleado" %}
+        <div class="sidebar-section">
+          <div class="sidebar-section-title">
+            <i class="bi bi-buildings"></i> Gestión de Propiedades
           </div>
-          
-          <div class="row">
-            <div class="col-md-12">
-              <div class="card mb-4 shadow-sm">
-                <div class="card-body">
-                  <h5 class="card-title">Bienvenido, {{ user.get_full_name|default:user.username }}</h5>
-                  <p class="card-text">Selecciona una opción del menú lateral para comenzar.</p>
-                </div>
+          <ul class="nav flex-column">
+            <li class="nav-item">
+              <a class="nav-link {% if request.resolver_match.url_name == 'admin_inmuebles' or request.resolver_match.url_name == 'admin_inmuebles_alta' or 'admin_inmuebles_' in request.resolver_match.url_name %}active{% endif %}"
+                href="{% url 'admin_inmuebles' %}">
+                <i class="bi bi-house-add"></i> Gestión de Viviendas
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {% if request.resolver_match.url_name == 'admin_cocheras' or request.resolver_match.url_name == 'admin_cocheras_alta' or 'admin_cocheras_' in request.resolver_match.url_name %}active{% endif %}"
+                href="{% url 'admin_cocheras' %}">
+                <i class="bi bi-car-front"></i> Gestión de Cocheras
+              </a>
+            </li>
+          </ul>
+        </div>
+        {% endif %}
+
+        <!-- Sección de Estadísticas -->
+        {% if user.is_staff %}
+        <div class="sidebar-section">
+          <div class="sidebar-section-title">
+            <i class="bi bi-bar-chart-line"></i> Estadísticas
+          </div>
+          <ul class="nav flex-column">
+            <li class="nav-item">
+              <a class="nav-link {% if request.resolver_match.url_name == 'admin_estadisticas_empleados' %}active{% endif %}" 
+                  href="{% url 'admin_estadisticas_empleados' %}">
+                <i class="bi bi-people"></i> Estadísticas de Empleados
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {% if 'admin_estadisticas_usuarios' in request.resolver_match.url_name %}active{% endif %}" 
+                  href="{% url 'admin_estadisticas_usuarios' %}">
+                <i class="bi bi-graph-up"></i> Estadísticas de Usuarios
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {% if request.resolver_match.url_name == 'admin_estadisticas_inmuebles' %}active{% endif %}" 
+                  href="{% url 'admin_estadisticas_inmuebles' %}">
+                <i class="bi bi-building"></i> Estadísticas de Inmuebles
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {% if request.resolver_match.url_name == 'admin_estadisticas_cocheras' %}active{% endif %}" 
+                  href="{% url 'admin_estadisticas_cocheras' %}">
+                <i class="bi bi-car-front-fill"></i> Estadísticas de Cocheras
+              </a>
+            </li>
+          </ul>
+        </div>
+        {% endif %}
+        {% if user.is_staff %}
+        <!-- Sección de Notificaciones 
+        <div class="sidebar-section">
+          <div class="sidebar-section-title">
+            <i class="bi bi-bell-fill"></i> Notificaciones
+          </div>
+          <ul class="nav flex-column">
+            <li class="nav-item">
+              <a class="nav-link {% if request.resolver_match.url_name == 'admin_notificar_imprevisto' %}active{% endif %}" 
+                 href="{% url 'admin_notificar_imprevisto' %}">
+                <i class="bi bi-exclamation-triangle"></i> Notificar Imprevisto
+              </a>
+            </li>
+          </ul>
+        </div>
+        -->
+        {% endif %}
+      </div>
+    </nav>
+    
+    <!-- Contenido principal -->
+    <main id="contenido-principal" class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4">
+      {% block admin_content %}
+        <!-- Contenido por defecto (página de inicio del admin) -->
+        <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+          <h1 class="h2">Panel de Administración</h1>
+        </div>
+        
+        <div class="row">
+          <div class="col-md-12">
+            <div class="card mb-4 shadow-sm">
+              <div class="card-body">
+                <h5 class="card-title">Bienvenido, {{ user.get_full_name|default:user.username }}</h5>
+                <p class="card-text">Selecciona una opción del menú lateral para comenzar.</p>
               </div>
             </div>
           </div>
-        {% endblock %}
-      </main>
-    </div>
+        </div>
+      {% endblock %}
+    </main>
   </div>
+</div>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Mover mensajes de Django al contenedor flotante
+    const messagesContainer = document.getElementById('floating-messages');
+    const djangoMessages = document.querySelectorAll('.alert');
+    
+    djangoMessages.forEach(msg => {
+        msg.classList.add('alert-auto-close');
+        messagesContainer.appendChild(msg);
+        
+        // Eliminar el mensaje después de 5 segundos
+        setTimeout(() => {
+            msg.remove();
+        }, 5000);
+    });
+});
+</script>
+{% endblock %}
 {% endblock %}

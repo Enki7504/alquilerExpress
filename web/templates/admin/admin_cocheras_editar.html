@@ -6,27 +6,24 @@
 {% block admin_content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
   <h1 class="h2">Editar Cochera: {{ cochera.nombre }}</h1>
-  <a href="{% url 'detalle_cochera' id_cochera=cochera.id_cochera %}" class="btn btn-outline-secondary">Volver</a>
 </div>
 
 <div class="card shadow-sm">
   <div class="card-body">
-    {% if messages %}
-      <div class="mt-4">
+    <div id="django-messages" style="display: none;">
+      {% if messages %}
         {% for message in messages %}
-          <div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-danger{% endif %}">
-            {{ message }}
-          </div>
+          <div class="django-message" data-tags="{{ message.tags }}" data-message="{{ message }}"></div>
         {% endfor %}
-      </div>
-    {% endif %}
+      {% endif %}
+    </div>
 
-    <form method="post" enctype="multipart/form-data">
+    <form method="post" id="cocheraForm" enctype="multipart/form-data">
       {% csrf_token %}
       <div class="row g-3">
         <div class="col-md-4">
           {{ form.nombre.label_tag }}
-          {{ form.nombre }}
+          <input type="text" name="nombre" id="id_nombre" class="form-control bg-light text-muted" value="{{ form.nombre.value }}" readonly style="pointer-events: none; opacity: 0.7;">
           {{ form.nombre.errors }}
         </div>
         <div class="col-md-4">
@@ -39,15 +36,20 @@
           {{ form.ciudad }}
           {{ form.ciudad.errors }}
         </div>
-        <div class="col-md-6">
+        <div class="col-md-4">
           {{ form.ubicacion.label_tag }}
           {{ form.ubicacion }}
           {{ form.ubicacion.errors }}
         </div>
-        <div class="col-md-6">
+        <div class="col-md-4">
           {{ form.precio_por_dia.label_tag }}
           {{ form.precio_por_dia }}
           {{ form.precio_por_dia.errors }}
+        </div>
+        <div class="col-md-4">
+          {{ form.minimo_dias_alquiler.label_tag }}
+          {{ form.minimo_dias_alquiler }}
+          {{ form.minimo_dias_alquiler.errors }}
         </div>
         <div class="col-12">
           {{ form.descripcion.label_tag }}
@@ -90,14 +92,36 @@
           {{ form.estado.errors }}
         </div>
         <div class="col-md-4">
-          {{ form.imagen.label_tag }}
-          {{ form.imagen }}
-          {{ form.imagen.errors }}
-          <img id="preview" class="img-fluid mt-3" style="max-height: 100px; display: none;">
+            {{ form.empleado.label_tag }}
+            {{ form.empleado }}
+            {{ form.empleado.errors }}
         </div>
+        <div class="col-md-12">
+          <label for="id_imagenes" class="form-label">Añadir más fotos</label>
+          <input type="file" name="imagenes" id="id_imagenes" class="form-control" multiple accept="image/*">
+        </div>
+
+        <div class="col-12">
+          <h5>Imágenes actuales</h5>
+          <div class="row" id="imagenes-actuales">
+            {% for imagen in cochera.imagenes.all %}
+            <div class="col-md-3 mb-3">
+              <img src="{{ imagen.imagen.url }}" class="img-thumbnail" style="max-height: 150px;">
+              <div class="mt-2">
+                <a href="#" class="btn btn-sm btn-danger eliminar-imagen" data-id="{{ imagen.id_imagen }}">Eliminar</a>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="col-12 mt-4">
+          <h5>Imágenes Nuevas</h5>
+          <div class="row" id="vista-previa-imagenes"></div>
+        </div>
+
         <div class="col-12">
           <button type="submit" class="btn btn-primary btn-azul">Guardar Cambios</button>
-          <a href="{% url 'detalle_cochera' id_cochera=cochera.id_cochera %}" class="btn btn-secondary">Cancelar</a>
         </div>
       </div>
     </form>
@@ -105,15 +129,249 @@
 </div>
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-  document.getElementById('id_imagen')?.addEventListener('change', function(e) {
-  const preview = document.getElementById('preview');
-  const file = e.target.files[0];
-  if (file && preview) {
-    preview.src = URL.createObjectURL(file);
-    preview.style.display = 'block';
-  }
+document.addEventListener('DOMContentLoaded', function() {
+    // Script que procesa los mensajes de Django y muestra el TOAST
+    const messageElements = document.querySelectorAll('.django-message');
+    if (messageElements.length > 0) {
+        setTimeout(() => {
+            messageElements.forEach(element => {
+                const tags = element.getAttribute('data-tags');
+                const message = element.getAttribute('data-message');
+                
+                let icon = 'info';
+                if (tags.includes('success')) icon = 'success';
+                if (tags.includes('error') || tags.includes('danger')) icon = 'error';
+                if (tags.includes('warning')) icon = 'warning';
+                
+                Swal.fire({
+                    position: 'top-end',
+                    icon: icon,
+                    title: message,
+                    showConfirmButton: false,
+                    timer: 5000,
+                    toast: true,
+                    timerProgressBar: true,
+                    width: '400px'
+                });
+            });
+        }, 300);
+    }
+
+    // Código para el manejo de imágenes
+    initializeImagePreview();
+    document.querySelectorAll('.eliminar-imagen').forEach(btn => {
+        btn.addEventListener('click', eliminarImagen);
+    });
 });
+
+
+// Lógica de envío de formulario AJAX para COCHERAS
+document.getElementById('cocheraForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const form = e.target;
+    const formData = new FormData(form);
+    const submitButton = form.querySelector('button[type="submit"]');
+
+    // Limpiar errores de validación anteriores
+    form.querySelectorAll('.errorlist').forEach(el => el.remove());
+    form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+    
+    // Deshabilitar el botón y mostrar spinner
+    submitButton.disabled = true;
+    submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...';
+
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Lógica de éxito
+            Swal.fire({
+                title: '¡Éxito!',
+                text: 'Los cambios se guardaron correctamente',
+                icon: 'success',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
+            }).then(() => {
+                window.location.href = '/panel/cocheras/';
+            });
+        } else {
+            // Lógica de error
+            if (data.message) {
+                Swal.fire({
+                    position: 'top-end',
+                    icon: data.icon || 'error',
+                    title: data.message,
+                    showConfirmButton: false,
+                    timer: 5000,
+                    toast: true,
+                    timerProgressBar: true,
+                    width: '400px'
+                });
+            }
+
+            if (data.errors) {
+                for (const fieldName in data.errors) {
+                    const field = document.getElementById(`id_${fieldName}`);
+                    if (field) {
+                        field.classList.add('is-invalid');
+                        const errorList = document.createElement('ul');
+                        errorList.className = 'errorlist';
+                        data.errors[fieldName].forEach(errorObj => {
+                            const errorItem = document.createElement('li');
+                            errorItem.textContent = errorObj.message;
+                            errorList.appendChild(errorItem);
+                        });
+                        field.parentNode.insertBefore(errorList, field.nextSibling);
+                    }
+                }
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        Swal.fire('Error', 'Ocurrió un error inesperado al contactar al servidor.', 'error');
+    })
+    .finally(() => {
+        // Volver a habilitar el botón
+        submitButton.disabled = false;
+        submitButton.textContent = 'Guardar Cambios';
+    });
+});
+
+// --- Funciones de manejo de imágenes (sin cambios en su lógica interna) ---
+let fileInputListener = null;
+let previewContainerListener = null;
+
+function toggleNewImagesSection(show) {
+    const sectionTitle = document.querySelector('#vista-previa-imagenes').previousElementSibling;
+    if (sectionTitle) {
+        sectionTitle.style.display = show ? 'block' : 'none';
+    }
+    document.getElementById('vista-previa-imagenes').style.display = show ? 'flex' : 'none';
+}
+
+function cleanUpEventListeners() {
+    const fileInput = document.getElementById('id_imagenes');
+    const previewContainer = document.getElementById('vista-previa-imagenes');
+    if (fileInputListener) {
+        fileInput.removeEventListener('change', fileInputListener);
+    }
+    if (previewContainerListener) {
+        previewContainer.removeEventListener('click', previewContainerListener);
+    }
+}
+
+function initializeImagePreview() {
+    cleanUpEventListeners();
+    const fileInput = document.getElementById('id_imagenes');
+    const previewContainer = document.getElementById('vista-previa-imagenes');
+    toggleNewImagesSection(false);
+
+    const handleFileSelect = (event) => {
+        const files = event.target.files;
+        previewContainer.innerHTML = '';
+        if (!files || files.length === 0) {
+            toggleNewImagesSection(false);
+            return;
+        }
+        toggleNewImagesSection(true);
+        Array.from(files).forEach((file, index) => {
+            if (!file.type.match('image.*')) return;
+            const reader = new FileReader();
+            reader.onload = (loadEvent) => {
+                const div = document.createElement('div');
+                div.className = 'col-md-3 mb-3';
+                div.innerHTML = `
+                  <img src="${loadEvent.target.result}" class="img-thumbnail" style="max-height:150px;">
+                  <div class="mt-2">
+                    <button class="btn btn-sm btn-danger quitar-imagen" data-index="${index}">Quitar</button>
+                  </div>
+                `;
+                previewContainer.appendChild(div);
+            };
+            reader.readAsDataURL(file);
+        });
+    };
+
+    const handleRemoveImage = async (event) => {
+        if (!event.target.classList.contains('quitar-imagen')) return;
+        event.preventDefault();
+        const index = parseInt(event.target.getAttribute('data-index'));
+        const result = await Swal.fire({
+            title: '¿Quitar esta imagen?',
+            text: "La imagen no se subirá al servidor",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Sí, quitar',
+            cancelButtonText: 'Cancelar'
+        });
+        if (!result.isConfirmed) return;
+        const files = Array.from(fileInput.files);
+        const newFiles = files.filter((_, i) => i !== index);
+        const dataTransfer = new DataTransfer();
+        newFiles.forEach(file => dataTransfer.items.add(file));
+        fileInput.files = dataTransfer.files;
+        const changeEvent = new Event('change');
+        fileInput.dispatchEvent(changeEvent);
+    };
+
+    fileInputListener = handleFileSelect;
+    previewContainerListener = handleRemoveImage;
+    fileInput.addEventListener('change', fileInputListener);
+    previewContainer.addEventListener('click', previewContainerListener);
+}
+
+async function eliminarImagen(e) {
+    e.preventDefault();
+    const btn = e.currentTarget;
+    const imagenId = btn.getAttribute('data-id');
+
+    const result = await Swal.fire({
+        title: '¿Eliminar imagen?',
+        text: "Esta acción no se puede deshacer",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+        // URL adaptada para eliminar imagen de cochera
+        const response = await fetch(`/eliminar-imagen-cochera/${imagenId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json',
+            },
+        });
+        if (!response.ok) throw new Error('Error en la respuesta del servidor');
+        const data = await response.json();
+        if (data.success) {
+            btn.closest('.col-md-3').remove();
+            await Swal.fire('Eliminada!', 'La imagen ha sido eliminada.', 'success');
+        } else {
+            throw new Error(data.message || 'Error al eliminar la imagen');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        Swal.fire('Error', error.message || 'Ocurrió un error al eliminar la imagen', 'error');
+    }
+}
 </script>
 {% endblock %}
 {% endblock %}

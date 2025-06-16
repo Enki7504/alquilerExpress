@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Realizar Pago</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/png" href="/alquilerExpress/static/img/logo-alquiler-express-3.png">
+    <!-- Bootstrap para mejor apariencia (opcional) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background: #f5f5f5; }
+        .mp-card {
+            max-width: 400px;
+            margin: 60px auto;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+            padding: 2rem 2.5rem;
+        }
+        .mp-logo {
+            width: 160px;
+            margin-bottom: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="mp-card text-center">
+        <!--
+        <img src="https://http2.mlstatic.com/frontend-assets/ui-navigation/5.22.6/mercadopago/logo__large_plus.png" alt="Mercado Pago" class="mp-logo">
+        -->
+        <h4 class="mb-4">Realizar Pago</h4>
+        <div class="mb-3">
+            <strong>Dinero disponible en cuenta:</strong>
+            <div id="saldo" class="display-6 text-success"></div>
+        </div>
+        <div class="mb-3">
+            <strong>Precio a pagar:</strong>
+            <div id="precio" class="display-6 text-primary"></div>
+        </div>
+        <div class="mb-3">
+            <strong>Seleccionar tarjeta:</strong>
+            <select id="tarjetaSelect" class="form-select mb-2">
+                {% for tarjeta in tarjetas %}
+                    <option value="{{ tarjeta.id_tarjeta }}" data-saldo="{{ tarjeta.saldo }}">
+                        **** **** **** {{ tarjeta.numero|slice:"-4:" }} - {{ tarjeta.nombre }}
+                    </option>
+                {% endfor %}
+            </select>
+            <a href="{% url 'agregar_tarjeta' %}?id_reserva={{ id_reserva }}" class="btn btn-link btn-sm">Agregar nueva tarjeta</a>
+        </div>
+        <form id="fake-csrf-form" style="display:none;">
+            {% csrf_token %}
+        </form>
+        <button id="btnPagar" class="btn btn-primary btn-lg w-100 mt-4">Pagar</button>
+        <div id="mensaje" class="mt-4"></div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        const saldo = "{{ saldo|default:'0.00' }}";
+        const precio = "{{ precio|default:'0.00' }}";
+        const idReserva = "{{ id_reserva|default:'' }}";
+        let saldoActual = parseFloat(saldo);
+
+        document.getElementById('saldo').textContent = '$ ' + saldoActual.toFixed(2);
+        document.getElementById('precio').textContent = '$ ' + parseFloat(precio).toFixed(2);
+
+        document.getElementById('btnPagar').onclick = async function() {
+            const saldoNum = saldoActual;
+            const precioNum = parseFloat(precio);
+            const idTarjeta = document.getElementById('tarjetaSelect').value;
+            if (saldoNum >= precioNum) {
+                const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+                const response = await fetch(window.location.pathname + window.location.search, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({id_reserva: idReserva, id_tarjeta: idTarjeta})
+                });
+                const data = await response.json();
+                if (data.success) {
+                    saldoActual -= precioNum;
+                    document.getElementById('saldo').textContent = '$ ' + saldoActual.toFixed(2);
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Pago realizado con éxito!',
+                        html: 'Estado de la reserva actualizado.<br>Serás redirigido al inicio en 3 segundos...',
+                        timer: 3000,
+                        timerProgressBar: true,
+                        showConfirmButton: false
+                    });
+                    setTimeout(function() {
+                        window.location.href = '/';
+                    }, 3000);
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Error al actualizar la reserva: ' + (data.error || 'Error desconocido'),
+                        timer: 5000,
+                        timerProgressBar: true,
+                        showConfirmButton: false
+                    });
+                }
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Saldo insuficiente',
+                    text: 'Saldo insuficiente para realizar el pago.',
+                    timer: 5000,
+                    timerProgressBar: true,
+                    showConfirmButton: false
+                });
+            }
+        }
+        
+        const tarjetaSelect = document.getElementById('tarjetaSelect');
+        if (tarjetaSelect) {
+            tarjetaSelect.addEventListener('change', function() {
+                saldoActual = parseFloat(this.selectedOptions[0].getAttribute('data-saldo'));
+                document.getElementById('saldo').textContent = '$ ' + saldoActual.toFixed(2);
+            });
+            // Inicializar saldo con la tarjeta seleccionada
+            saldoActual = parseFloat(tarjetaSelect.selectedOptions[0].getAttribute('data-saldo'));
+            document.getElementById('saldo').textContent = '$ ' + saldoActual.toFixed(2);
+        }
+    </script>
+</body>
+</html>

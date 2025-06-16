@@ -1,24 +1,22 @@
 {% extends 'admin/admin_base.html' %}
 {% load static %}
 
-{% block title %}Alta de Inmuebles | Panel Admin{% endblock %}
+{% block title %}Alta de Viviendas | Panel Admin{% endblock %}
 
 {% block admin_content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-  <h1 class="h2">Dar de Alta de Inmueble</h1>
+  <h1 class="h2">Dar de Alta de Vivienda</h1>
 </div>
 
 <div class="card shadow-sm">
   <div class="card-body">
-    {% if messages %}
-      <div class="mt-4">
+    <div id="django-messages" style="display: none;">
+      {% if messages %}
         {% for message in messages %}
-          <div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-danger{% endif %}">
-            {{ message }}
-          </div>
+          <div class="django-message" data-tags="{{ message.tags }}" data-message="{{ message }}"></div>
         {% endfor %}
-      </div>
-    {% endif %}
+      {% endif %}
+    </div>
 
     <form method="post" enctype="multipart/form-data">
       {% csrf_token %}
@@ -39,15 +37,20 @@
           {{ form.ciudad }}
           {{ form.ciudad.errors }}
         </div>
-        <div class="col-md-6">
+        <div class="col-md-4">
           {{ form.ubicacion.label_tag }}
           {{ form.ubicacion }}
           {{ form.ubicacion.errors }}
         </div>
-        <div class="col-md-6">
+        <div class="col-md-4">
           {{ form.precio_por_dia.label_tag }}
           {{ form.precio_por_dia }}
           {{ form.precio_por_dia.errors }}
+        </div>
+        <div class="col-md-4">
+          {{ form.minimo_dias_alquiler.label_tag }}
+          {{ form.minimo_dias_alquiler }}
+          {{ form.minimo_dias_alquiler.errors }}
         </div>
         <div class="col-12">
           {{ form.descripcion.label_tag }}
@@ -96,19 +99,26 @@
           {{ form.estado.errors }}
         </div>
         <div class="col-md-4">
-          <label for="id_imagenes" class="form-label">Fotos del inmueble</label>
+            {{ form.empleado.label_tag }}
+            {{ form.empleado }}
+            {{ form.empleado.errors }}
+        </div>
+        <div class="col-md-12">
+          <label for="id_imagenes" class="form-label">Fotos de la Vivienda</label>
           <input type="file" name="imagenes" id="id_imagenes" class="form-control" multiple accept="image/*">
         </div>
         <div class="col-12">
-          <button type="submit" class="btn btn-primary btn-azul">Cargar Inmueble</button>
+          <button type="submit" class="btn btn-primary btn-azul">Cargar Vivienda</button>
         </div>
       </div>
     </form>
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+  // Primero carga el código de provincias/ciudades
   const checkbox = document.getElementById('toggleCochera');
   const selectDiv = document.getElementById('cocheraSelectDiv');
   checkbox.addEventListener('change', function() {
@@ -136,6 +146,35 @@ document.addEventListener('DOMContentLoaded', function() {
         });
       });
   });
+
+  // Luego maneja los mensajes
+  const messageElements = document.querySelectorAll('.django-message');
+  
+  if (messageElements.length > 0) {
+    // Pequeño retraso para asegurar que SweetAlert esté listo
+    setTimeout(() => {
+      messageElements.forEach(element => {
+        const tags = element.getAttribute('data-tags');
+        const message = element.getAttribute('data-message');
+        
+        let icon = 'info';
+        if (tags.includes('success')) icon = 'success';
+        if (tags.includes('error') || tags.includes('danger')) icon = 'error';
+        if (tags.includes('warning')) icon = 'warning';
+        
+        Swal.fire({
+          position: 'top-end',
+          icon: icon,
+          title: message,
+          showConfirmButton: false,
+          timer: 5000,
+          toast: true,
+          timerProgressBar: true,
+          width: '400px'
+        });
+      });
+    }, 300); // Pequeño retraso de 300ms
+  }
 });
 </script>
 {% endblock %}

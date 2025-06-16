@@ -13,63 +13,84 @@
   <div class="container-wrapper row">
     <!-- Filtros -->
     <aside class="filtros col-md-2 sidebar bg-light sticky-top">
-        <form>
-          <div class="mb-3">
-            <label class="form-label">Precio por dia</label>
-            <input type="number" class="form-control filtros__campo" placeholder="$" min="0">
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Ubicación</label>
-            <input type="text" class="form-control filtros__campo">
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Cantidad de Huespedes</label>
-            <input type="number" class="form-control filtros__campo" min="0">
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Cantidad de Ambientes</label>
-            <select class="form-select filtros__campo">
-              <option>Cualquiera</option>
-              <option>1</option>
-              <option>2+</option>
-              <option>3+</option>
-              <option>4+</option>
-              <option>5+</option>
-              <option>6+</option>
-              <option>7+</option>
-              <option>8+</option>
-            </select>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Cantidad de Camas</label>
-            <select class="form-select filtros__campo">
-              <option>Cualquiera</option>
-              <option>1</option>
-              <option>2+</option>
-              <option>3+</option>
-              <option>4+</option>
-              <option>5+</option>
-              <option>6+</option>
-              <option>7+</option>
-              <option>8+</option>
-            </select>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Cantidad de Baños</label>
-            <select class="form-select filtros__campo">
-              <option>Cualquiera</option>
-              <option>1</option>
-              <option>2+</option>
-              <option>3+</option>
-              <option>4+</option>
-              <option>5+</option>
-              <option>6+</option>
-              <option>7+</option>
-              <option>8+</option>
-            </select>
-          </div>
-          <button class="btn btn-primary w-100 btn-azul">Aplicar</button>
-        </form>
+        <!-- Filtros de búsqueda de inmuebles -->
+      <form method="get">
+        <div class="mb-3">
+          <label class="form-label">Precio por día</label>
+          <input type="number" class="form-control filtros__campo" name="precio" placeholder="$" min="0" value="{{ request.GET.precio }}">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Ubicación</label>
+          <input type="text" class="form-control filtros__campo" name="ubicacion" value="{{ request.GET.ubicacion }}">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Cantidad de Huéspedes</label>
+          <input type="number" class="form-control filtros__campo" name="huespedes" min="0" value="{{ request.GET.huespedes }}">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Cantidad de Ambientes</label>
+          <select class="form-select filtros__campo" name="ambientes">
+            <option value="">Cualquiera</option>
+            <option value="1" {% if request.GET.ambientes == "1" %}selected{% endif %}>1</option>
+            <option value="2+" {% if request.GET.ambientes == "2+" %}selected{% endif %}>2+</option>
+            <option value="3+" {% if request.GET.ambientes == "3+" %}selected{% endif %}>3+</option>
+            <option value="4+" {% if request.GET.ambientes == "4+" %}selected{% endif %}>4+</option>
+            <option value="5+" {% if request.GET.ambientes == "5+" %}selected{% endif %}>5+</option>
+            <option value="6+" {% if request.GET.ambientes == "6+" %}selected{% endif %}>6+</option>
+            <option value="7+" {% if request.GET.ambientes == "7+" %}selected{% endif %}>7+</option>
+            <option value="8+" {% if request.GET.ambientes == "8+" %}selected{% endif %}>8+</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Cantidad de Camas</label>
+          <select class="form-select filtros__campo" name="camas">
+            <option value="">Cualquiera</option>
+            <option value="1" {% if request.GET.camas == "1" %}selected{% endif %}>1</option>
+            <option value="2+" {% if request.GET.camas == "2+" %}selected{% endif %}>2+</option>
+            <option value="3+" {% if request.GET.camas == "3+" %}selected{% endif %}>3+</option>
+            <option value="4+" {% if request.GET.camas == "4+" %}selected{% endif %}>4+</option>
+            <option value="5+" {% if request.GET.camas == "5+" %}selected{% endif %}>5+</option>
+            <option value="6+" {% if request.GET.camas == "6+" %}selected{% endif %}>6+</option>
+            <option value="7+" {% if request.GET.camas == "7+" %}selected{% endif %}>7+</option>
+            <option value="8+" {% if request.GET.camas == "8+" %}selected{% endif %}>8+</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Cantidad de Baños</label>
+          <select class="form-select filtros__campo" name="banios">
+            <option value="">Cualquiera</option>
+            <option value="1" {% if request.GET.banios == "1" %}selected{% endif %}>1</option>
+            <option value="2+" {% if request.GET.banios == "2+" %}selected{% endif %}>2+</option>
+            <option value="3+" {% if request.GET.banios == "3+" %}selected{% endif %}>3+</option>
+            <option value="4+" {% if request.GET.banios == "4+" %}selected{% endif %}>4+</option>
+            <option value="5+" {% if request.GET.banios == "5+" %}selected{% endif %}>5+</option>
+            <option value="6+" {% if request.GET.banios == "6+" %}selected{% endif %}>6+</option>
+            <option value="7+" {% if request.GET.banios == "7+" %}selected{% endif %}>7+</option>
+            <option value="8+" {% if request.GET.banios == "8+" %}selected{% endif %}>8+</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Provincia</label>
+          <select class="form-select filtros__campo" name="provincia" id="provincia-select">
+            <option value="">Todas</option>
+            {% for provincia in provincias %}
+              <option value="{{ provincia.id }}" {% if request.GET.provincia == provincia.id|stringformat:"s" %}selected{% endif %}>{{ provincia.nombre }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Ciudad</label>
+          <select class="form-select filtros__campo" name="ciudad" id="ciudad-select" {% if not request.GET.provincia %}disabled{% endif %}>
+            <option value="">Todas</option>
+            {% if request.GET.provincia %}
+              {% for ciudad in ciudades %}
+                <option value="{{ ciudad.id }}" {% if request.GET.ciudad == ciudad.id|stringformat:"s" %}selected{% endif %}>{{ ciudad.nombre }}</option>
+              {% endfor %}
+            {% endif %}
+          </select>
+        </div>
+        <button class="btn btn-primary w-100 btn-azul">Aplicar</button>
+      </form>
     </aside>
 
     <!-- Lista de Inmuebles -->
@@ -114,4 +135,36 @@
     </aside>
   </div>
 </main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+console.log("Cargando script de búsqueda de inmuebles");
+console.log("Cargando script de búsqueda de inmuebles1");
+
+document.addEventListener('DOMContentLoaded', function() {
+  const provincia = document.getElementById('provincia-select');
+  const ciudad = document.getElementById('ciudad-select');
+  if (!provincia || !ciudad) return;
+
+  provincia.addEventListener('change', function() {
+    const provinciaId = this.value;
+    ciudad.innerHTML = '<option value="">Todas</option>';
+    ciudad.disabled = true;
+    if (!provinciaId) return;
+
+    fetch(`/ajax/cargar-ciudades-filtro/?provincia=${provinciaId}`)
+      .then(response => response.json())
+      .then(data => {
+        data.ciudades.forEach(function(ciudadObj) {
+          const option = document.createElement('option');
+          option.value = ciudadObj.id;
+          option.textContent = ciudadObj.nombre;
+          ciudad.appendChild(option);
+        });
+        ciudad.disabled = false;
+      });
+  });
+});
+</script>
 {% endblock %}

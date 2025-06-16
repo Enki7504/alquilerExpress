@@ -6,13 +6,8 @@ from .models import Reserva
 from .models import Perfil
 from .utils import enviar_mail_a_empleados_sobre_reserva
 
-@receiver(post_save, sender=Reserva)
-def enviar_mail_automatica_reserva(sender, instance, created, **kwargs):
-    if created:
-        enviar_mail_a_empleados_sobre_reserva(instance.id_reserva)
-
-@receiver(post_save, sender=User)
-def crear_o_actualizar_perfil_usuario(sender, instance, created, **kwargs):
-    if created:
-        Perfil.objects.create(usuario=instance, dni='00000000') # Se crea con un DNI de ejemplo, asegúrate de que esto sea válido
-    instance.perfil.save()
+# la comento porque si no se intenta enviar y devuelve error, pero el otro llamado funciona re bien
+#@receiver(post_save, sender=Reserva)
+#def enviar_mail_automatica_reserva(sender, instance, created, **kwargs):
+#    if created:
+#        enviar_mail_a_empleados_sobre_reserva(instance.id_reserva)

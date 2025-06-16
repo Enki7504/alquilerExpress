@@ -43,7 +43,7 @@
 }
 
 .navbar__icon {
-  height: 40px;
+  height: 72px;
 }
 
 .navbar__search {
@@ -81,6 +81,8 @@
   color: white;
 }
 
+/* =========== cosas =========== */
+
 .block {
     display: block;
 }
@@ -93,4 +95,23 @@
   display: none; /* Oculto por defecto */
   flex-wrap: wrap;
   gap: 15px;
+}
+
+.alert-auto-close {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    min-width: 300px;
+    text-align: center;
+    animation: fadeOut 5s forwards;
+    animation-delay: 3s;
+}
+
+@keyframes fadeOut {
+    to {
+        opacity: 0;
+        visibility: hidden;
+    }
 }

@@ -1,11 +1,14 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
+from datetime import date
 
-from .models import Cochera, Comentario, Estado, Inmueble, Perfil
-from .models import Perfil, Comentario, Inmueble, Estado, Cochera, Ciudad, Provincia
+from .models import Cochera, Comentario, Estado, Inmueble, Perfil, Resenia, RespuestaComentario
+from .models import Perfil, Comentario, Inmueble, Estado, Cochera, Ciudad, Provincia, Tarjeta
 from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator
+from django.db.models import Q
 
 class ComentarioForm(forms.ModelForm):
     class Meta:
@@ -26,10 +29,15 @@ class ComentarioForm(forms.ModelForm):
 class RegistroUsuarioForm(UserCreationForm):
     dni = forms.CharField(max_length=20, required=True, label="DNI")
     email = forms.EmailField(required=True, label="Correo electrónico")
+    fecha_nacimiento = forms.DateField(
+        label="Fecha de nacimiento",
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+        required=True
+    )
 
     class Meta:
         model = User
-        fields = ("email", "first_name", "last_name", "password1", "password2")  # Quitar "dni" de aquí
+        fields = ("email", "first_name", "last_name", "fecha_nacimiento", "dni", "password1", "password2")
 
     def clean_email(self):
         email = self.cleaned_data["email"]
@@ -43,6 +51,14 @@ class RegistroUsuarioForm(UserCreationForm):
             raise forms.ValidationError("Este DNI ya está registrado.")
         return dni
 
+    def clean_fecha_nacimiento(self):
+        fecha = self.cleaned_data["fecha_nacimiento"]
+        hoy = date.today()
+        edad = hoy.year - fecha.year - ((hoy.month, hoy.day) < (fecha.month, fecha.day))
+        if edad < 18:
+            raise forms.ValidationError("Debes ser mayor de 18 años.")
+        return fecha
+
     def save(self, commit=True):
         user = super().save(commit=False)
         email = self.cleaned_data["email"]
@@ -51,9 +67,10 @@ class RegistroUsuarioForm(UserCreationForm):
         if commit:
             user.save()
             dni = self.cleaned_data["dni"]
+            fecha_nacimiento = self.cleaned_data["fecha_nacimiento"]
             # Solo crear el perfil si no existe
             if not Perfil.objects.filter(usuario=user).exists():
-                Perfil.objects.create(usuario=user, dni=dni)
+                Perfil.objects.create(usuario=user, dni=dni, fecha_nacimiento=fecha_nacimiento)
             # Asignar grupo cliente
             grupo_cliente, _ = Group.objects.get_or_create(name="cliente")
             user.groups.add(grupo_cliente)
@@ -88,6 +105,18 @@ class InmuebleForm(forms.ModelForm):
         label="Cochera",
         widget=forms.Select(attrs={'class': 'form-select', 'id': 'cocheraSelect'})
     )
+    empleado = forms.ModelChoiceField(
+        queryset=Perfil.objects.filter(usuario__groups__name="empleado"),
+        required=False,
+        label="Empleado asignado",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    minimo_dias_alquiler = forms.IntegerField(
+        min_value=1,
+        label="Mínimo de días de alquiler",
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+        initial=1
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -101,13 +130,20 @@ class InmuebleForm(forms.ModelForm):
             self.fields['ciudad'].queryset = Ciudad.objects.filter(provincia=self.instance.provincia).order_by('nombre')
         else:
             self.fields['ciudad'].queryset = Ciudad.objects.none()
+        if self.instance.pk and self.instance.cochera:
+            cocheras = Cochera.objects.filter(
+                Q(estado__nombre="Disponible") | Q(pk=self.instance.cochera.pk)
+            )
+        else:
+            cocheras = Cochera.objects.filter(estado__nombre="Disponible")
+        self.fields['cochera'].queryset = cocheras
 
     class Meta:
         model = Inmueble
         fields = [
             'nombre', 'ubicacion', 'descripcion', 'cantidad_banios', 'cantidad_ambientes',
             'cantidad_camas', 'cantidad_huespedes', 'precio_por_dia', 'politica_cancelacion',
-            'provincia', 'ciudad', 'cochera', 'estado'
+            'provincia', 'ciudad', 'cochera', 'estado', 'empleado', 'minimo_dias_alquiler'  # <-- AGREGADO AQUÍ
         ]
         widgets = {
             'descripcion': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
@@ -119,19 +155,46 @@ class InmuebleForm(forms.ModelForm):
             'cantidad_camas': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
             'cantidad_huespedes': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
             'precio_por_dia': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
-            'cochera': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'cochera': forms.Select(attrs={'class': 'form-select', 'id': 'cocheraSelect'}),
             'estado': forms.Select(attrs={'class': 'form-select'}),
         }
+
+    def clean_nombre(self):
+        nombre = self.cleaned_data['nombre']
+        qs = Inmueble.objects.filter(nombre=nombre)
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise forms.ValidationError("Ya existe una vivienda con este nombre.")
+        return nombre
 
     # Esto pone el estado de la cochera a "Oculto" cuando se guarda el inmueble
     def save(self, commit=True):
         inmueble = super().save(commit=False)
-        cochera = self.cleaned_data.get('cochera')
-        if cochera:
-            # Cambiar el estado de la cochera a "Oculto"
+        cochera_nueva = self.cleaned_data.get('cochera')
+        cochera_anterior = None
+
+        # Si el inmueble ya existe y tenía cochera asignada, la guardamos
+        if self.instance.pk:
+            inmueble_db = Inmueble.objects.get(pk=self.instance.pk)
+            cochera_anterior = inmueble_db.cochera
+
+        # Si se desasigna la cochera (se deja vacío)
+        if cochera_anterior and cochera_anterior != cochera_nueva:
+            # Cambiar el estado de la cochera anterior a "Disponible"
+            estado_disponible = Estado.objects.get(nombre="Disponible")
+            cochera_anterior.estado = estado_disponible
+            cochera_anterior.save()
+
+        # Si se asigna una nueva cochera
+        if cochera_nueva:
+            # Cambiar el estado de la cochera nueva a "Oculto"
             estado_oculto = Estado.objects.get(nombre="Oculto")
-            cochera.estado = estado_oculto
-            cochera.save()
+            cochera_nueva.estado = estado_oculto
+            cochera_nueva.save()
+
+        inmueble.cochera = cochera_nueva
+
         if commit:
             inmueble.save()
             self.save_m2m()
@@ -155,6 +218,18 @@ class CocheraForm(forms.ModelForm):
         required=True,
         label="Estado"
     )
+    empleado = forms.ModelChoiceField(
+        queryset=Perfil.objects.filter(usuario__groups__name="empleado"),
+        required=False,
+        label="Empleado asignado",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    minimo_dias_alquiler = forms.IntegerField(
+        min_value=1,
+        label="Mínimo de días de alquiler",
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+        initial=1
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -174,7 +249,7 @@ class CocheraForm(forms.ModelForm):
         fields = [
             'nombre', 'ubicacion', 'descripcion', 'alto', 'ancho', 'largo',
             'cantidad_vehiculos', 'con_techo', 'precio_por_dia', 'politica_cancelacion',
-            'provincia', 'ciudad', 'estado'
+            'provincia', 'ciudad', 'estado', 'empleado', 'minimo_dias_alquiler'  # <-- AGREGADO AQUÍ
         ]
         widgets = {
             'nombre': forms.TextInput(attrs={'class': 'form-control'}),
@@ -188,78 +263,78 @@ class CocheraForm(forms.ModelForm):
             'precio_por_dia': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
             'politica_cancelacion': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
             'estado': forms.Select(attrs={'class': 'form-select'}),
-        }
-        
+        }     
+    
+    def clean_nombre(self):
+        nombre = self.cleaned_data['nombre']
+        qs = Cochera.objects.filter(nombre=nombre)
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise forms.ValidationError("Ya existe una cochera con este nombre.")
+        return nombre
+
 # esto sirve? 
 class AdminLoginForm(forms.Form):
     email = forms.EmailField(label='Email')
     password = forms.CharField(widget=forms.PasswordInput, label='Contraseña')
 
-# para el registro de cliente
-"""
-class ClienteCreationForm(forms.ModelForm):
+class ClienteCreationForm(forms.Form):
+    first_name = forms.CharField(
+        label="Nombre",
+        max_length=30,
+        validators=[
+            RegexValidator(
+                regex=r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$',
+                message="El nombre solo puede contener letras y espacios."
+            )
+        ]
+    )
+    last_name = forms.CharField(
+        label="Apellido",
+        max_length=30,
+        validators=[
+            RegexValidator(
+                regex=r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$',
+                message="El apellido solo puede contener letras y espacios."
+            )
+        ]
+    )
     email = forms.EmailField(label="Correo electrónico")
-    first_name = forms.CharField(label="Nombre")
-    last_name = forms.CharField(label="Apellido")
-    password = forms.CharField(widget=forms.PasswordInput, label="Contraseña")
-    dni = forms.CharField(label="DNI")
+    password = forms.CharField(
+        widget=forms.PasswordInput,
+        label="Contraseña",
+        min_length=9,
+        help_text="La contraseña debe tener al menos 9 caracteres."
+    )
+    dni = forms.CharField(
+        label="DNI",
+        max_length=20,
+        validators=[
+            RegexValidator(
+                regex=r'^\d{7,8}$',
+                message="El DNI debe contener 7 u 8 dígitos numéricos."
+            )
+        ]
+    )
 
-    class Meta:
-        model = Perfil
-        fields = ["dni"]
-
-    def save(self, commit=True):
+    def clean_email(self):
         email = self.cleaned_data["email"]
-        password = self.cleaned_data["password"]
-        first_name = self.cleaned_data["first_name"]
-        last_name = self.cleaned_data["last_name"]
+        if User.objects.filter(username=email).exists():
+            raise forms.ValidationError("Ya existe un usuario con este correo electrónico.")
+        return email
 
-        # Crear el usuario
-        user = User.objects.create_user(
-            username=email,
-            email=email,
-            password=password,
-            first_name=first_name,
-            last_name=last_name,
-        )
-
-        # Agregar al grupo "cliente"
-        from django.contrib.auth.models import Group
-        grupo_cliente, _ = Group.objects.get_or_create(name="cliente")
-        user.groups.add(grupo_cliente)
-
-        # Crear el perfil
-        perfil = super().save(commit=False)
-        perfil.usuario = user
-        if commit:
-            perfil.save()
-        return perfil
-
-"""
-
-#para el registro de empleado
-class ClienteCreationForm(forms.ModelForm):
-    email = forms.EmailField(label="Correo electrónico")
-    password = forms.CharField(widget=forms.PasswordInput, label="Contraseña")
-    first_name = forms.CharField(label="Nombre")
-    last_name = forms.CharField(label="Apellido")
-    dni = forms.CharField(label="DNI")
-
-    class Meta:
-        model = User
-        fields = ["email", "password", "first_name", "last_name"]
+    def clean_dni(self):
+        dni = self.cleaned_data["dni"]
+        if Perfil.objects.filter(dni=dni).exists():
+            raise forms.ValidationError("Ya existe un usuario con este DNI.")
+        return dni
 
     def clean_password(self):
         password = self.cleaned_data.get("password")
         if len(password) < 9:
-            raise forms.ValidationError("La contraseña debe tener más de 8 caracteres.")
+            raise forms.ValidationError("La contraseña debe tener al menos 9 caracteres.")
         return password
-
-    def clean_dni(self):
-        dni = self.cleaned_data.get("dni")
-        if Perfil.objects.filter(dni=dni).exists():
-            raise forms.ValidationError("Este DNI ya está registrado.")
-        return dni
 
     def save(self, commit=True):
         user = User(
@@ -271,18 +346,14 @@ class ClienteCreationForm(forms.ModelForm):
         user.set_password(self.cleaned_data["password"])
         if commit:
             user.save()
-
-            # Asignar grupo cliente
             grupo_cliente, _ = Group.objects.get_or_create(name="cliente")
             user.groups.add(grupo_cliente)
-
-            # Crear perfil
             Perfil.objects.create(
                 usuario=user,
                 dni=self.cleaned_data["dni"]
             )
         return user
-
+    
 class EmpleadoCreationForm(forms.Form):
     first_name = forms.CharField(max_length=30)
     last_name = forms.CharField(max_length=30)
@@ -295,12 +366,6 @@ class EmpleadoCreationForm(forms.Form):
         if User.objects.filter(username=email).exists():
             raise ValidationError("Ya existe un usuario con este email.")
         return email
-
-    def clean_password(self):
-        password = self.cleaned_data.get("password")
-        if len(password) < 9:
-            raise forms.ValidationError("La contraseña debe tener más de 8 caracteres.")
-        return password
 
     def clean_dni(self):
         dni = self.cleaned_data["dni"]
@@ -324,21 +389,218 @@ class EmpleadoCreationForm(forms.Form):
         return user
 
 class EmpleadoAdminCreationForm(forms.Form):
-    first_name = forms.CharField(label="Nombre", max_length=30)
-    last_name = forms.CharField(label="Apellido", max_length=30)
+    first_name = forms.CharField(
+        label="Nombre",
+        max_length=30,
+        validators=[
+            RegexValidator(
+                regex=r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$',
+                message="El nombre solo puede contener letras y espacios."
+            )
+        ]
+    )
+    last_name = forms.CharField(
+        label="Apellido",
+        max_length=30,
+        validators=[
+            RegexValidator(
+                regex=r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$',
+                message="El apellido solo puede contener letras y espacios."
+            )
+        ]
+    )
     email = forms.EmailField(label="Correo electrónico")
-    dni = forms.CharField(label="DNI", max_length=20)
+    dni = forms.CharField(
+        label="DNI",
+        max_length=20,
+        validators=[
+            RegexValidator(
+                regex=r'^\d{7,8}$',  # Para DNI argentino; ajusta según el formato de tu país
+                message="El DNI debe contener 7 u 8 dígitos numéricos."
+            )
+        ]
+    )
+    fecha_nacimiento = forms.DateField(
+        label="Fecha de nacimiento",
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+        required=True
+    )
+
+    def clean_email(self):
+        email = self.cleaned_data['email']
+        if User.objects.filter(username=email).exists():
+            raise forms.ValidationError("Ya existe un usuario con este correo electrónico.")
+        return email
+
+    def clean_dni(self):
+        dni = self.cleaned_data['dni']
+        if Perfil.objects.filter(dni=dni).exists():
+            raise forms.ValidationError("Ya existe un usuario con este DNI.")
+        return dni
+
+    def clean_fecha_nacimiento(self):
+        fecha = self.cleaned_data["fecha_nacimiento"]
+        hoy = date.today()
+        edad = hoy.year - fecha.year - ((hoy.month, hoy.day) < (fecha.month, fecha.day))
+        if edad < 18:
+            raise forms.ValidationError("El empleado debe ser mayor de 18 años.")
+        return fecha
+    
+class ClienteAdminCreationForm(forms.Form):
+    first_name = forms.CharField(
+        label="Nombre",
+        max_length=30,
+        validators=[
+            RegexValidator(
+                regex=r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$',
+                message="El nombre solo puede contener letras y espacios."
+            )
+        ]
+    )
+    last_name = forms.CharField(
+        label="Apellido",
+        max_length=30,
+        validators=[
+            RegexValidator(
+                regex=r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$',
+                message="El apellido solo puede contener letras y espacios."
+            )
+        ]
+    )
+    email = forms.EmailField(label="Correo electrónico")
+    dni = forms.CharField(
+        label="DNI",
+        max_length=20,
+        validators=[
+            RegexValidator(
+                regex=r'^\d{7,8}$',
+                message="El DNI debe contener 7 u 8 dígitos numéricos."
+            )
+        ]
+    )
+    fecha_nacimiento = forms.DateField(
+        label="Fecha de nacimiento",
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+        required=True
+    )
 
     def clean_email(self):
         email = self.cleaned_data["email"]
-        from django.contrib.auth.models import User
         if User.objects.filter(username=email).exists():
-            raise forms.ValidationError("Ya existe un usuario con este email.")
+            raise forms.ValidationError("Ya existe un usuario con este correo electrónico.")
         return email
 
     def clean_dni(self):
         dni = self.cleaned_data["dni"]
-        from .models import Perfil
         if Perfil.objects.filter(dni=dni).exists():
-            raise forms.ValidationError("Este DNI ya está registrado.")
+            raise forms.ValidationError("Ya existe un usuario con este DNI.")
         return dni
+    
+    def clean_fecha_nacimiento(self):
+        fecha = self.cleaned_data["fecha_nacimiento"]
+        hoy = date.today()
+        edad = hoy.year - fecha.year - ((hoy.month, hoy.day) < (fecha.month, fecha.day))
+        if edad < 18:
+            raise forms.ValidationError("El cliente debe ser mayor de 18 años.")
+        return fecha
+
+class ChangePasswordForm(forms.Form):
+    current_password = forms.CharField(
+        label="Contraseña actual",
+        widget=forms.PasswordInput(attrs={'class': 'form-control'}),
+        required=True
+    )
+    new_password1 = forms.CharField(
+        label="Nueva contraseña",
+        widget=forms.PasswordInput(attrs={'class': 'form-control'}),
+        required=True,
+        min_length=8
+    )
+    new_password2 = forms.CharField(
+        label="Repetir nueva contraseña",
+        widget=forms.PasswordInput(attrs={'class': 'form-control'}),
+        required=True,
+        min_length=8
+    )
+
+    def __init__(self, user, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+
+    def clean_current_password(self):
+        current_password = self.cleaned_data.get("current_password")
+        if not self.user.check_password(current_password):
+            raise forms.ValidationError("La contraseña actual es incorrecta.")
+        return current_password
+
+    def clean(self):
+        cleaned_data = super().clean()
+        new_password1 = cleaned_data.get("new_password1")
+        new_password2 = cleaned_data.get("new_password2")
+        current_password = cleaned_data.get("current_password")
+
+        if new_password1 and new_password2:
+            if new_password1 != new_password2:
+                raise forms.ValidationError("Las contraseñas no coinciden.")
+            if len(new_password1) < 8:
+                raise forms.ValidationError("La contraseña tiene menos de 8 caracteres.")
+            if current_password and new_password1 == current_password:
+                raise forms.ValidationError("La contraseña debe ser diferente a la actual.")
+        return cleaned_data
+
+class ReseniaForm(forms.ModelForm):
+    calificacion = forms.ChoiceField(
+        choices=[
+            (5, "⭐️⭐️⭐️⭐️⭐️ Excelente"),
+            (4, "⭐️⭐️⭐️⭐️ Muy bueno"),
+            (3, "⭐️⭐️⭐️ Bueno"),
+            (2, "⭐️⭐️ Regular"),
+            (1, "⭐️ Malo"),
+        ],
+        widget=forms.Select(attrs={'class': 'form-select form-select-lg'}),
+        label="Calificación",
+        required=True
+    )
+    descripcion = forms.CharField(
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'Compartí detalles de tu estadía...'}),
+        label="Opinión (opcional)",
+        required=False
+    )
+
+    class Meta:
+        model = Resenia
+        fields = ['calificacion', 'descripcion']
+
+class RespuestaComentarioForm(forms.ModelForm):
+    texto = forms.CharField(
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Responder al comentario...'}),
+        label='Respuesta',
+        required=True
+    )
+
+    class Meta:
+        model = RespuestaComentario
+        fields = ['texto']
+
+class NotificarImprevistoForm(forms.Form):
+    usuario = forms.ModelChoiceField(
+        queryset=Perfil.objects.all(),
+        label="Usuario afectado",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    mensaje = forms.CharField(
+        label="Mensaje del imprevisto",
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+        required=True
+    )
+
+class TarjetaForm(forms.ModelForm):
+    class Meta:
+        model = Tarjeta
+        fields = ['numero', 'nombre', 'vencimiento', 'cvv']
+        widgets = {
+            'numero': forms.TextInput(attrs={'class': 'form-control', 'maxlength': 16, 'placeholder': 'Número de tarjeta'}),
+            'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre en la tarjeta'}),
+            'vencimiento': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'MM/AA'}),
+            'cvv': forms.PasswordInput(attrs={'class': 'form-control', 'maxlength': 4, 'placeholder': 'CVV'}),
+        }

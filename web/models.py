@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+import random
 from django.contrib.auth.models import User
 from django.db import models
 from django.utils import timezone
@@ -8,6 +9,7 @@ class Perfil(models.Model):
     id_perfil = models.AutoField(primary_key=True)
     usuario = models.OneToOneField(User, on_delete=models.CASCADE)
     dni = models.CharField(max_length=20)
+    fecha_nacimiento = models.DateField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.usuario.first_name} {self.usuario.last_name} - DNI: {self.dni}"
@@ -38,7 +40,7 @@ class Ciudad(models.Model):
 
 class Cochera(models.Model):
     id_cochera = models.AutoField(primary_key=True)
-    nombre = models.CharField(max_length=100)
+    nombre = models.CharField(max_length=100, unique=True)
     alto = models.FloatField()
     ancho = models.FloatField()
     largo = models.FloatField()
@@ -52,13 +54,18 @@ class Cochera(models.Model):
     politica_cancelacion = models.TextField()
     fecha_publicacion = models.DateField()
     estado = models.ForeignKey(Estado, on_delete=models.SET_NULL, null=True)
+    # se le asigna un perfil de empleado que lo administre, puede ser null si no hay
+    empleado = models.ForeignKey(Perfil, null=True, blank=True, on_delete=models.SET_NULL)
+
+    minimo_dias_alquiler = models.PositiveIntegerField(default=1, verbose_name="Mínimo de días de alquiler")
+
 
     def __str__(self):
         return self.nombre
 
 class Inmueble(models.Model):
     id_inmueble = models.AutoField(primary_key=True)
-    nombre = models.CharField(max_length=100)
+    nombre = models.CharField(max_length=100, unique=True)
     ubicacion = models.TextField()
     provincia = models.ForeignKey(Provincia, on_delete=models.SET_NULL, null=True)
     ciudad = models.ForeignKey(Ciudad, on_delete=models.SET_NULL, null=True)
@@ -72,6 +79,9 @@ class Inmueble(models.Model):
     fecha_publicacion = models.DateField()
     cochera = models.ForeignKey(Cochera, null=True, blank=True, on_delete=models.SET_NULL)
     estado = models.ForeignKey(Estado, on_delete=models.SET_NULL, null=True)
+    # se le asigna un perfil de empleado que lo administre, puede ser null si no hay
+    empleado = models.ForeignKey(Perfil, null=True, blank=True, on_delete=models.SET_NULL)
+    minimo_dias_alquiler = models.PositiveIntegerField(default=1, verbose_name="Mínimo de días de alquiler")
 
     def __str__(self):
         return self.nombre
@@ -85,6 +95,11 @@ class Reserva(models.Model):
     inmueble = models.ForeignKey(Inmueble, null=True, blank=True, on_delete=models.SET_NULL)
     cochera = models.ForeignKey(Cochera, null=True, blank=True, on_delete=models.SET_NULL)
     descripcion = models.TextField()
+    aprobada_en = models.DateTimeField(null=True, blank=True)
+    
+    def cliente(self):
+        rel = ClienteInmueble.objects.filter(reserva=self).first()
+        return rel.cliente if rel else None
 
     def __str__(self):
         return f"Reserva #{self.id_reserva} - Estado: {self.estado.nombre if self.estado else 'Sin estado'}"
@@ -104,6 +119,12 @@ class InmuebleEstado(models.Model):
     fecha_inicio = models.DateField()
     fecha_fin = models.DateField(null=True, blank=True)
 
+class CocheraEstado(models.Model):
+    id_cochera_estado = models.AutoField(primary_key=True)
+    cochera = models.ForeignKey(Cochera, null=True, blank=True, on_delete=models.SET_NULL)
+    estado = models.ForeignKey(Estado, on_delete=models.CASCADE)
+    fecha_inicio = models.DateField()
+    fecha_fin = models.DateField(null=True, blank=True)
 
 class ClienteInmueble(models.Model):
     id_cliente_inmueble = models.AutoField(primary_key=True)
@@ -158,11 +179,19 @@ class CocheraImagen(models.Model):
 class LoginOTP(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     codigo = models.CharField(max_length=6)
-    creado_en = models.DateTimeField(auto_now_add=True)
+    creado_en = models.DateTimeField(default=timezone.now)
 
     def is_valido(self):
-        # Verifica si el código es válido (dentro de 10 minutos)        
-        return timezone.now() < self.creado_en + timedelta(minutes=10)
+        return (timezone.now() - self.creado_en).total_seconds() < 60
+
+    @staticmethod
+    def generar_para_usuario(user):
+        codigo = f"{random.randint(0, 999999):06d}"
+        otp_obj, _ = LoginOTP.objects.update_or_create(
+            user=user,
+            defaults={"codigo": codigo, "creado_en": timezone.now()},
+        )
+        return otp_obj
 
 class Notificacion(models.Model):
     usuario = models.ForeignKey(Perfil, on_delete=models.CASCADE)
@@ -177,3 +206,30 @@ class Notificacion(models.Model):
 
     def __str__(self):
         return f"Notificación para {self.usuario}"
+
+class RespuestaComentario(models.Model):
+    comentario = models.OneToOneField(Comentario, on_delete=models.CASCADE, related_name='respuestacomentario')
+    usuario = models.ForeignKey(Perfil, on_delete=models.CASCADE)  # Empleado o admin que responde
+    texto = models.TextField()
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+class Huesped(models.Model):
+    reserva = models.ForeignKey('Reserva', related_name='huespedes', on_delete=models.CASCADE)
+    nombre = models.CharField(max_length=100)
+    apellido = models.CharField(max_length=100)
+    dni = models.CharField(max_length=20)
+    fecha_nacimiento = models.DateField()
+
+    def __str__(self):
+        return f"{self.nombre} {self.apellido} (DNI: {self.dni})"
+
+class Tarjeta(models.Model):
+    id_tarjeta = models.AutoField(primary_key=True)
+    numero = models.CharField(max_length=16)
+    nombre = models.CharField(max_length=100)
+    vencimiento = models.CharField(max_length=5)  # MM/AA
+    cvv = models.CharField(max_length=4)
+    saldo = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    def __str__(self):
+        return f"**** **** **** {self.numero[-4:]} ({self.nombre})"
