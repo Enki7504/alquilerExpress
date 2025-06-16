@@ -2049,9 +2049,31 @@ def pagar_reserva(request, id_reserva):
                 return JsonResponse({'success': False, 'error': 'El tiempo para pagar la reserva ha expirado (más de 24 horas desde la aprobación).'}, status=400)
             # ---------------------------------------------------------------------------
 
+            # ...lógica de pago...
             estado_pagada = Estado.objects.get(nombre='Confirmada')
             reserva.estado = estado_pagada
             reserva.save()
+
+            # Rechazar automáticamente reservas pendientes superpuestas
+            reservas_superpuestas = Reserva.objects.filter(
+                inmueble=reserva.inmueble,
+                estado__nombre='Pendiente',
+                fecha_inicio__lte=reserva.fecha_fin,
+                fecha_fin__gte=reserva.fecha_inicio
+            ).exclude(id_reserva=reserva.id_reserva)
+
+            estado_rechazada = Estado.objects.get(nombre='Rechazada')
+            for r in reservas_superpuestas:
+                r.estado = estado_rechazada
+                r.save()
+                # Notificar al cliente si querés
+                cliente_rel = ClienteInmueble.objects.filter(reserva=r).first()
+                if cliente_rel:
+                    crear_notificacion(
+                        usuario=cliente_rel.cliente,
+                        mensaje=f"Tu reserva #{r.id_reserva} para la vivienda '{reserva.inmueble.nombre} fue rechazada'."
+                    )
+
             # Notificación al empleado asignado
             empleado_asignado = reserva.inmueble.empleado if reserva.inmueble else reserva.cochera.empleado
             if empleado_asignado:
