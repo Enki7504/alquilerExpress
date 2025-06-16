@@ -1401,121 +1401,71 @@ def admin_estadisticas_inmuebles(request):
 @login_required
 def crear_reserva(request, id_inmueble):
     """
-    Permite a los usuarios crear una reserva para un inmueble.
-    Valida las fechas y calcula el precio total.
+    Permite a un cliente crear una reserva para un inmueble, validando que no existan reservas superpuestas
+    del mismo cliente para el mismo inmueble.
     """
     inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
-    
-    if request.method == 'POST':
-        fecha_inicio = request.POST.get('fecha_inicio')
-        fecha_fin = request.POST.get('fecha_fin')
-       
+    perfil = request.user.perfil
 
-        if not fecha_inicio or not fecha_fin:
-            messages.error(request, 'Debes ingresar ambas fechas.')
-            return redirect('detalle_inmueble', id_inmueble=id_inmueble)
-            
+    if request.method == "POST":
+        # Obtener fechas del formulario
+        fecha_inicio_str = request.POST.get("fecha_inicio")
+        fecha_fin_str = request.POST.get("fecha_fin")
         try:
-            fecha_inicio = datetime.datetime.strptime(fecha_inicio, '%Y-%m-%d').date()
-            fecha_fin = datetime.datetime.strptime(fecha_fin, '%Y-%m-%d').date()
-            
-            if fecha_inicio >= fecha_fin:
-                messages.error(request, 'La fecha de salida debe ser posterior a la de llegada.')
-                return redirect('detalle_inmueble', id_inmueble=id_inmueble)
+            fecha_inicio = datetime.datetime.strptime(fecha_inicio_str, "%Y-%m-%d").date()
+            fecha_fin = datetime.datetime.strptime(fecha_fin_str, "%Y-%m-%d").date()
+        except (TypeError, ValueError):
+            messages.error(request, "Fechas inválidas.")
+            return redirect("detalle_inmueble", id_inmueble=id_inmueble)
 
-            dias = (fecha_fin - fecha_inicio).days
-            if dias < inmueble.minimo_dias_alquiler:
-                messages.error(request, f"El mínimo de noches de alquiler para esta vivienda es {inmueble.minimo_dias_alquiler}.")
-                return redirect('detalle_inmueble', id_inmueble=id_inmueble)
-            
-            # --- VALIDACIÓN DE RESERVA SUPERPUESTA DEL USUARIO ---
-            perfil = request.user.perfil
-            reserva_superpuesta_usuario = Reserva.objects.filter(
-                clienteinmueble__cliente=perfil,
-                inmueble__isnull=False,
-                estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada'],
-                fecha_inicio__lt=fecha_fin,
-                fecha_fin__gt=fecha_inicio
-            ).exists()
-            if reserva_superpuesta_usuario:
-                messages.error(request, "Ya tenés una reserva de vivienda que se superpone con las fechas seleccionadas.")
-                return redirect('detalle_inmueble', id_inmueble=id_inmueble)
-            # -----------------------------------------------------
+        # Validar que la fecha de inicio sea anterior a la de fin
+        if fecha_inicio >= fecha_fin:
+            messages.error(request, "La fecha de salida debe ser posterior a la de llegada.")
+            return redirect("detalle_inmueble", id_inmueble=id_inmueble)
 
-            # --- VALIDACIÓN DE RESERVAS SUPERPUESTAS EN EL INMUEBLE ---
-            reservas_superpuestas = Reserva.objects.filter(
-                inmueble=inmueble,
-                estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada'],
-                fecha_inicio__lt=fecha_fin,
-                fecha_fin__gt=fecha_inicio
-            )
-            if reservas_superpuestas.exists():
-                messages.error(request, "La vivienda ya está reservada en esas fechas.")
-                return redirect('detalle_inmueble', id_inmueble=id_inmueble)
-            # ---------------------------------------------------------
+        # Validar que el cliente no tenga reservas superpuestas para el mismo inmueble
+        reserva_superpuesta_usuario = Reserva.objects.filter(
+            clienteinmueble__cliente=perfil,
+            inmueble=inmueble,
+            estado__nombre__in=['Pendiente', 'Confirmada', 'Pagada', 'Aprobada'],
+            fecha_inicio__lte=fecha_fin,  
+            fecha_fin__gte=fecha_inicio   
+        ).exists()
+        if reserva_superpuesta_usuario:
+            messages.error(request, "Ya tienes una reserva activa para este inmueble en esas fechas.")
+            return redirect("detalle_inmueble", id_inmueble=id_inmueble)
 
+        # Validar que el inmueble esté disponible en esas fechas
+        reserva_superpuesta_inmueble = Reserva.objects.filter(
+            inmueble=inmueble,
+            estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada'],
+            fecha_inicio__lte=fecha_fin,  
+            fecha_fin__gte=fecha_inicio   
+        ).exists()
+        if reserva_superpuesta_inmueble:
+            messages.error(request, "El inmueble no está disponible en esas fechas.")
+            return redirect("detalle_inmueble", id_inmueble=id_inmueble)
 
-            # Calcular días y precio total
-            dias = (fecha_fin - fecha_inicio).days
-            precio_total = dias * inmueble.precio_por_dia
-            
-            # Crear la reserva
-            reserva = Reserva.objects.create(
-                fecha_inicio=fecha_inicio,
-                fecha_fin=fecha_fin,
-                precio_total=precio_total,
-                inmueble=inmueble,
-                estado=Estado.objects.get(nombre='Pendiente'),  # Asegúrate de que este estado exista
-                descripcion=f"Reserva para {inmueble.nombre} del {fecha_inicio} al {fecha_fin}"
-            )
-            
-            # Relacionar el cliente con la reserva
-            if request.user.is_authenticated:
-                ClienteInmueble.objects.create(
-                    cliente=request.user.perfil,
-                    inmueble=inmueble,
-                    reserva=reserva
-                )
+        # Crear la reserva
+        reserva = Reserva.objects.create(
+            inmueble=inmueble,
+            fecha_inicio=fecha_inicio,
+            fecha_fin=fecha_fin,
+            estado=Estado.objects.get(nombre="Pendiente"),
+            precio_total=inmueble.precio_por_dia * (fecha_fin - fecha_inicio).days
+        )
 
-            # --- GUARDAR HUÉSPEDES ---
-            huespedes_json = request.POST.get('huespedes_json')
-            if huespedes_json:
-                try:
-                    lista_huespedes = json.loads(huespedes_json)
-                    for h in lista_huespedes:
-                        Huesped.objects.create(
-                            reserva=reserva,
-                            nombre=h['nombre'],
-                            apellido=h['apellido'],
-                            dni=h['dni'],
-                            fecha_nacimiento=h['fecha_nac']
-                        )
-                except Exception as e:
-                    # Puedes loguear el error si lo deseas
-                    pass
-            # --- FIN GUARDADO HUÉSPEDES ---
+        # Relacionar el cliente con la reserva
+        ClienteInmueble.objects.create(
+            cliente=perfil,
+            reserva=reserva
+        )
 
-            # Enviar notificación a todos los empleados
-            # usando enviar_mail_a_empleados_sobre_reserva(id_reserva) de utils.py
-            # enviar_mail_a_empleados_sobre_reserva(reserva.id_reserva)     
-            # 
+        messages.success(request, "Reserva creada exitosamente.")
+        return redirect("detalle_inmueble", id_inmueble=id_inmueble)
 
-            # Notificar al empleado asignado al inmueble
-            if inmueble.empleado:
-                crear_notificacion(
-                    usuario=inmueble.empleado,
-                    mensaje=f"Nueva reserva #{reserva.id_reserva} pendiente para la vivienda {inmueble.nombre} del {fecha_inicio} al {fecha_fin}.",
-                )
-            
-            messages.success(request, 'Reserva creada exitosamente!')
-            return redirect('detalle_inmueble', id_inmueble=id_inmueble)
-            
-        except ValueError:
-            messages.error(request, 'Formato de fecha inválido.')
-            return redirect('detalle_inmueble', id_inmueble=id_inmueble)
-    
-    # Si no es POST, redirigir al detalle del inmueble
-    return redirect('detalle_inmueble', id_inmueble=id_inmueble)
+    # Si es GET, redirigir al detalle del inmueble
+    return redirect("detalle_inmueble", id_inmueble=id_inmueble)
 
 @login_required
 def crear_reserva_cochera(request, id_cochera):
@@ -1550,7 +1500,7 @@ def crear_reserva_cochera(request, id_cochera):
             perfil = request.user.perfil
             reserva_superpuesta_usuario = Reserva.objects.filter(
                 clienteinmueble__cliente=perfil,
-                cochera__isnull=False,
+                cochera=cochera,  # <-- SOLO la misma cochera
                 estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada'],
                 fecha_inicio__lt=fecha_fin,
                 fecha_fin__gt=fecha_inicio
