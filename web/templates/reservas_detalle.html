@@ -98,9 +98,9 @@
                 </span>
               </div>
               {% if not is_admin_or_empleado %}
-                <a href="{% url 'pagar_reserva' reserva.id_reserva %}" class="btn btn-success d-flex align-items-center h-100" id="pagar-btn">
+                <button class="btn btn-success d-flex align-items-center h-100" id="pagar-btn">
                   <i class="bi bi-cash-coin me-1"></i> Pagar
-                </a>
+                </button>
               {% endif %}
             {% else %}
               <div class="alert alert-danger d-flex align-items-center gap-2 mb-3">
@@ -201,5 +201,33 @@
         });
       }
     });
+    document.addEventListener('DOMContentLoaded', function() {
+      const pagarBtn = document.getElementById('pagar-btn');
+      if (pagarBtn) {
+        pagarBtn.addEventListener('click', function() {
+          fetch("{% url 'crear_preferencia_mp' %}", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRFToken": "{{ csrf_token }}"
+            },
+            body: JSON.stringify({
+                monto: {{ reserva.precio_total }},
+                descripcion: "Pago de reserva #{{ reserva.id_reserva }}",
+                id_reserva: {{ reserva.id_reserva }}
+            })
+          })
+          .then(res => res.json())
+          .then(data => {
+            if (data.init_point) {
+              window.location.href = data.init_point;
+            } else {
+              alert("Error al generar el pago: " + (data.error || "Error desconocido"));
+            }
+          });
+        });
+      }
+    });
   </script>
+  
 {% endblock %}

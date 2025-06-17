@@ -90,6 +90,11 @@ urlpatterns = [
     # Chequea reservas vencidas
     path('reservas/cancelar-vencidas/', views.cancelar_reservas_vencidas, name='cancelar_reservas_vencidas'),
 
+    # Mercado Pago
+    path('mercadopago/crear-preferencia/', views.crear_preferencia_mp, name='crear_preferencia_mp'),
+    path('probar-mp/', views.probar_mp, name='probar_mp'),
+    path('mercadopago/webhook/', views.mercadopago_webhook, name='mercadopago_webhook'),
+
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 

@@ -210,3 +210,4 @@ def hay_reserva_confirmada_hoy(id_reserva):
     except Exception as e:
         print("Error al buscar reserva confirmada:", e)
         return False
+

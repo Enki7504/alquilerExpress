@@ -25,7 +25,11 @@ SECRET_KEY = 'django-insecure-iq-nd6t9uj40^#78)+9@iy-dm1ekx=&jr0%#k!_9_eo5r(c855
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    '0ba3-2802-8012-4-3a01-953f-3843-4831-f60b.ngrok-free.app',
+]
 
 
 # Application definition
@@ -140,3 +144,12 @@ EMAIL_HOST_USER = 'ventasgoats@gmail.com'  # tu dirección de Gmail
 EMAIL_HOST_PASSWORD = 'wnpl jnfr ohrp dwio'  # contraseña de aplicación
 
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER  # opcional, para que el "remitente" sea ese
+
+# Mercado Pago
+# settings.py
+MERCADOPAGO_ACCESS_TOKEN = 'APP_USR-7150305971631682-061620-32fa3df117937f87b66baaff5e7bae8c-2498476215'
+MERCADOPAGO_PUBLIC_KEY = 'APP_USR-dd45282b-9b8b-4fdb-92ec-3ccc4ff0340c'
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://0ba3-2802-8012-4-3a01-953f-3843-4831-f60b.ngrok-free.app",
+]
