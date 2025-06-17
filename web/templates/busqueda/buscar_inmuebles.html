@@ -1,0 +1,131 @@
+<!-- templates/buscar_inmuebles.html -->
+{% extends 'base/base_search.html' %}
+{% load static %}
+
+{% block title %}Búsqueda de Inmuebles{% endblock %}
+
+{% block search_page_content %}
+  <!-- Filtros de Inmuebles -->
+  <aside class="filtros col-md-2 sidebar bg-light sticky-top">
+    <form method="get">
+      <div class="mb-3">
+        <label class="form-label">Precio por día</label>
+        <input type="number" class="form-control filtros__campo" name="precio" placeholder="$" min="0" value="{{ request.GET.precio }}">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Ubicación</label>
+        <input type="text" class="form-control filtros__campo" name="ubicacion" value="{{ request.GET.ubicacion }}">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Cantidad de Huéspedes</label>
+        <input type="number" class="form-control filtros__campo" name="huespedes" min="0" value="{{ request.GET.huespedes }}">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Cantidad de Ambientes</label>
+        <select class="form-select filtros__campo" name="ambientes">
+          <option value="">Cualquiera</option>
+          <option value="1" {% if request.GET.ambientes == "1" %}selected{% endif %}>1</option>
+          <option value="2+" {% if request.GET.ambientes == "2+" %}selected{% endif %}>2+</option>
+          <option value="3+" {% if request.GET.ambientes == "3+" %}selected{% endif %}>3+</option>
+          <option value="4+" {% if request.GET.ambientes == "4+" %}selected{% endif %}>4+</option>
+          <option value="5+" {% if request.GET.ambientes == "5+" %}selected{% endif %}>5+</option>
+          <option value="6+" {% if request.GET.ambientes == "6+" %}selected{% endif %}>6+</option>
+          <option value="7+" {% if request.GET.ambientes == "7+" %}selected{% endif %}>7+</option>
+          <option value="8+" {% if request.GET.ambientes == "8+" %}selected{% endif %}>8+</option>
+        </select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Cantidad de Camas</label>
+        <select class="form-select filtros__campo" name="camas">
+          <option value="">Cualquiera</option>
+          <option value="1" {% if request.GET.camas == "1" %}selected{% endif %}>1</option>
+          <option value="2+" {% if request.GET.camas == "2+" %}selected{% endif %}>2+</option>
+          <option value="3+" {% if request.GET.camas == "3+" %}selected{% endif %}>3+</option>
+          <option value="4+" {% if request.GET.camas == "4+" %}selected{% endif %}>4+</option>
+          <option value="5+" {% if request.GET.camas == "5+" %}selected{% endif %}>5+</option>
+          <option value="6+" {% if request.GET.camas == "6+" %}selected{% endif %}>6+</option>
+          <option value="7+" {% if request.GET.camas == "7+" %}selected{% endif %}>7+</option>
+          <option value="8+" {% if request.GET.camas == "8+" %}selected{% endif %}>8+</option>
+        </select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Cantidad de Baños</label>
+        <select class="form-select filtros__campo" name="banios">
+          <option value="">Cualquiera</option>
+          <option value="1" {% if request.GET.banios == "1" %}selected{% endif %}>1</option>
+          <option value="2+" {% if request.GET.banios == "2+" %}selected{% endif %}>2+</option>
+          <option value="3+" {% if request.GET.banios == "3+" %}selected{% endif %}>3+</option>
+          <option value="4+" {% if request.GET.banios == "4+" %}selected{% endif %}>4+</option>
+          <option value="5+" {% if request.GET.banios == "5+" %}selected{% endif %}>5+</option>
+          <option value="6+" {% if request.GET.banios == "6+" %}selected{% endif %}>6+</option>
+          <option value="7+" {% if request.GET.banios == "7+" %}selected{% endif %}>7+</option>
+          <option value="8+" {% if request.GET.banios == "8+" %}selected{% endif %}>8+</option>
+        </select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Provincia</label>
+        <select class="form-select filtros__campo" name="provincia" id="provincia-select">
+          <option value="">Todas</option>
+          {% for provincia in provincias %}
+            <option value="{{ provincia.id }}" {% if request.GET.provincia == provincia.id|stringformat:"s" %}selected{% endif %}>{{ provincia.nombre }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Ciudad</label>
+        <select class="form-select filtros__campo" name="ciudad" id="ciudad-select" {% if not request.GET.provincia %}disabled{% endif %}>
+          <option value="">Todas</option>
+          {% if request.GET.provincia %}
+            {% for ciudad in ciudades %}
+              <option value="{{ ciudad.id }}" {% if request.GET.ciudad == ciudad.id|stringformat:"s" %}selected{% endif %}>{{ ciudad.nombre }}</option>
+            {% endfor %}
+          {% endif %}
+        </select>
+      </div>
+      <button class="btn btn-primary w-100 btn-azul">Aplicar</button>
+    </form>
+  </aside>
+
+  <!-- Lista de Inmuebles -->
+  <section class="lista-resultados col-md-6 p-3">
+    <div id="lista-inmuebles" class="row">
+      {% for inmueble in inmuebles %}
+      <div class="col-12 col-md-6 col-lg-3 mb-4">
+        <a href="{% url 'detalle_inmueble' inmueble.id_inmueble %}" class="text-decoration-none">
+          <div class="propiedad-card card border-0 shadow-sm">
+            {# Asumiendo que tu modelo Inmueble ahora tiene un método o propiedad 'first_image' #}
+            {# que devuelve la primera imagen relacionada o None #}
+            {% if inmueble.first_image %}
+              <img src="{{ inmueble.first_image.imagen.url }}" class="propiedad-imagen card-img-top" alt="{{ inmueble.nombre }}">
+            {% else %}
+              <img src="{% static 'img/default-property.jpg' %}" class="propiedad-imagen card-img-top" alt="Imagen por defecto">
+            {% endif %}
+            <div class="propiedad-body card-body">
+              <h5 class="propiedad-nombre card-title">{{ inmueble.nombre }}</h5>
+              <div class="propiedad-info">
+                <p class="propiedad-precio card-text">
+                  <i class="bi bi-cash-coin"></i> ${{ inmueble.precio_por_dia|floatformat:"0" }}/día
+                </p>
+                <p class="propiedad-ubicacion card-text">
+                  <i class="bi bi-geo-alt-fill"></i> {{ inmueble.ubicacion }}
+                </p>
+              </div>
+            </div>
+          </div>
+        </a>
+      </div>
+      {% empty %}
+      <div class="col-12">
+        <div class="mensaje-vacio alert alert-info" role="alert">
+          <i class="bi bi-info-circle"></i> No se encontraron inmuebles disponibles.
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <!-- Mapa -->
+  <aside class="mapa-contenedor col-md-4">
+    <div class="mapa-content" id="map" role="region" aria-label="Mapa de Inmuebles disponibles"></div>
+  </aside>
+{% endblock search_page_content %}

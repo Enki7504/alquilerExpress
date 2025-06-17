@@ -59,6 +59,8 @@ class Cochera(models.Model):
 
     minimo_dias_alquiler = models.PositiveIntegerField(default=1, verbose_name="Mínimo de días de alquiler")
 
+    def first_image(self):
+            return self.imagenes.first()
 
     def __str__(self):
         return self.nombre
@@ -83,6 +85,9 @@ class Inmueble(models.Model):
     empleado = models.ForeignKey(Perfil, null=True, blank=True, on_delete=models.SET_NULL)
     minimo_dias_alquiler = models.PositiveIntegerField(default=1, verbose_name="Mínimo de días de alquiler")
 
+    def first_image(self):
+            return self.imagenes.first() 
+    
     def __str__(self):
         return self.nombre
 

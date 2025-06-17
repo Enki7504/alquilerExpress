@@ -348,7 +348,7 @@ def buscar_inmuebles(request):
             inmueble__isnull=False
         ).distinct()
 
-    return render(request, 'buscar_inmuebles.html', {
+    return render(request, 'busqueda/buscar_inmuebles.html', {
         'inmuebles': inmuebles,
         'query': query,
         'provincias': provincias,
@@ -367,7 +367,7 @@ def buscar_cocheras(request):
     if query:
         cocheras = cocheras.filter(nombre__icontains=query)
     
-    return render(request, 'buscar_cocheras.html', {
+    return render(request, 'busqueda/buscar_cocheras.html', {
         'cocheras': cocheras,
         'query': query
     })
@@ -1397,7 +1397,6 @@ def admin_estadisticas_inmuebles(request):
 # --- Vistas de Gestión de Reservas ---
 ################################################################################################################
 
-# crear reserva para inmuebles y cocheras
 @login_required
 def crear_reserva(request, id_inmueble):
     """
