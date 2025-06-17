@@ -1,4 +1,3 @@
-<!-- templates/base_search.html -->
 {% extends 'base/base.html' %}
 {% load static %}
 
@@ -6,7 +5,6 @@
 
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'css/busqueda.css' %}">
-  {{ block.super }}
 {% endblock %}
 
 {% block navbar_center_content %}
@@ -33,8 +31,6 @@
 {% endblock content %}
 
 {% block extra_js %}
-  {# Incluye los scripts de base.html #}
-  {{ block.super }}
   {# JS de la busqueda #}
   <script src="{% static 'js/search_logic.js' %}"></script>
 {% endblock extra_js %}

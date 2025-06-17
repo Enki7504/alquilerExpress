@@ -1,11 +1,10 @@
-<!-- templates/buscar_cocheras.html -->
 {% extends 'base/base_search.html' %}
 {% load static %}
 
 {% block title %}Búsqueda de Cocheras{% endblock %}
 
 {% block search_page_content %}
-  <!-- Filtros de Cocheras -->
+  {# Filtros de Cocheras #}
   <aside class="filtros col-md-2 sidebar bg-light sticky-top">
     <form method="get">
       <div class="mb-3">
@@ -72,15 +71,13 @@
     </form>
   </aside>
 
-  <!-- Lista de Cocheras -->
+  {# Lista de Cocheras #}
   <section class="lista-resultados col-md-6 p-3">
     <div id="lista-cocheras" class="row">
       {% for cochera in cocheras %}
       <div class="col-12 col-md-6 col-lg-3 mb-4">
         <a href="{% url 'detalle_cochera' cochera.id_cochera %}" class="text-decoration-none">
           <div class="propiedad-card card border-0 shadow-sm">
-            {# Asumiendo que tu modelo Cochera ahora tiene un método o propiedad 'first_image' #}
-            {# que devuelve la primera imagen relacionada o None #}
             {% if cochera.first_image %}
               <img src="{{ cochera.first_image.imagen.url }}" class="propiedad-imagen card-img-top" alt="{{ cochera.nombre }}">
             {% else %}
@@ -110,7 +107,7 @@
     </div>
   </section>
 
-  <!-- Mapa -->
+  {# Mapa #}
   <aside class="mapa-contenedor col-md-4">
     <div class="mapa-content" id="map" role="region" aria-label="Mapa de Cocheras disponibles"></div>
   </aside>

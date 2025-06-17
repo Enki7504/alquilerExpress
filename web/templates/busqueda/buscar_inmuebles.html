@@ -1,11 +1,10 @@
-<!-- templates/buscar_inmuebles.html -->
 {% extends 'base/base_search.html' %}
 {% load static %}
 
 {% block title %}Búsqueda de Inmuebles{% endblock %}
 
 {% block search_page_content %}
-  <!-- Filtros de Inmuebles -->
+  {# Filtros de Inmuebles #}
   <aside class="filtros col-md-2 sidebar bg-light sticky-top">
     <form method="get">
       <div class="mb-3">
@@ -86,15 +85,13 @@
     </form>
   </aside>
 
-  <!-- Lista de Inmuebles -->
+  {# Lista de Inmuebles #}
   <section class="lista-resultados col-md-6 p-3">
     <div id="lista-inmuebles" class="row">
       {% for inmueble in inmuebles %}
       <div class="col-12 col-md-6 col-lg-3 mb-4">
         <a href="{% url 'detalle_inmueble' inmueble.id_inmueble %}" class="text-decoration-none">
           <div class="propiedad-card card border-0 shadow-sm">
-            {# Asumiendo que tu modelo Inmueble ahora tiene un método o propiedad 'first_image' #}
-            {# que devuelve la primera imagen relacionada o None #}
             {% if inmueble.first_image %}
               <img src="{{ inmueble.first_image.imagen.url }}" class="propiedad-imagen card-img-top" alt="{{ inmueble.nombre }}">
             {% else %}
@@ -124,7 +121,7 @@
     </div>
   </section>
 
-  <!-- Mapa -->
+  {# Mapa #}
   <aside class="mapa-contenedor col-md-4">
     <div class="mapa-content" id="map" role="region" aria-label="Mapa de Inmuebles disponibles"></div>
   </aside>
