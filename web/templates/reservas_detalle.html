@@ -222,7 +222,14 @@
             if (data.init_point) {
               window.location.href = data.init_point;
             } else {
-              alert("Error al generar el pago: " + (data.error || "Error desconocido"));
+                Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: "Error al generar el pago: " + (data.error || "Error desconocido"),
+                timer: 3000,
+                timerProgressBar: true,
+                showConfirmButton: false
+                });
             }
           });
         });

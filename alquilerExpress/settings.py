@@ -28,7 +28,7 @@ DEBUG = True
 ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
-    '0ba3-2802-8012-4-3a01-953f-3843-4831-f60b.ngrok-free.app',
+    'reptile-genuine-redbird.ngrok-free.app',
 ]
 
 
@@ -151,5 +151,5 @@ MERCADOPAGO_ACCESS_TOKEN = 'APP_USR-7150305971631682-061620-32fa3df117937f87b66b
 MERCADOPAGO_PUBLIC_KEY = 'APP_USR-dd45282b-9b8b-4fdb-92ec-3ccc4ff0340c'
 
 CSRF_TRUSTED_ORIGINS = [
-    "https://0ba3-2802-8012-4-3a01-953f-3843-4831-f60b.ngrok-free.app",
+    "https://reptile-genuine-redbird.ngrok-free.app",
 ]

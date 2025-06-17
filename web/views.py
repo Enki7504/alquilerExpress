@@ -2170,7 +2170,16 @@ def crear_preferencia_mp(request):
         data = json.loads(request.body)
         monto = data.get('monto', 1000)
         descripcion = data.get('descripcion', 'Reserva Alquiler Express')
-        id_reserva = data.get('id_reserva')  # <--- AGREGA ESTA LÍNEA
+        id_reserva = data.get('id_reserva')
+
+        # Verificar que la reserva esté en estado "Aprobada"
+        try:
+            reserva = Reserva.objects.get(id_reserva=id_reserva)
+        except Reserva.DoesNotExist:
+            return JsonResponse({"error": "Reserva no encontrada."}, status=404)
+
+        if reserva.estado.nombre != "Aprobada":
+            return JsonResponse({"error": "Solo se puede pagar una reserva en estado Aprobada."}, status=400)
 
         sdk = mercadopago.SDK(settings.MERCADOPAGO_ACCESS_TOKEN)
         preference_data = {
@@ -2182,13 +2191,13 @@ def crear_preferencia_mp(request):
                 }
             ],
             "back_urls": {
-                "success": "https://0ba3-2802-8012-4-3a01-953f-3843-4831-f60b.ngrok-free.app/reservas/",
-                "failure": "https://0ba3-2802-8012-4-3a01-953f-3843-4831-f60b.ngrok-free.app/reservas/",
-                "pending": "https://0ba3-2802-8012-4-3a01-953f-3843-4831-f60b.ngrok-free.app/reservas/",
+                "success": "https://reptile-genuine-redbird.ngrok-free.app/reservas/",
+                "failure": "https://reptile-genuine-redbird.ngrok-free.app/reservas/",
+                "pending": "https://reptile-genuine-redbird.ngrok-free.app/reservas/",
             },
             "auto_return": "approved",
-            "external_reference": str(id_reserva),  # <--- AGREGA ESTA LÍNEA
-            "notification_url": "https://0ba3-2802-8012-4-3a01-953f-3843-4831-f60b.ngrok-free.app/mercadopago/webhook/",  # <--- AGREGA ESTA LÍNEA
+            "external_reference": str(id_reserva),
+            "notification_url": "https://reptile-genuine-redbird.ngrok-free.app/mercadopago/webhook/",
         }
         preference_response = sdk.preference().create(preference_data)
         preference = preference_response.get("response", {})
