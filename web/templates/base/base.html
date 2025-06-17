@@ -33,26 +33,20 @@
         </a>
       </div>   
 
-      {# Bloque para poner la navbar en el centro #}
+      {# Bloque para poner la navbar en el centro (será sobrescrito por base_search.html) #}
       {% block navbar_center_content %}
         <div class="flex-grow-1 mx-3"></div>
       {% endblock %}
 
       {# Botones de Navegación del lado derecho #}
       <div class="navbar__buttons d-flex align-items-center ms-3">
-        {# Botones de Busqueda #}
+        {# Botones de Busqueda siempre visibles #}
         <a href="{% url 'buscar_inmuebles' %}" class="btn btn-outline-secondary me-2">Viviendas</a>
         <a href="{% url 'buscar_cocheras' %}" class="btn btn-outline-secondary me-2">Cocheras</a>
+        
         {% if user.is_authenticated %}        
-          {# Boton de Reservas #}
-          {% if is_client %}
-            <a href="{% url 'reservas_usuario' %}" class="btn btn-outline-primary me-2">
-              <i class="bi bi-calendar-check"></i> Mis reservas
-            </a>
-          {% endif %}   
-          {# Boton de Notificaciones #}
+          {# Boton de Notificaciones (siempre visible para usuarios autenticados) #}
           <div class="dropdown me-2">
-            {# Botoncito #}
             <button class="btn btn-outline-secondary position-relative dropdown-toggle"
                     type="button"
                     id="notificacionesDropdown"
@@ -66,7 +60,6 @@
                 </span>
               {% endif %}
             </button>
-            {# Listado #}
             <ul class="dropdown-menu dropdown-menu-end dropdown-menu-notifications" aria-labelledby="notificacionesDropdown">
               {% if notificaciones %}
                 <div class="notification-scrollable">
@@ -77,7 +70,6 @@
                           <div class="notification-message">{{ notificacion.mensaje|safe }}</div>
                           <small class="text-muted notification-time">{{ notificacion.fecha_creacion|timesince }}</small>
                         </div>
-                        {# Usa onclick para pasar los parámetros al script de JS #}
                         <button type="button" class="btn btn-sm btn-link text-danger p-0" title="Eliminar"
                                 onclick="eliminarNotificacion(this, '{% url 'eliminar_notificacion' notificacion.id %}', '{{ csrf_token }}')">
                           <i class="bi bi-trash"></i>
@@ -91,21 +83,45 @@
               {% endif %}
             </ul>
           </div>
-          {# Boton de Panel#}
-          {% if user.is_staff or user|has_group:"empleado" %}
-            <a href="{% url 'admin_panel' %}" class="btn btn-outline-primary me-2">
-              <i class="bi bi-speedometer2"></i> Panel
-            </a>
-          {% endif %}
-          {# Boton para cambiar contraseña #}
-          {% if not user.is_superuser %}
-            <a href="{% url 'cambiar_contrasena' %}" class="btn btn-outline-secondary me-2">Cambiar contraseña</a>
-          {% endif %}
-          {# Boton para cerrar sesión #}
-          <form action="{% url 'logout' %}" method="post" class="d-inline">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-outline-secondary me-2">Cerrar sesión</button>
-          </form>
+
+          {# Dropdown de Opciones de Usuario #}
+          <div class="dropdown">
+            <button class="btn btn-primary dropdown-toggle" type="button" id="userOptionsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="bi bi-person-circle"></i> {{ user.first_name|default:user.username }}
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userOptionsDropdown">
+              {% if is_client %}
+                <li>
+                  <a class="dropdown-item" href="{% url 'reservas_usuario' %}">
+                    <i class="bi bi-calendar-check me-2"></i> Mis reservas
+                  </a>
+                </li>
+              {% endif %}
+              {% if user.is_staff or user|has_group:"empleado" %}
+                <li>
+                  <a class="dropdown-item" href="{% url 'admin_panel' %}">
+                    <i class="bi bi-speedometer2 me-2"></i> Panel de Administración
+                  </a>
+                </li>
+              {% endif %}
+              {% if not user.is_superuser %} {# Superusuarios generalmente no cambian contraseña por aquí #}
+                <li>
+                  <a class="dropdown-item" href="{% url 'cambiar_contrasena' %}">
+                    <i class="bi bi-key me-2"></i> Cambiar contraseña
+                  </a>
+                </li>
+              {% endif %}
+              <li><hr class="dropdown-divider"></li>
+              <li>
+                <form action="{% url 'logout' %}" method="post" class="d-inline w-100">
+                  {% csrf_token %}
+                  <button type="submit" class="dropdown-item">
+                    <i class="bi bi-box-arrow-right me-2"></i> Cerrar sesión
+                  </button>
+                </form>
+              </li>
+            </ul>
+          </div>
         {% else %}
           {# Botones de Inicio y Registro (sin autenticar) #}
           <a href="{% url 'login' %}" class="btn btn-outline-secondary me-2">Iniciar sesión</a>
