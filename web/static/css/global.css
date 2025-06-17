@@ -1,35 +1,105 @@
-/* =========== global =========== */
+/* =========== Botones Tremendos =========== */
 
 :root {
   --color-azul-alquiler: #005A87;
-  --color-naranja-alquiler: #F26A1B;
+  --color-azul-hover: #004466;
+  --color-azul-active: #003347;
+  --color-azul-focus-shadow: rgba(0, 90, 135, 0.25);
 
-  --color-azul-hover: #004466;     /* Más oscuro que el azul original */
-  --color-naranja-hover: #d85b17;  /* Más oscuro que el naranja original */
+  --color-naranja-alquiler: #F26A1B;
+  --color-naranja-hover: #d85b17;
+  --color-naranja-active: #b84e14;
+  --color-naranja-focus-shadow: rgba(242, 106, 27, 0.25);
 }
 
+/* BOTÓN AZUL */
 .btn-azul {
+  color: #fff;
   background-color: var(--color-azul-alquiler);
-  color: white;
-  border-color: lightgrey;
-  transition: background-color 0.3s ease;
+  border: 1px solid var(--color-azul-alquiler);
+  transition: color 0.15s ease-in-out,
+              background-color 0.15s ease-in-out,
+              border-color 0.15s ease-in-out,
+              box-shadow 0.15s ease-in-out;
 }
 
 .btn-azul:hover {
+  color: #fff;
   background-color: var(--color-azul-hover);
-  border-color: lightgrey;
+  border-color: var(--color-azul-hover);
 }
 
+.btn-azul:focus {
+  color: #fff;
+  background-color: var(--color-azul-hover);
+  border-color: var(--color-azul-hover);
+  box-shadow: 0 0 0 0.25rem var(--color-azul-focus-shadow);
+}
+
+.btn-azul:active,
+.btn-azul.active,
+.show > .btn-azul.dropdown-toggle {
+  color: #fff;
+  background-color: var(--color-azul-active);
+  border-color: var(--color-azul-active);
+  box-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
+}
+
+.btn-azul:disabled,
+.btn-azul.disabled {
+  background-color: var(--color-azul-alquiler);
+  border-color: var(--color-azul-alquiler);
+  color: #fff;
+  opacity: 0.65;
+  pointer-events: none;
+}
+
+/* BOTÓN NARANJA */
 .btn-naranja {
+  color: #fff;
   background-color: var(--color-naranja-alquiler);
-  color: white;
-  border-color: lightgrey;
-  transition: color 0.3s ease;
+  border: 1px solid var(--color-naranja-alquiler);
+  transition: color 0.15s ease-in-out,
+              background-color 0.15s ease-in-out,
+              border-color 0.15s ease-in-out,
+              box-shadow 0.15s ease-in-out;
 }
 
 .btn-naranja:hover {
+  color: #fff;
   background-color: var(--color-naranja-hover);
-  border-color: lightgrey;
+  border-color: var(--color-naranja-hover);
+}
+
+.btn-naranja:focus {
+  color: #fff;
+  background-color: var(--color-naranja-hover);
+  border-color: var(--color-naranja-hover);
+  box-shadow: 0 0 0 0.25rem var(--color-naranja-focus-shadow);
+}
+
+.btn-naranja:active,
+.btn-naranja.active,
+.show > .btn-naranja.dropdown-toggle {
+  color: #fff;
+  background-color: var(--color-naranja-active);
+  border-color: var(--color-naranja-active);
+  box-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
+}
+
+.btn-naranja:disabled,
+.btn-naranja.disabled {
+  background-color: var(--color-naranja-alquiler);
+  border-color: var(--color-naranja-alquiler);
+  color: #fff;
+  opacity: 0.65;
+  pointer-events: none;
+}
+
+/* Íconos en blanco siempre */
+.btn-azul i,
+.btn-naranja i {
+  color: white !important;
 }
 
 /* =========== navegación =========== */
