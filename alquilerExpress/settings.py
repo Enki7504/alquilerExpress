@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'web',
     "widget_tweaks",
+    "django_celery_beat"
 ]
 
 MIDDLEWARE = [
@@ -153,3 +154,8 @@ MERCADOPAGO_PUBLIC_KEY = 'APP_USR-dd45282b-9b8b-4fdb-92ec-3ccc4ff0340c'
 CSRF_TRUSTED_ORIGINS = [
     "https://reptile-genuine-redbird.ngrok-free.app",
 ]
+
+# Celery settings
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
