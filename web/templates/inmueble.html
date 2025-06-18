@@ -144,6 +144,7 @@
                 <span class="h3 text-primary">${{ inmueble.precio_por_dia|floatformat:"0" }}</span>
                 <span class="text-muted ms-1">/ noche</span>
               </div>
+              
               <form method="post" action="{% url 'crear_reserva' id_inmueble=inmueble.id_inmueble %}">
                 {% csrf_token %}
                 <div class="mb-3">
@@ -154,7 +155,9 @@
                   <label for="fecha_fin" class="form-label">Fecha de salida</label>
                   <input type="text" class="form-control" id="fecha_fin" name="fecha_fin" required autocomplete="off">
                 </div>
-                <!-- Formulario oculto para agregar huésped -->
+                <!-- aca se pide la cantidad de adultos y niños -->
+                
+                <!-- Formulario oculto para agregar huésped
                 <div class="mb-3">
                   <ul id="lista-huespedes" class="list-group mb-2" data-max-huespedes="{{ inmueble.cantidad_huespedes }}"></ul>
                   <button type="button" class="btn btn-outline-primary btn-sm w-100" id="btn-agregar-huesped">
@@ -183,8 +186,9 @@
                     <button type="button" class="btn btn-azul btn-secondary btn-sm" id="btn-cancelar-huesped">Cancelar</button>
                   </div>
                 </div>
-                <!-- Campo oculto para enviar los huéspedes como JSON -->
+                <!-- Campo oculto para enviar los huéspedes como JSON 
                 <input type="hidden" name="huespedes_json" id="huespedes-json">
+                -->
 
                 <button type="submit" class="btn btn-primary btn-azul w-100 py-2">
                   <i class="bi bi-calendar-check me-2"></i> Reservar ahora

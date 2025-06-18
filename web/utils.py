@@ -211,3 +211,22 @@ def hay_reserva_confirmada_hoy(id_reserva):
         print("Error al buscar reserva confirmada:", e)
         return False
 
+################################################################################################################
+# --- Funciones de Ayuda para Permisos ---
+################################################################################################################
+
+def is_admin(user):
+    """Verifica si el usuario es un superusuario."""
+    return user.is_authenticated and user.is_staff
+
+def is_empleado(user):
+    """Verifica si el usuario es un superusuario."""
+    return user.is_authenticated and user.groups.filter(name="empleado").exists()
+
+def is_admin_or_empleado(user):
+    """Verifica si el usuario es un superusuario o pertenece al grupo 'empleado'."""
+    return user.is_authenticated and (user.is_staff or user.groups.filter(name="empleado").exists())
+
+def is_client(user):
+    """Verifica si el usuario es un cliente."""
+    return user.is_authenticated and user.groups.filter(name="cliente").exists()
