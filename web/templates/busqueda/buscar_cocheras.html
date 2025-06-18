@@ -86,12 +86,24 @@
             <div class="propiedad-body card-body">
               <h5 class="propiedad-nombre card-title">{{ cochera.nombre }}</h5>
               <div class="propiedad-info">
-                <p class="propiedad-precio card-text">
+                <p class="propiedad-precio card-text mb-1">
                   <i class="bi bi-cash-coin"></i> ${{ cochera.precio_por_dia|floatformat:"0" }}/día
                 </p>
-                <p class="propiedad-ubicacion card-text">
+                <p class="propiedad-ubicacion card-text mb-2">
                   <i class="bi bi-geo-alt-fill"></i> {{ cochera.ubicacion }}
                 </p>
+                <div class="d-flex flex-wrap gap-2 small text-muted">
+                  {% if cochera.cantidad_vehiculos %}
+                  <span class="d-flex align-items-center me-2">
+                      <i class="bi bi-car-front me-1"></i> {{ cochera.cantidad_vehiculos }}
+                  </span>
+                  {% endif %}
+                  {% if cochera.ancho and cochera.largo and cochera.alto %}
+                  <span class="d-flex align-items-center me-2">
+                      <i class="bi bi-arrows-angle-expand me-1"></i> {{ cochera.ancho }} x {{ cochera.largo }} x {{ cochera.alto }} m
+                  </span>
+                  {% endif %}
+                </div>
               </div>
             </div>
           </div>

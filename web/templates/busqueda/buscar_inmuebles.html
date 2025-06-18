@@ -4,8 +4,9 @@
 {% block title %}Búsqueda de Inmuebles{% endblock %}
 
 {% block search_page_content %}
-  {# Filtros de Inmuebles #}
+  {# Filtros #}
   <aside class="filtros col-md-2 sidebar bg-light sticky-top">
+    {# Filtros de búsqueda de inmuebles #}
     <form method="get">
       <div class="mb-3">
         <label class="form-label">Precio por día</label>
@@ -86,7 +87,7 @@
   </aside>
 
   {# Lista de Inmuebles #}
-  <section class="lista-resultados col-md-6 p-3">
+    <section class="lista-resultados col-md-6 p-3">
     <div id="lista-inmuebles" class="row">
       {% for inmueble in inmuebles %}
       <div class="col-12 col-md-6 col-lg-3 mb-4">
@@ -100,12 +101,34 @@
             <div class="propiedad-body card-body">
               <h5 class="propiedad-nombre card-title">{{ inmueble.nombre }}</h5>
               <div class="propiedad-info">
-                <p class="propiedad-precio card-text">
+                <p class="propiedad-precio card-text mb-1">
                   <i class="bi bi-cash-coin"></i> ${{ inmueble.precio_por_dia|floatformat:"0" }}/día
                 </p>
-                <p class="propiedad-ubicacion card-text">
+                <p class="propiedad-ubicacion card-text mb-2">
                   <i class="bi bi-geo-alt-fill"></i> {{ inmueble.ubicacion }}
                 </p>
+                <div class="d-flex flex-wrap gap-2 small text-muted">
+                    {% if inmueble.cantidad_huespedes %}
+                    <span class="d-flex align-items-center me-2">
+                        <i class="bi bi-people me-1"></i> {{ inmueble.cantidad_huespedes }}
+                    </span>
+                    {% endif %}
+                    {% if inmueble.cantidad_ambientes %}
+                    <span class="d-flex align-items-center me-2">
+                        <i class="bi bi-door-open me-1"></i> {{ inmueble.cantidad_ambientes }}
+                    </span>
+                    {% endif %}
+                    {% if inmueble.cantidad_banios %}
+                    <span class="d-flex align-items-center me-2">
+                        <i class="bi bi-bootstrap me-1"></i> {{ inmueble.cantidad_banios }}
+                    </span>
+                    {% endif %}
+                    {% if inmueble.cantidad_camas %}
+                    <span class="d-flex align-items-center me-2">
+                        <i class="bi bi-c-square me-2"></i> {{ inmueble.cantidad_camas }}
+                    </span>
+                    {% endif %}
+                </div>
               </div>
             </div>
           </div>
@@ -120,6 +143,7 @@
       {% endfor %}
     </div>
   </section>
+
 
   {# Mapa #}
   <aside class="mapa-contenedor col-md-4">
