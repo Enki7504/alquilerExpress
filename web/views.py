@@ -295,14 +295,15 @@ def verify_admin_link(request, uidb64, token):
 
 def buscar_inmuebles(request):
     query = request.GET.get('q', '').strip()
-    provincia_id = request.GET.get('provincia')
-    ciudad_id = request.GET.get('ciudad')
     precio = request.GET.get('precio')
-    ubicacion = request.GET.get('ubicacion')
+    direccion = request.GET.get('direccion')
     huespedes = request.GET.get('huespedes')
     ambientes = request.GET.get('ambientes')
     camas = request.GET.get('camas')
     banios = request.GET.get('banios')
+    provincia_id = request.GET.get('provincia')
+    ciudad_id = request.GET.get('ciudad')
+    provincias, ciudades = obtener_provincias_y_ciudades('inmueble', provincia_id)
 
     # Solo mostrar inmuebles que NO estén en estado Eliminado ni Oculto
     inmuebles = Inmueble.objects.exclude(estado__nombre__in=['Oculto','Eliminado'])
@@ -315,8 +316,8 @@ def buscar_inmuebles(request):
         inmuebles = inmuebles.filter(ciudad_id=ciudad_id)
     if precio:
         inmuebles = inmuebles.filter(precio_por_dia__lte=precio)
-    if ubicacion:
-        inmuebles = inmuebles.filter(ubicacion__icontains=ubicacion)
+    if direccion:
+        inmuebles = inmuebles.filter(direccion__icontains=direccion)
     if huespedes:
         inmuebles = inmuebles.filter(cantidad_huespedes__gte=huespedes)
     if ambientes:
@@ -334,19 +335,6 @@ def buscar_inmuebles(request):
             inmuebles = inmuebles.filter(cantidad_banios__gte=int(banios[:-1]))
         else:
             inmuebles = inmuebles.filter(cantidad_banios=int(banios))
-
-    # Provincias solo con inmuebles
-    provincias = Provincia.objects.filter(ciudades__inmueble__isnull=False).distinct()
-    # Ciudades solo con inmuebles (y opcionalmente de la provincia seleccionada)
-    if provincia_id:
-        ciudades = Ciudad.objects.filter(
-            provincia_id=provincia_id,
-            inmueble__isnull=False
-        ).distinct()
-    else:
-        ciudades = Ciudad.objects.filter(
-            inmueble__isnull=False
-        ).distinct()
 
     return render(request, 'busqueda/buscar_inmuebles.html', {
         'inmuebles': inmuebles,
@@ -616,15 +604,41 @@ def detalle_cochera(request, id_cochera):
 # --- Funciones para filtrar ---
 ################################################################################################################
 
-# def cargar_ciudades_filtro(request):
-#     provincia_id = request.GET.get('provincia')
-#     # Solo ciudades de la provincia seleccionada que tengan al menos un inmueble
-#     ciudades = Ciudad.objects.filter(
-#         provincia_id=provincia_id,
-#         inmueble__isnull=False
-#     ).distinct().order_by('nombre')
-#     ciudades_list = [{'id': ciudad.id, 'nombre': ciudad.nombre} for ciudad in ciudades]
-#     return JsonResponse({'ciudades': ciudades_list})
+def obtener_provincias_y_ciudades(tipo='inmueble', provincia_id=None):
+    from .models import Provincia, Ciudad
+    if tipo == 'inmueble':
+        provincias = Provincia.objects.filter(ciudades__inmueble__isnull=False).distinct()
+        if provincia_id:
+            ciudades = Ciudad.objects.filter(
+                provincia_id=provincia_id,
+                inmueble__isnull=False
+            ).distinct()
+        else:
+            ciudades = Ciudad.objects.filter(
+                inmueble__isnull=False
+            ).distinct()
+    elif tipo == 'cochera':
+        provincias = Provincia.objects.filter(ciudades__cochera__isnull=False).distinct()
+        if provincia_id:
+            ciudades = Ciudad.objects.filter(
+                provincia_id=provincia_id,
+                cochera__isnull=False
+            ).distinct()
+        else:
+            ciudades = Ciudad.objects.filter(
+                cochera__isnull=False
+            ).distinct()
+    else:
+        provincias = Provincia.objects.none()
+        ciudades = Ciudad.objects.none()
+    return provincias, ciudades
+
+# para cargar las ciudades en el formulario de registro
+def cargar_ciudades(request):
+    provincia_id = request.GET.get('provincia')
+    ciudades = Ciudad.objects.filter(provincia_id=provincia_id).order_by('nombre')
+    ciudades_list = [{'id': ciudad.id, 'nombre': ciudad.nombre} for ciudad in ciudades]
+    return JsonResponse({'ciudades': ciudades_list})
 
 def cargar_ciudades_filtro(request):
     provincia_id = request.GET.get('provincia')
@@ -1835,13 +1849,6 @@ def marcar_todas_leidas(request):
 ################################################################################################################
 # --- OTRAS VISTAS ---
 ################################################################################################################
-
-# para cargar las ciudades en el formulario de registro
-def cargar_ciudades(request):
-    provincia_id = request.GET.get('provincia')
-    ciudades = Ciudad.objects.filter(provincia_id=provincia_id).order_by('nombre')
-    ciudades_list = [{'id': ciudad.id, 'nombre': ciudad.nombre} for ciudad in ciudades]
-    return JsonResponse({'ciudades': ciudades_list})
 
 @login_required
 def cambiar_contrasena(request):

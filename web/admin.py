@@ -58,15 +58,15 @@ class EstadoAdmin(admin.ModelAdmin):
 
 @admin.register(Inmueble)
 class InmuebleAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'ubicacion', 'precio_por_dia', 'estado')
-    search_fields = ('nombre', 'ubicacion')
+    list_display = ('nombre', 'direccion', 'precio_por_dia', 'estado')
+    search_fields = ('nombre', 'direccion')
     list_filter = ('estado', 'cochera')
     inlines = [InmuebleImagenInline]
 
 @admin.register(Cochera)
 class CocheraAdmin(admin.ModelAdmin):
     list_display = ('nombre', 'cantidad_vehiculos', 'precio_por_dia', 'estado')
-    search_fields = ('nombre', 'ubicacion')
+    search_fields = ('nombre', 'direccion')
     list_filter = ('estado', 'con_techo')
     inlines = [CocheraImagenInline]
 

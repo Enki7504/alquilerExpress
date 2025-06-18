@@ -47,7 +47,7 @@ class Cochera(models.Model):
     cantidad_vehiculos = models.IntegerField()
     con_techo = models.BooleanField()
     descripcion = models.TextField()
-    ubicacion = models.TextField()
+    direccion = models.TextField()
     provincia = models.ForeignKey(Provincia, on_delete=models.SET_NULL, null=True)
     ciudad = models.ForeignKey(Ciudad, on_delete=models.SET_NULL, null=True)
     precio_por_dia = models.DecimalField(max_digits=10, decimal_places=2)
@@ -68,7 +68,7 @@ class Cochera(models.Model):
 class Inmueble(models.Model):
     id_inmueble = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=100, unique=True)
-    ubicacion = models.TextField()
+    direccion = models.TextField()
     provincia = models.ForeignKey(Provincia, on_delete=models.SET_NULL, null=True)
     ciudad = models.ForeignKey(Ciudad, on_delete=models.SET_NULL, null=True)
     descripcion = models.TextField()

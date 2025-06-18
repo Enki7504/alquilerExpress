@@ -13,7 +13,7 @@
       </div>
       <div class="mb-3">
         <label class="form-label">Ubicación</label>
-        <input type="text" class="form-control filtros__campo" name="ubicacion" value="{{ request.GET.ubicacion }}">
+        <input type="text" class="form-control filtros__campo" name="direccion" value="{{ request.GET.direccion }}">
       </div>
       <div class="mb-3">
         <label class="form-label">Cantidad de Vehículos</label>
@@ -89,8 +89,8 @@
                 <p class="propiedad-precio card-text mb-1">
                   <i class="bi bi-cash-coin"></i> ${{ cochera.precio_por_dia|floatformat:"0" }}/día
                 </p>
-                <p class="propiedad-ubicacion card-text mb-2">
-                  <i class="bi bi-geo-alt-fill"></i> {{ cochera.ubicacion }}
+                <p class="propiedad-direccion card-text mb-2">
+                  <i class="bi bi-geo-alt-fill"></i> {{ cochera.direccion }}
                 </p>
                 <div class="d-flex flex-wrap gap-2 small text-muted">
                   {% if cochera.cantidad_vehiculos %}
