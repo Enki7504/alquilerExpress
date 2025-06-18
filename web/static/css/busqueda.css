@@ -52,7 +52,7 @@ body {
   border-radius: 0.5rem;
   overflow: hidden;
   background: white;
-  height: 280px;
+  height: 300px;
   margin-bottom: 1.5rem;
   display: flex;
   flex-direction: column;
@@ -77,15 +77,18 @@ body {
   flex-grow: 1;
 }
 
-.propiedad-info {
-  margin-top: auto; /* Empuja la información al final de la tarjeta */
-}
-
 .propiedad-nombre {
   font-weight: 600;
   color: #333;
   margin-bottom: 8px;
   font-size: 16px;
+  margin-top: auto;
+  margin-bottom: auto;
+}
+
+.propiedad-info {
+  margin-top: auto;
+  margin-bottom: auto;
 }
 
 .propiedad-precio {
@@ -98,6 +101,18 @@ body {
   color: #666;
   font-size: 14px;
   margin-bottom: 8px;
+  white-space: nowrap; /* Evita que el texto se envuelva a la siguiente línea */
+  overflow: hidden;     /* Oculta cualquier texto que se desborde */
+  text-overflow: ellipsis;
+}
+
+.propiedad-direccion { /* Asegúrate de que esta clase también tenga las mismas propiedades */
+  color: #666;
+  font-size: 14px;
+  margin-bottom: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .propiedad-detalle {

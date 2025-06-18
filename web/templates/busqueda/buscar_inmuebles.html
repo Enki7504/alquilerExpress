@@ -8,9 +8,15 @@
   <aside class="filtros col-md-2 sidebar bg-light sticky-top">
     {# Filtros de búsqueda de inmuebles #}
     <form method="get">
-      <div class="mb-3">
-        <label class="form-label">Precio por día</label>
-        <input type="number" class="form-control filtros__campo" name="precio" placeholder="$" min="0" value="{{ request.GET.precio }}">
+      <div class="row mb-3">
+        <div class="col">
+          <label for="precio_min" class="form-label">Precio mínimo</label>
+          <input type="number" class="form-control" name="precio_min" id="precio_min" value="{{ request.GET.precio_min }}">
+        </div>
+        <div class="col">
+          <label for="precio_max" class="form-label">Precio máximo</label>
+          <input type="number" class="form-control" name="precio_max" id="precio_max" value="{{ request.GET.precio_max }}">
+        </div>
       </div>
       <div class="mb-3">
         <label class="form-label">Ubicación</label>
