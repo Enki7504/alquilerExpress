@@ -534,7 +534,7 @@ def detalle_inmueble(request, id_inmueble):
             "fecha_nac": perfil.fecha_nacimiento.strftime("%Y-%m-%d") if perfil.fecha_nacimiento else "",
         }
 
-    return render(request, 'inmueble.html', {
+    return render(request, 'detalle_inmueble.html', {
         'inmueble': inmueble,
         'resenias': resenias,
         'comentarios': comentarios,
@@ -641,7 +641,7 @@ def detalle_cochera(request, id_cochera):
         ).exists()
         puede_reseñar = tiene_reserva_finalizada
 
-    return render(request, 'cochera.html', {
+    return render(request, 'detalle_cochera.html', {
         'cochera': cochera,
         'resenias': resenias,
         'comentarios': comentarios,
