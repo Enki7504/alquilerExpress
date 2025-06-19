@@ -701,19 +701,19 @@ def cargar_ciudades(request):
 
 def cargar_ciudades_filtro(request):
     provincia_id = request.GET.get('provincia')
-    tipo = request.GET.get('tipo')
-    if tipo == 'cochera':
-        ciudades = Ciudad.objects.filter(
-            provincia_id=provincia_id,
-            cochera__isnull=False
-        ).distinct().order_by('nombre')
-    else:
+    tipo = request.GET.get('tipo', 'inmueble')
+    if tipo == 'inmueble':
         ciudades = Ciudad.objects.filter(
             provincia_id=provincia_id,
             inmueble__isnull=False
-        ).distinct().order_by('nombre')
-    ciudades_list = [{'id': ciudad.id, 'nombre': ciudad.nombre} for ciudad in ciudades]
-    return JsonResponse({'ciudades': ciudades_list})
+        ).distinct()
+    else:
+        ciudades = Ciudad.objects.filter(
+            provincia_id=provincia_id,
+            cochera__isnull=False
+        ).distinct()
+    data = {'ciudades': [{'id': c.id, 'nombre': c.nombre} for c in ciudades]}
+    return JsonResponse(data)
 
 ################################################################################################################
 # --- Funciones de Ayuda para Permisos ---

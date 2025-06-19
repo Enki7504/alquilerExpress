@@ -7,7 +7,7 @@
   {# Filtros #}
   <aside class="filtros col-md-2 sidebar bg-light sticky-top">
     {# Filtros de búsqueda de inmuebles #}
-    <form method="get">
+    <form method="get" data-tipo="inmueble">
       <div class="row mb-3">
         <div class="col">
           <label for="precio_min" class="form-label">Precio mínimo</label>
@@ -19,7 +19,27 @@
         </div>
       </div>
       <div class="mb-3">
-        <label class="form-label">Ubicación</label>
+        <label class="form-label">Provincia</label>
+        <select class="form-select filtros__campo" name="provincia" id="provincia-select">
+          <option value="">Todas</option>
+          {% for provincia in provincias %}
+            <option value="{{ provincia.id }}" {% if request.GET.provincia == provincia.id|stringformat:"s" %}selected{% endif %}>{{ provincia.nombre }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Ciudad</label>
+        <select class="form-select filtros__campo" name="ciudad" id="ciudad-select" {% if not request.GET.provincia %}disabled{% endif %}>
+          <option value="">Todas</option>
+          {% if request.GET.provincia %}
+            {% for ciudad in ciudades %}
+              <option value="{{ ciudad.id }}" {% if request.GET.ciudad == ciudad.id|stringformat:"s" %}selected{% endif %}>{{ ciudad.nombre }}</option>
+            {% endfor %}
+          {% endif %}
+        </select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Dirección</label>
         <input type="text" class="form-control filtros__campo" name="direccion" value="{{ request.GET.direccion }}">
       </div>
       <div class="mb-3">
@@ -68,26 +88,6 @@
           <option value="8+" {% if request.GET.banios == "8+" %}selected{% endif %}>8+</option>
         </select>
       </div>
-      <div class="mb-3">
-        <label class="form-label">Provincia</label>
-        <select class="form-select filtros__campo" name="provincia" id="provincia-select">
-          <option value="">Todas</option>
-          {% for provincia in provincias %}
-            <option value="{{ provincia.id }}" {% if request.GET.provincia == provincia.id|stringformat:"s" %}selected{% endif %}>{{ provincia.nombre }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="mb-3">
-        <label class="form-label">Ciudad</label>
-        <select class="form-select filtros__campo" name="ciudad" id="ciudad-select" {% if not request.GET.provincia %}disabled{% endif %}>
-          <option value="">Todas</option>
-          {% if request.GET.provincia %}
-            {% for ciudad in ciudades %}
-              <option value="{{ ciudad.id }}" {% if request.GET.ciudad == ciudad.id|stringformat:"s" %}selected{% endif %}>{{ ciudad.nombre }}</option>
-            {% endfor %}
-          {% endif %}
-        </select>
-      </div>
       <button class="btn btn-primary w-100 btn-azul">Aplicar</button>
     </form>
   </aside>
@@ -124,14 +124,14 @@
                         <i class="bi bi-door-open me-1"></i> {{ inmueble.cantidad_ambientes }}
                     </span>
                     {% endif %}
-                    {% if inmueble.cantidad_banios %}
-                    <span class="d-flex align-items-center me-2">
-                        <i class="bi bi-bootstrap me-1"></i> {{ inmueble.cantidad_banios }}
-                    </span>
-                    {% endif %}
                     {% if inmueble.cantidad_camas %}
                     <span class="d-flex align-items-center me-2">
                         <i class="bi bi-c-square me-2"></i> {{ inmueble.cantidad_camas }}
+                    </span>
+                    {% endif %}
+                    {% if inmueble.cantidad_banios %}
+                    <span class="d-flex align-items-center me-2">
+                        <i class="bi bi-bootstrap me-1"></i> {{ inmueble.cantidad_banios }}
                     </span>
                     {% endif %}
                 </div>
