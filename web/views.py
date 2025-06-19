@@ -1495,6 +1495,12 @@ def crear_reserva(request, id_inmueble):
             messages.error(request, "La fecha de salida debe ser posterior a la de llegada.")
             return redirect("detalle_inmueble", id_inmueble=id_inmueble)
 
+        # Validar mínimo de noches
+        dias = (fecha_fin - fecha_inicio).days
+        if dias < inmueble.minimo_dias_alquiler:
+            messages.error(request, f"El mínimo de noches de alquiler para esta vivienda es {inmueble.minimo_dias_alquiler}.")
+            return redirect("detalle_inmueble", id_inmueble=id_inmueble)
+
         # Validar que el cliente no tenga reservas superpuestas para el mismo inmueble
         reserva_superpuesta_usuario = Reserva.objects.filter(
             clienteinmueble__cliente=perfil,
