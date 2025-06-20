@@ -156,7 +156,14 @@
                   <input type="text" class="form-control" id="fecha_fin" name="fecha_fin" required autocomplete="off">
                 </div>
                 <!-- aca se pide la cantidad de adultos y niños -->
-                
+                <div class="mb-3">
+                  <label for="cantidad_adultos" class="form-label">Cantidad de adultos</label>
+                  <input type="number" class="form-control" id="cantidad_adultos" name="cantidad_adultos" min="1" max="{{ inmueble.cantidad_huespedes }}" required>
+                </div>
+                <div class="mb-3">
+                  <label for="cantidad_ninos" class="form-label">Cantidad de niños</label>
+                  <input type="number" class="form-control" id="cantidad_ninos" name="cantidad_ninos" min="0" max="{{ inmueble.cantidad_huespedes }}" required>
+                </div>
                 <!-- Formulario oculto para agregar huésped
                 <div class="mb-3">
                   <ul id="lista-huespedes" class="list-group mb-2" data-max-huespedes="{{ inmueble.cantidad_huespedes }}"></ul>

@@ -19,11 +19,10 @@ from django.utils.http import urlsafe_base64_decode
 from django.views.decorators.http import require_POST
 from django.db import IntegrityError, transaction
 from django.db.models import Q
-from datetime import timedelta
+from datetime import timedelta, date
 from django.template.loader import render_to_string
 # mercado pago
 from django.views.decorators.csrf import csrf_exempt
-
 
 # Importaciones de formularios locales
 from .forms import (
@@ -138,7 +137,11 @@ def crear_reserva(request, id_inmueble):
             fecha_inicio=fecha_inicio,
             fecha_fin=fecha_fin,
             estado=Estado.objects.get(nombre="Pendiente"),
-            precio_total=inmueble.precio_por_dia * (fecha_fin - fecha_inicio).days
+            precio_total=inmueble.precio_por_dia * (fecha_fin - fecha_inicio).days,
+            # asigna cantidad de niños y adultos recibidos por el form
+            cantidad_adultos=request.POST.get("cantidad_adultos", 1),
+            cantidad_ninos=request.POST.get("cantidad_ninos", 0)
+
         )
 
         # Relacionar el cliente con la reserva
@@ -493,7 +496,12 @@ def reservas_usuario(request):
 @login_required
 def ver_detalle_reserva(request, id_reserva):
     reserva = get_object_or_404(Reserva, id_reserva=id_reserva)
-    huespedes = reserva.huespedes.all()
+    huespedes = reserva.huespedes.all()  # <-- Relación con Huesped
+    #huespedes = get_object_or_404(Huesped, reserva=id_reserva)
+    rango_adultos = range(reserva.cantidad_adultos)
+    rango_ninos = range(reserva.cantidad_ninos)
+    today = date.today()
+    fecha_max_adulto = today.replace(year=today.year - 18)
     tiempo_restante = None
 
     if reserva.estado.nombre == "Aprobada" and reserva.aprobada_en:
@@ -507,8 +515,11 @@ def ver_detalle_reserva(request, id_reserva):
     return render(request, 'reservas_detalle.html', {
         'reserva': reserva,
         'huespedes': huespedes,
+        'rango_adultos': rango_adultos,
+        'rango_ninos': rango_ninos,
         'tiempo_restante': tiempo_restante,
         'is_admin_or_empleado': es_admin_o_empleado,
+        'fecha_max_adulto': fecha_max_adulto.strftime("%Y-%m-%d"),
     })
 
 @require_POST
@@ -636,3 +647,27 @@ def cancelar_reservas_vencidas(request):
             reserva.save()
             count += 1
     return JsonResponse({'success': True, 'canceladas': count})
+
+#################################################################################################################
+# --- Huespedes ---
+#################################################################################################################
+
+@login_required
+def completar_huespedes(request, id_reserva):
+    reserva = get_object_or_404(Reserva, id_reserva=id_reserva)
+    total = reserva.cantidad_adultos + reserva.cantidad_ninos
+    if request.method == "POST":
+        for i in range(total):
+            nombre = request.POST.get(f'nombre_{i}')
+            apellido = request.POST.get(f'apellido_{i}')
+            dni = request.POST.get(f'dni_{i}')
+            fecha_nacimiento = request.POST.get(f'fecha_nacimiento_{i}')
+            if nombre and apellido and dni and fecha_nacimiento:
+                reserva.huespedes.create(
+                    nombre=nombre,
+                    apellido=apellido,
+                    dni=dni,
+                    fecha_nacimiento=fecha_nacimiento
+                )
+        return redirect('ver_detalle_reserva', id_reserva=id_reserva)
+    return redirect('ver_detalle_reserva', id_reserva=id_reserva)

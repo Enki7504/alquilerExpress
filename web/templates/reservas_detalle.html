@@ -97,8 +97,12 @@
                   <span id="timer" class="ms-1 text-dark" style="font-family: monospace; font-size: 1.1rem;"></span>
                 </span>
               </div>
-              {% if not is_admin_or_empleado %}
+              {% if not is_admin_or_empleado and huespedes|length == reserva.cantidad_adultos|add:reserva.cantidad_ninos %}
                 <button class="btn btn-success d-flex align-items-center h-100" id="pagar-btn">
+                  <i class="bi bi-cash-coin me-1"></i> Pagar
+                </button>
+              {% else %}
+                <button class="btn btn-secondary d-flex align-items-center h-100" disabled>
                   <i class="bi bi-cash-coin me-1"></i> Pagar
                 </button>
               {% endif %}
@@ -121,6 +125,51 @@
           {% endif %}
         {% endif %}
       </div>
+      <br>
+      {% with total_huespedes=huespedes|length %}
+        {% if total_huespedes < reserva.cantidad_adultos|add:reserva.cantidad_ninos %}
+          <form id="form-huespedes" method="post" action="{% url 'completar_huespedes' reserva.id_reserva %}">
+            {% csrf_token %}
+            <h5>Completa los datos de los huéspedes antes de pagar</h5>
+            <h6> Adultos </h6>
+            {% for i in rango_adultos %}
+              <div class="row mb-2">
+                <div class="col">
+                  <input type="text" name="nombre_{{ forloop.counter0 }}" class="form-control" placeholder="Nombre" required>
+                </div>
+                <div class="col">
+                  <input type="text" name="apellido_{{ forloop.counter0 }}" class="form-control" placeholder="Apellido" required>
+                </div>
+                <div class="col">
+                  <input type="text" name="dni_{{ forloop.counter0 }}" class="form-control" placeholder="DNI" required>
+                </div>
+                <div class="col">
+                  <input type="text" name="fecha_nacimiento_{{ forloop.counter0 }}" class="form-control fecha-adulto" required>
+                  <small class="text-muted">Debe ser mayor de 18 años</small>
+                </div>
+              </div>
+            {% endfor %}
+            <h6> Niños </h6>
+            {% for i in rango_ninos %}
+              <div class="row mb-2">
+                <div class="col">
+                  <input type="text" name="nombre_{{ forloop.counter0|add:reserva.cantidad_adultos }}" class="form-control" placeholder="Nombre" required>
+                </div>
+                <div class="col">
+                  <input type="text" name="apellido_{{ forloop.counter0|add:reserva.cantidad_adultos }}" class="form-control" placeholder="Apellido" required>
+                </div>
+                <div class="col">
+                  <input type="text" name="dni_{{ forloop.counter0|add:reserva.cantidad_adultos }}" class="form-control" placeholder="DNI" required>
+                </div>
+                <div class="col">
+                  <input type="date" name="fecha_nacimiento_{{ forloop.counter0|add:reserva.cantidad_adultos }}" class="form-control fecha-nino" required>
+                </div>
+              </div>
+            {% endfor %}
+            <button type="submit" class="btn btn-primary">Guardar huéspedes</button>
+          </form>
+        {% endif %}
+      {% endwith %}
     </div>
   </div>
 </div>
@@ -151,6 +200,8 @@
       actualizarTimer();
     </script>
   {% endif %}
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script>
     console.log('Cargando script de cancelar reserva');
@@ -234,6 +285,32 @@
           });
         });
       }
+    });
+    document.addEventListener('DOMContentLoaded', function() {
+      // Calcular la fecha máxima para mayores de 18 años
+      const hoy = new Date();
+      const fechaMax = new Date(hoy.getFullYear() - 18, hoy.getMonth(), hoy.getDate());
+      const fechaMaxStr = fechaMax.toISOString().split('T')[0];
+
+      // Inicializar flatpickr solo en los campos de adultos
+      flatpickr('.fecha-adulto', {
+        dateFormat: "Y-m-d",
+        maxDate: fechaMaxStr,
+        locale: "es"
+      });
+      // Calcular el rango para niños: deben ser menores de 18 años
+      const fechaMaxNino = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate()); // hasta ayer
+      const fechaMinNino = new Date(hoy.getFullYear() - 18, hoy.getMonth(), hoy.getDate() + 1); // desde hace 18 años + 1 día
+
+      const fechaMaxNinoStr = fechaMaxNino.toISOString().split('T')[0];
+      const fechaMinNinoStr = fechaMinNino.toISOString().split('T')[0];
+
+      flatpickr('.fecha-nino', {
+        dateFormat: "Y-m-d",
+        minDate: fechaMinNinoStr,
+        maxDate: fechaMaxNinoStr,
+        locale: "es"
+      });
     });
   </script>
   
