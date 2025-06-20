@@ -661,7 +661,11 @@ def completar_huespedes(request, id_reserva):
             nombre = request.POST.get(f'nombre_{i}')
             apellido = request.POST.get(f'apellido_{i}')
             dni = request.POST.get(f'dni_{i}')
-            fecha_nacimiento = request.POST.get(f'fecha_nacimiento_{i}')
+            # Validar fecha de nacimiento solo si es un adulto
+            if reserva.cantidad_adultos > 0 and i < reserva.cantidad_adultos:
+                fecha_nacimiento = request.POST.get(f'fecha_nacimiento_{i}')
+            else:
+                fecha_nacimiento = request.POST.get(f'fecha_nacimiento_{i}')
             if nombre and apellido and dni and fecha_nacimiento:
                 reserva.huespedes.create(
                     nombre=nombre,
