@@ -1,0 +1,144 @@
+{% extends 'base/base_search.html' %}
+{% load static %}
+
+{% block title %}Búsqueda de Cocheras{% endblock %}
+
+{% block search_page_content %}
+  {# Filtros de Cocheras #}
+  <aside class="filtros col-md-2 sidebar bg-light sticky-top">
+    <form method="get" data-tipo="cochera">
+      <div class="row mb-3">
+        <div class="col">
+          <label for="precio_min" class="form-label">Precio mínimo</label>
+          <input type="number" class="form-control" name="precio_min" id="precio_min" value="{{ request.GET.precio_min }}">
+        </div>
+        <div class="col">
+          <label for="precio_max" class="form-label">Precio máximo</label>
+          <input type="number" class="form-control" name="precio_max" id="precio_max" value="{{ request.GET.precio_max }}">
+        </div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Provincia</label>
+        <select class="form-select filtros__campo" name="provincia" id="provincia-select">
+          <option value="">Todas</option>
+          {% for provincia in provincias %}
+            <option value="{{ provincia.id }}" {% if request.GET.provincia == provincia.id|stringformat:"s" %}selected{% endif %}>{{ provincia.nombre }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Ciudad</label>
+        <select class="form-select filtros__campo" name="ciudad" id="ciudad-select" {% if not request.GET.provincia %}disabled{% endif %}>
+          <option value="">Todas</option>
+          {% if request.GET.provincia %}
+            {% for ciudad in ciudades %}
+              <option value="{{ ciudad.id }}" {% if request.GET.ciudad == ciudad.id|stringformat:"s" %}selected{% endif %}>{{ ciudad.nombre }}</option>
+            {% endfor %}
+          {% endif %}
+        </select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Dirección</label>
+        <input type="text" class="form-control filtros__campo" name="direccion" value="{{ request.GET.direccion }}">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Cantidad de Vehículos</label>
+        <select class="form-select filtros__campo" name="cantidad_vehiculos">
+          <option value="">Cualquiera</option>
+          <option value="1" {% if request.GET.cantidad_vehiculos == "1" %}selected{% endif %}>1</option>
+          <option value="2+" {% if request.GET.cantidad_vehiculos == "2+" %}selected{% endif %}>2+</option>
+          <option value="3+" {% if request.GET.cantidad_vehiculos == "3+" %}selected{% endif %}>3+</option>
+          <option value="4+" {% if request.GET.cantidad_vehiculos == "4+" %}selected{% endif %}>4+</option>
+          <option value="5+" {% if request.GET.cantidad_vehiculos == "5+" %}selected{% endif %}>5+</option>
+          <option value="6+" {% if request.GET.cantidad_vehiculos == "6+" %}selected{% endif %}>6+</option>
+          <option value="7+" {% if request.GET.cantidad_vehiculos == "7+" %}selected{% endif %}>7+</option>
+          <option value="8+" {% if request.GET.cantidad_vehiculos == "8+" %}selected{% endif %}>8+</option>
+        </select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Dimensiones (m²)</label>
+        <div class="row g-2">
+          <div class="col">
+            <input type="number" step="0.01" class="form-control filtros__campo" name="ancho" placeholder="Ancho" min="0" value="{{ request.GET.ancho }}">
+          </div>
+          <div class="col">
+            <input type="number" step="0.01" class="form-control filtros__campo" name="largo" placeholder="Largo" min="0" value="{{ request.GET.largo }}">
+          </div>
+          <div class="col">
+            <input type="number" step="0.01" class="form-control filtros__campo" name="alto" placeholder="Alto" min="0" value="{{ request.GET.alto }}">
+          </div>
+        </div>
+      </div>
+      <div class="mb-3 form-check">
+        <input type="checkbox" class="form-check-input filtros__campo" id="conTecho" name="con_techo" {% if request.GET.con_techo %}checked{% endif %}>
+        <label class="form-check-label" for="conTecho">Con techo</label>
+      </div>
+      <button class="btn btn-primary w-100 btn-azul">Aplicar</button>
+    </form>
+  </aside>
+
+  {# Lista de Cocheras #}
+  <section class="lista-resultados col-md-6 p-3">
+    <div id="lista-cocheras" class="row">
+      {% for cochera in cocheras %}
+      <div class="col-12 col-md-6 col-lg-3 mb-4">
+        <a href="{% url 'detalle_cochera' cochera.id_cochera %}" class="text-decoration-none">
+          <div class="propiedad-card card border-0 shadow-sm">
+            {% if cochera.first_image %}
+              <img src="{{ cochera.first_image.imagen.url }}" class="propiedad-imagen card-img-top" alt="{{ cochera.nombre }}">
+            {% else %}
+              <img src="{% static 'img/default-garage.jpg' %}" class="propiedad-imagen card-img-top" alt="Imagen por defecto">
+            {% endif %}
+            <div class="propiedad-body card-body">
+              <h5 class="propiedad-nombre card-title">{{ cochera.nombre }}</h5>
+              <div class="propiedad-info">
+                <p class="propiedad-precio card-text mb-1">
+                  <i class="bi bi-cash-coin"></i> ${{ cochera.precio_por_dia|floatformat:"0" }}/día
+                </p>
+                <p class="propiedad-direccion card-text mb-2">
+                  <i class="bi bi-geo-alt-fill"></i> {{ cochera.direccion }}
+                </p>
+                <div class="d-flex flex-wrap gap-2 small text-muted">
+                  {% if cochera.cantidad_vehiculos %}
+                  <span class="d-flex align-items-center me-2">
+                      <i class="bi bi-car-front me-1"></i> {{ cochera.cantidad_vehiculos }}
+                  </span>
+                  {% endif %}
+                  {% if cochera.con_techo is not None %}
+                  <span class="d-flex align-items-center me-2">
+                      <i class="bi bi-triangle"></i>
+                      <span class="ms-1">
+                          {% if cochera.con_techo %}
+                              Sí
+                          {% else %}
+                              No
+                          {% endif %}
+                      </span>
+                  </span>
+                  {% endif %}
+                  {% if cochera.ancho and cochera.largo and cochera.alto %}
+                  <span class="d-flex align-items-center me-2">
+                      <i class="bi bi-arrows-angle-expand me-1"></i> {{ cochera.ancho }} x {{ cochera.largo }} x {{ cochera.alto }} m
+                  </span>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+        </a>
+      </div>
+      {% empty %}
+      <div class="col-12">
+        <div class="mensaje-vacio alert alert-info" role="alert">
+          <i class="bi bi-info-circle"></i> No se encontraron cocheras disponibles.
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  {# Mapa #}
+  <aside class="mapa-contenedor col-md-4">
+    <div class="mapa-content" id="map" role="region" aria-label="Mapa de Cocheras disponibles"></div>
+  </aside>
+{% endblock search_page_content %}

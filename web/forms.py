@@ -141,7 +141,7 @@ class InmuebleForm(forms.ModelForm):
     class Meta:
         model = Inmueble
         fields = [
-            'nombre', 'ubicacion', 'descripcion', 'cantidad_banios', 'cantidad_ambientes',
+            'nombre', 'direccion', 'descripcion', 'cantidad_banios', 'cantidad_ambientes',
             'cantidad_camas', 'cantidad_huespedes', 'precio_por_dia', 'politica_cancelacion',
             'provincia', 'ciudad', 'cochera', 'estado', 'empleado', 'minimo_dias_alquiler'  # <-- AGREGADO AQUÍ
         ]
@@ -149,7 +149,7 @@ class InmuebleForm(forms.ModelForm):
             'descripcion': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
             'politica_cancelacion': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
             'nombre': forms.TextInput(attrs={'class': 'form-control'}),
-            'ubicacion': forms.TextInput(attrs={'class': 'form-control'}),
+            'direccion': forms.TextInput(attrs={'class': 'form-control'}),
             'cantidad_banios': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
             'cantidad_ambientes': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
             'cantidad_camas': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
@@ -247,13 +247,13 @@ class CocheraForm(forms.ModelForm):
     class Meta:
         model = Cochera
         fields = [
-            'nombre', 'ubicacion', 'descripcion', 'alto', 'ancho', 'largo',
+            'nombre', 'direccion', 'descripcion', 'alto', 'ancho', 'largo',
             'cantidad_vehiculos', 'con_techo', 'precio_por_dia', 'politica_cancelacion',
             'provincia', 'ciudad', 'estado', 'empleado', 'minimo_dias_alquiler'  # <-- AGREGADO AQUÍ
         ]
         widgets = {
             'nombre': forms.TextInput(attrs={'class': 'form-control'}),
-            'ubicacion': forms.TextInput(attrs={'class': 'form-control'}),
+            'direccion': forms.TextInput(attrs={'class': 'form-control'}),
             'descripcion': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
             'alto': forms.NumberInput(attrs={'class': 'form-control', 'min': 0, 'step': '0.01'}),
             'ancho': forms.NumberInput(attrs={'class': 'form-control', 'min': 0, 'step': '0.01'}),

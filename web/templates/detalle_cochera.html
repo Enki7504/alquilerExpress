@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends 'base/base.html' %}
 {% load static %}
 {% load user_groups %}
 {% load dict_extras %}
@@ -9,7 +9,6 @@
 <link rel="stylesheet" href="{% static 'css/inmueble.css' %}">
 <!-- Incluye flatpickr -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <style>
   .carousel-inner,
   .carousel-item {
@@ -26,6 +25,18 @@
     border-radius: 0 !important;
     display: block !important;
     background: #eee !important;
+  }
+
+  .flatpickr-day.flatpickr-day-propia {
+    background: #FFEFD5 !important;
+    color: #E67E22 !important;
+    border-radius: 50% !important;
+  }
+
+  .flatpickr-day.flatpickr-day-propia:hover {
+    background: #F0D5BB !important; /* Un tono ligeramente más oscuro del durazno */
+    color: #CD6E1B !important; /* Un naranja ligeramente más oscuro para el texto en hover */
+    cursor: pointer; /* Cambia el cursor a una mano para indicar que es interactivo */
   }
 </style>
 {% endblock %}
@@ -65,7 +76,9 @@
           <h1 class="h2 mb-3">{{ cochera.nombre }}</h1>
           <div class="d-flex align-items-center mb-3">
             <i class="bi bi-geo-alt-fill text-primary me-2"></i>
-            <span class="text-muted">{{ cochera.ubicacion }}</span>
+            <span class="text-muted">
+              {{ cochera.provincia.nombre }}, {{ cochera.ciudad.nombre }}, {{ cochera.direccion }}
+            </span>
           </div>
           <div class="d-flex flex-wrap gap-3 mb-4">
             <div class="d-flex align-items-center">
@@ -206,8 +219,13 @@
   {% comment %} {% include '_resenias.html' %} {% endcomment %}
 {% endblock %}
 
+
+
+
 {% block extra_js %}
   {{ fechas_ocupadas|json_script:"fechasOcupadasJSON" }}
+  {{ fechas_ocupadas_propias|json_script:"fechasOcupadasPropiasJSON" }}
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script>
     // Convertir los mensajes de Django a SweetAlert
@@ -237,15 +255,30 @@
 
     document.addEventListener('DOMContentLoaded', function() {
       var fechasOcupadas = JSON.parse(document.getElementById('fechasOcupadasJSON').textContent);
+      var fechasOcupadasPropias = JSON.parse(document.getElementById('fechasOcupadasPropiasJSON').textContent);
+
+      function marcarPropias(date, domElement) {
+        const fechaStr = date.toISOString().slice(0, 10);
+        if (fechasOcupadasPropias.includes(fechaStr)) {
+          domElement.classList.add('flatpickr-day-propia');
+        }
+      }
+
       flatpickr("#fecha_inicio", {
         disable: fechasOcupadas,
         dateFormat: "Y-m-d",
-        minDate: "today"
+        minDate: "today",
+        onDayCreate: function(dObj, dStr, fp, dayElem) {
+          marcarPropias(dayElem.dateObj, dayElem);
+        }
       });
       flatpickr("#fecha_fin", {
         disable: fechasOcupadas,
         dateFormat: "Y-m-d",
-        minDate: "today"
+        minDate: "today",
+        onDayCreate: function(dObj, dStr, fp, dayElem) {
+          marcarPropias(dayElem.dateObj, dayElem);
+        }
       });
     });
 

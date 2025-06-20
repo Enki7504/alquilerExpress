@@ -37,7 +37,7 @@
         {% for inmueble in inmuebles %}
         <tr>
           <td>{{ inmueble.nombre }}</td>
-          <td>{{ inmueble.ubicacion }}</td>
+          <td>{{ inmueble.direccion }}</td>
           <td>${{ inmueble.precio_por_dia|floatformat:2 }}</td>
           <td>{{ inmueble.estado.nombre }}</td>
           <td>

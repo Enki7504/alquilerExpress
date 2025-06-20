@@ -37,7 +37,7 @@
         {% for cochera in cocheras %}
         <tr>
           <td>{{ cochera.nombre }}</td>
-          <td>{{ cochera.ubicacion }}</td>
+          <td>{{ cochera.direccion }}</td>
           <td>${{ cochera.precio_por_dia|floatformat:2 }}</td>
           <td>{{ cochera.estado.nombre }}</td>
           <td>
