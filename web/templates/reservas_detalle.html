@@ -152,23 +152,25 @@
                   </div>
                 </div>
               {% endfor %}
-              <h6> Niños </h6>
-              {% for i in rango_ninos %}
-                <div class="row mb-2">
-                  <div class="col">
-                    <input type="text" name="nombre_{{ forloop.counter0|add:reserva.cantidad_adultos }}" class="form-control" placeholder="Nombre" required>
+              {% if reserva.cantidad_ninos > 0 %}
+                <h6> Niños </h6>
+                {% for i in rango_ninos %}
+                  <div class="row mb-2">
+                    <div class="col">
+                      <input type="text" name="nombre_{{ forloop.counter0|add:reserva.cantidad_adultos }}" class="form-control" placeholder="Nombre" required>
+                    </div>
+                    <div class="col">
+                      <input type="text" name="apellido_{{ forloop.counter0|add:reserva.cantidad_adultos }}" class="form-control" placeholder="Apellido" required>
+                    </div>
+                    <div class="col">
+                      <input type="text" name="dni_{{ forloop.counter0|add:reserva.cantidad_adultos }}" class="form-control" placeholder="DNI" required>
+                    </div>
+                    <div class="col">
+                      <input type="date" name="fecha_nacimiento_{{ forloop.counter0|add:reserva.cantidad_adultos }}" class="form-control fecha-nino" required>
+                    </div>
                   </div>
-                  <div class="col">
-                    <input type="text" name="apellido_{{ forloop.counter0|add:reserva.cantidad_adultos }}" class="form-control" placeholder="Apellido" required>
-                  </div>
-                  <div class="col">
-                    <input type="text" name="dni_{{ forloop.counter0|add:reserva.cantidad_adultos }}" class="form-control" placeholder="DNI" required>
-                  </div>
-                  <div class="col">
-                    <input type="date" name="fecha_nacimiento_{{ forloop.counter0|add:reserva.cantidad_adultos }}" class="form-control fecha-nino" required>
-                  </div>
-                </div>
-              {% endfor %}
+                {% endfor %}
+              {% endif %}
               <button type="submit" class="btn btn-primary">Guardar huéspedes</button>
             </form>
           {% endif %}
@@ -285,6 +287,50 @@
                 timerProgressBar: true,
                 showConfirmButton: false
                 });
+            }
+          });
+        });
+      }
+    });
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('Cargando script de formulario de huéspedes');
+      const form_huespedes = document.getElementById('form-huespedes');
+      if (form_huespedes) {
+        form_huespedes.addEventListener('submit', function(e) {
+          e.preventDefault();
+          const formData = new FormData(form_huespedes);
+          fetch(form_huespedes.action, {
+            method: 'POST',
+            headers: {
+              'X-CSRFToken': form_huespedes.querySelector('[name=csrfmiddlewaretoken]').value,
+              'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+          })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              Swal.fire({
+                icon: 'success',
+                title: data.message || 'Huéspedes guardados correctamente.',
+                toast: true,
+                position: 'top-end',
+                timer: 2000,
+                timerProgressBar: true,
+                showConfirmButton: false
+              }).then(() => {
+                window.location.reload();
+              });
+            } else if (data.errors) {
+              Swal.fire({
+                icon: 'error',
+                html: data.errors.map(e => `<div>${e}</div>`).join(''),
+                toast: true,
+                position: 'top-end',
+                timer: 4000,
+                timerProgressBar: true,
+                showConfirmButton: false
+              });
             }
           });
         });
