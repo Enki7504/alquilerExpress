@@ -210,3 +210,56 @@ def hay_reserva_confirmada_hoy(id_reserva):
     except Exception as e:
         print("Error al buscar reserva confirmada:", e)
         return False
+
+################################################################################################################
+# --- Funciones de Ayuda para Permisos ---
+################################################################################################################
+
+def is_admin(user):
+    """Verifica si el usuario es un superusuario."""
+    return user.is_authenticated and user.is_staff
+
+def is_empleado(user):
+    """Verifica si el usuario es un superusuario."""
+    return user.is_authenticated and user.groups.filter(name="empleado").exists()
+
+def is_admin_or_empleado(user):
+    """Verifica si el usuario es un superusuario o pertenece al grupo 'empleado'."""
+    return user.is_authenticated and (user.is_staff or user.groups.filter(name="empleado").exists())
+
+def is_client(user):
+    """Verifica si el usuario es un cliente."""
+    return user.is_authenticated and user.groups.filter(name="cliente").exists()
+
+################################################################################################################
+# --- Funciones para filtrar ---
+################################################################################################################
+
+def obtener_provincias_y_ciudades(tipo='inmueble', provincia_id=None):
+    from .models import Provincia, Ciudad
+    if tipo == 'inmueble':
+        provincias = Provincia.objects.filter(ciudades__inmueble__isnull=False).distinct()
+        if provincia_id:
+            ciudades = Ciudad.objects.filter(
+                provincia_id=provincia_id,
+                inmueble__isnull=False
+            ).distinct()
+        else:
+            ciudades = Ciudad.objects.filter(
+                inmueble__isnull=False
+            ).distinct()
+    elif tipo == 'cochera':
+        provincias = Provincia.objects.filter(ciudades__cochera__isnull=False).distinct()
+        if provincia_id:
+            ciudades = Ciudad.objects.filter(
+                provincia_id=provincia_id,
+                cochera__isnull=False
+            ).distinct()
+        else:
+            ciudades = Ciudad.objects.filter(
+                cochera__isnull=False
+            ).distinct()
+    else:
+        provincias = Provincia.objects.none()
+        ciudades = Ciudad.objects.none()
+    return provincias, ciudades
