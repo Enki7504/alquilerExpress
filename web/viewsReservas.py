@@ -82,7 +82,6 @@ from .utils import enviar_mail_a_empleados_sobre_reserva
 # --- Vistas de Gestión de Reservas ---
 ################################################################################################################
 
-# crear reserva para inmuebles y cocheras
 @login_required
 def crear_reserva(request, id_inmueble):
     """
@@ -106,6 +105,12 @@ def crear_reserva(request, id_inmueble):
         # Validar que la fecha de inicio sea anterior a la de fin
         if fecha_inicio >= fecha_fin:
             messages.error(request, "La fecha de salida debe ser posterior a la de llegada.")
+            return redirect("detalle_inmueble", id_inmueble=id_inmueble)
+
+        # Validar mínimo de noches
+        dias = (fecha_fin - fecha_inicio).days
+        if dias < inmueble.minimo_dias_alquiler:
+            messages.error(request, f"El mínimo de noches de alquiler para esta vivienda es {inmueble.minimo_dias_alquiler}.")
             return redirect("detalle_inmueble", id_inmueble=id_inmueble)
 
         # Validar que el cliente no tenga reservas superpuestas para el mismo inmueble
@@ -137,11 +142,7 @@ def crear_reserva(request, id_inmueble):
             fecha_inicio=fecha_inicio,
             fecha_fin=fecha_fin,
             estado=Estado.objects.get(nombre="Pendiente"),
-            precio_total=inmueble.precio_por_dia * (fecha_fin - fecha_inicio).days,
-            # asigna cantidad de niños y adultos recibidos por el form
-            cantidad_adultos=request.POST.get("cantidad_adultos", 1),
-            cantidad_ninos=request.POST.get("cantidad_ninos", 0)
-
+            precio_total=inmueble.precio_por_dia * (fecha_fin - fecha_inicio).days
         )
 
         # Relacionar el cliente con la reserva
@@ -165,96 +166,92 @@ def crear_reserva(request, id_inmueble):
 def crear_reserva_cochera(request, id_cochera):
     """
     Permite a los usuarios crear una reserva para una cochera.
-    Valida las fechas y calcula el precio total.
+    Valida fechas, mínimo de noches, superposición de reservas y crea la relación con el cliente.
     """
     cochera = get_object_or_404(Cochera, id_cochera=id_cochera)
-    
+    perfil = request.user.perfil
+
     if request.method == 'POST':
-        fecha_inicio = request.POST.get('fecha_inicio')
-        fecha_fin = request.POST.get('fecha_fin')
-        
-        if not fecha_inicio or not fecha_fin:
-            messages.error(request, 'Debes ingresar ambas fechas.')
-            return redirect('detalle_cochera', id_cochera=id_cochera)
-            
+        fecha_inicio_str = request.POST.get('fecha_inicio')
+        fecha_fin_str = request.POST.get('fecha_fin')
+
+        # Validar fechas
         try:
-            fecha_inicio = datetime.datetime.strptime(fecha_inicio, '%Y-%m-%d').date()
-            fecha_fin = datetime.datetime.strptime(fecha_fin, '%Y-%m-%d').date()
-            
-            if fecha_inicio >= fecha_fin:
-                messages.error(request, 'La fecha de fin debe ser posterior a la de inicio.')
-                return redirect('detalle_cochera', id_cochera=id_cochera)
-                
-            dias = (fecha_fin - fecha_inicio).days
-            if dias < cochera.minimo_dias_alquiler:
-                messages.error(request, f"El mínimo de noches de alquiler para esta cochera es {cochera.minimo_dias_alquiler}.")
-                return redirect('detalle_cochera', id_cochera=id_cochera)
-            
-            # --- VALIDACIÓN DE RESERVA SUPERPUESTA DEL USUARIO ---
-            perfil = request.user.perfil
-            reserva_superpuesta_usuario = Reserva.objects.filter(
-                clienteinmueble__cliente=perfil,
-                cochera=cochera,  # <-- SOLO la misma cochera
-                estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada'],
-                fecha_inicio__lt=fecha_fin,
-                fecha_fin__gt=fecha_inicio
-            ).exists()
-            if reserva_superpuesta_usuario:
-                messages.error(request, "Ya tenés una reserva de cochera que se superpone con las fechas seleccionadas.")
-                return redirect('detalle_cochera', id_cochera=id_cochera)
-            # -----------------------------------------------------
+            fecha_inicio = datetime.datetime.strptime(fecha_inicio_str, '%Y-%m-%d').date()
+            fecha_fin = datetime.datetime.strptime(fecha_fin_str, '%Y-%m-%d').date()
+        except (TypeError, ValueError):
+            messages.error(request, 'Fechas inválidas.')
+            return redirect('detalle_cochera', id_cochera=id_cochera)
 
-            # --- Validar que no haya reservas superpuestas ---
-            reservas_superpuestas = Reserva.objects.filter(
-                cochera=cochera,
-                estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada'],
-                fecha_inicio__lt=fecha_fin,
-                fecha_fin__gt=fecha_inicio
-            )
-            if reservas_superpuestas.exists():
-                messages.error(request, "La cochera ya está reservada en esas fechas.")
-                return redirect('detalle_cochera', id_cochera=id_cochera)
-            # ------------------------------------------------------
-                
-            # Calcular días y precio total
-            dias = (fecha_fin - fecha_inicio).days
-            precio_total = dias * cochera.precio_por_dia
-            
-            # Crear la reserva
-            reserva = Reserva.objects.create(
-                fecha_inicio=fecha_inicio,
-                fecha_fin=fecha_fin,
-                precio_total=precio_total,
-                cochera=cochera,
-                estado=Estado.objects.get(nombre='Pendiente'),
-                descripcion=f"Reserva para {cochera.nombre} del {fecha_inicio} al {fecha_fin}"
-            )
-            
-            # Relacionar el cliente con la reserva
-            if request.user.is_authenticated:
-                ClienteInmueble.objects.create(
-                    cliente=request.user.perfil,
-                    cochera=cochera,
-                    reserva=reserva
-                )
+        if fecha_inicio >= fecha_fin:
+            messages.error(request, 'La fecha de salida debe ser posterior a la de llegada.')
+            return redirect('detalle_cochera', id_cochera=id_cochera)
 
-            # Notificar al empleado asignado a la cochera
+        # Validar mínimo de noches
+        dias = (fecha_fin - fecha_inicio).days
+        if dias < cochera.minimo_dias_alquiler:
+            messages.error(request, f"El mínimo de noches de alquiler para esta cochera es {cochera.minimo_dias_alquiler}.")
+            return redirect('detalle_cochera', id_cochera=id_cochera)
+
+        # Validar que el cliente no tenga reservas superpuestas para la misma cochera
+        reserva_superpuesta_usuario = Reserva.objects.filter(
+            clienteinmueble__cliente=perfil,
+            cochera=cochera,
+            estado__nombre__in=['Pendiente', 'Confirmada', 'Pagada', 'Aprobada'],
+            fecha_inicio__lte=fecha_fin,
+            fecha_fin__gte=fecha_inicio
+        ).exists()
+        if reserva_superpuesta_usuario:
+            messages.error(request, "Ya tenés una reserva activa para esta cochera en esas fechas.")
+            return redirect('detalle_cochera', id_cochera=id_cochera)
+
+        # Validar que la cochera esté disponible en esas fechas
+        reserva_superpuesta_cochera = Reserva.objects.filter(
+            cochera=cochera,
+            estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada'],
+            fecha_inicio__lte=fecha_fin,
+            fecha_fin__gte=fecha_inicio
+        ).exists()
+        if reserva_superpuesta_cochera:
+            messages.error(request, "La cochera no está disponible en esas fechas.")
+            return redirect('detalle_cochera', id_cochera=id_cochera)
+
+        # Calcular precio total
+        precio_total = cochera.precio_por_dia * dias
+
+        # Crear la reserva
+        reserva = Reserva.objects.create(
+            cochera=cochera,
+            fecha_inicio=fecha_inicio,
+            fecha_fin=fecha_fin,
+            estado=Estado.objects.get(nombre='Pendiente'),
+            precio_total=precio_total,
+            descripcion=f"Reserva para {cochera.nombre} del {fecha_inicio} al {fecha_fin}"
+        )
+
+        # Relacionar el cliente con la reserva
+        ClienteInmueble.objects.create(
+            cliente=perfil,
+            cochera=cochera,
+            reserva=reserva
+        )
+
+        # Notificar al cliente
+        crear_notificacion(
+            usuario=perfil,
+            mensaje=f"Tu reserva #{reserva.id_reserva} fue registrada. En menos de 72 horas será revisada por un empleado. Recibirás una notificación cuando sea aprobada o rechazada."
+        )
+
+        # Notificar al empleado asignado a la cochera
+        if cochera.empleado:
             crear_notificacion(
                 usuario=cochera.empleado,
                 mensaje=f"Nueva reserva #{reserva.id_reserva} pendiente para la cochera {cochera.nombre} del {fecha_inicio} al {fecha_fin}.",
             )
 
-            # Enviar notificación a todos los empleados
-            # usando enviar_mail_a_empleados_sobre_reserva(id_reserva) de utils.py
-            # enviar_mail_a_empleados_sobre_reserva(reserva.id_reserva)    
-            
-            messages.success(request, 'Reserva creada exitosamente!')
-            return redirect('detalle_cochera', id_cochera=id_cochera)
-            
-        except ValueError:
-            messages.error(request, 'Formato de fecha inválido.')
-            return redirect('detalle_cochera', id_cochera=id_cochera)
-    
+        messages.success(request, 'Reserva creada exitosamente.')
+        return redirect('detalle_cochera', id_cochera=id_cochera)
+
     return redirect('detalle_cochera', id_cochera=id_cochera)
 
 @require_POST
@@ -496,12 +493,7 @@ def reservas_usuario(request):
 @login_required
 def ver_detalle_reserva(request, id_reserva):
     reserva = get_object_or_404(Reserva, id_reserva=id_reserva)
-    huespedes = reserva.huespedes.all()  # <-- Relación con Huesped
-    #huespedes = get_object_or_404(Huesped, reserva=id_reserva)
-    rango_adultos = range(reserva.cantidad_adultos)
-    rango_ninos = range(reserva.cantidad_ninos)
-    today = date.today()
-    fecha_max_adulto = today.replace(year=today.year - 18)
+    huespedes = reserva.huespedes.all()
     tiempo_restante = None
 
     if reserva.estado.nombre == "Aprobada" and reserva.aprobada_en:
@@ -515,11 +507,8 @@ def ver_detalle_reserva(request, id_reserva):
     return render(request, 'reservas_detalle.html', {
         'reserva': reserva,
         'huespedes': huespedes,
-        'rango_adultos': rango_adultos,
-        'rango_ninos': rango_ninos,
         'tiempo_restante': tiempo_restante,
         'is_admin_or_empleado': es_admin_o_empleado,
-        'fecha_max_adulto': fecha_max_adulto.strftime("%Y-%m-%d"),
     })
 
 @require_POST

@@ -15,10 +15,10 @@ urlpatterns = [
     path('register/', viewsLogin.register, name='register'),
 
     # Busquedas
-    path('buscar-inmuebles/', views.buscar_inmuebles, name='buscar_inmuebles'),
-    path('buscar-inmuebles/<int:id_inmueble>/', views.detalle_inmueble, name='detalle_inmueble'),
-    path('buscar-cocheras/', views.buscar_cocheras, name='buscar_cocheras'),
-    path('buscar-cocheras/<int:id_cochera>/', views.detalle_cochera, name='detalle_cochera'),
+    path('buscar-inmuebles/', viewsBusquedas.buscar_inmuebles, name='buscar_inmuebles'),
+    path('buscar-inmuebles/<int:id_inmueble>/', viewsBusquedas.detalle_inmueble, name='detalle_inmueble'),
+    path('buscar-cocheras/', viewsBusquedas.buscar_cocheras, name='buscar_cocheras'),
+    path('buscar-cocheras/<int:id_cochera>/', viewsBusquedas.detalle_cochera, name='detalle_cochera'),
 
     # Filtros de busqueda
     path('ajax/cargar-ciudades-filtro/', views.cargar_ciudades_filtro, name='ajax_cargar_ciudades_filtro'),
@@ -60,10 +60,10 @@ urlpatterns = [
     path('panel/notificar-imprevisto/', viewsNotificaciones.admin_notificar_imprevisto, name='admin_notificar_imprevisto'),
     
     # Reservas
-    path('crear-reserva/<int:id_inmueble>/', views.crear_reserva, name='crear_reserva'),
-    path('crear-reserva-cochera/<int:id_cochera>/', views.crear_reserva_cochera, name='crear_reserva_cochera'),
-    path('panel/reserva-inmueble/<int:id_reserva>/cambiar-estado/', views.cambiar_estado_reserva, name='cambiar_estado_reserva_inmueble'),
-    path('panel/reserva-cochera/<int:id_reserva>/cambiar-estado/', views.cambiar_estado_reserva, name='cambiar_estado_reserva'),
+    path('crear-reserva/<int:id_inmueble>/', viewsReservas.crear_reserva, name='crear_reserva'),
+    path('crear-reserva-cochera/<int:id_cochera>/', viewsReservas.crear_reserva_cochera, name='crear_reserva_cochera'),
+    path('panel/reserva-inmueble/<int:id_reserva>/cambiar-estado/', viewsReservas.cambiar_estado_reserva, name='cambiar_estado_reserva_inmueble'),
+    path('panel/reserva-cochera/<int:id_reserva>/cambiar-estado/', viewsReservas.cambiar_estado_reserva, name='cambiar_estado_reserva'),
     
     # Reservas del usuario autenticado
     path('reservas/', viewsReservas.reservas_usuario, name='reservas_usuario'),

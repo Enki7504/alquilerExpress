@@ -230,3 +230,36 @@ def is_admin_or_empleado(user):
 def is_client(user):
     """Verifica si el usuario es un cliente."""
     return user.is_authenticated and user.groups.filter(name="cliente").exists()
+
+################################################################################################################
+# --- Funciones para filtrar ---
+################################################################################################################
+
+def obtener_provincias_y_ciudades(tipo='inmueble', provincia_id=None):
+    from .models import Provincia, Ciudad
+    if tipo == 'inmueble':
+        provincias = Provincia.objects.filter(ciudades__inmueble__isnull=False).distinct()
+        if provincia_id:
+            ciudades = Ciudad.objects.filter(
+                provincia_id=provincia_id,
+                inmueble__isnull=False
+            ).distinct()
+        else:
+            ciudades = Ciudad.objects.filter(
+                inmueble__isnull=False
+            ).distinct()
+    elif tipo == 'cochera':
+        provincias = Provincia.objects.filter(ciudades__cochera__isnull=False).distinct()
+        if provincia_id:
+            ciudades = Ciudad.objects.filter(
+                provincia_id=provincia_id,
+                cochera__isnull=False
+            ).distinct()
+        else:
+            ciudades = Ciudad.objects.filter(
+                cochera__isnull=False
+            ).distinct()
+    else:
+        provincias = Provincia.objects.none()
+        ciudades = Ciudad.objects.none()
+    return provincias, ciudades
