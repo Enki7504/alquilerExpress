@@ -60,31 +60,33 @@
 
         </div>
       </div>
-      <div class="mb-3">
-        <strong>Huéspedes:</strong>
-        <ul class="list-group mt-2">
-          {% for h in huespedes %}
-            <li class="list-group-item">
-              <div class="d-flex align-items-center flex-wrap gap-3">
-                <!-- Icono -->
-                <span class="me-2">
-                  <i class="bi bi-person-fill text-primary fs-4"></i>
-                </span>
-                <!-- Nombre y apellido -->
-                <span class="fw-semibold">{{ h.nombre }} {{ h.apellido }}</span>
-                <!-- DNI -->
-                <span class="badge bg-light text-dark border fw-normal">
-                  DNI: <span class="fw-semibold">{{ h.dni }}</span>
-                </span>
-                <!-- Fecha de nacimiento -->
-                <span class="badge bg-light text-dark border fw-normal">
-                  Nac: <span class="fw-semibold">{{ h.fecha_nacimiento|date:"d/m/Y" }}</span>
-                </span>
-              </div>
-            </li>
-          {% endfor %}
-        </ul>
-      </div>
+      {% if reserva.inmueble %}
+        <div class="mb-3">
+          <strong>Huéspedes:</strong>
+          <ul class="list-group mt-2">
+            {% for h in huespedes %}
+              <li class="list-group-item">
+                <div class="d-flex align-items-center flex-wrap gap-3">
+                  <!-- Icono -->
+                  <span class="me-2">
+                    <i class="bi bi-person-fill text-primary fs-4"></i>
+                  </span>
+                  <!-- Nombre y apellido -->
+                  <span class="fw-semibold">{{ h.nombre }} {{ h.apellido }}</span>
+                  <!-- DNI -->
+                  <span class="badge bg-light text-dark border fw-normal">
+                    DNI: <span class="fw-semibold">{{ h.dni }}</span>
+                  </span>
+                  <!-- Fecha de nacimiento -->
+                  <span class="badge bg-light text-dark border fw-normal">
+                    Nac: <span class="fw-semibold">{{ h.fecha_nacimiento|date:"d/m/Y" }}</span>
+                  </span>
+                </div>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
       <!-- Botones de acción -->
       <div class="mt-4 d-flex flex-wrap gap-2 align-items-center">
         {% if reserva.estado.nombre != "Cancelada" and reserva.estado.nombre != "Finalizada" %}
@@ -126,50 +128,52 @@
         {% endif %}
       </div>
       <br>
-      {% with total_huespedes=huespedes|length %}
-        {% if total_huespedes < reserva.cantidad_adultos|add:reserva.cantidad_ninos %}
-          <form id="form-huespedes" method="post" action="{% url 'completar_huespedes' reserva.id_reserva %}">
-            {% csrf_token %}
-            <h5>Completa los datos de los huéspedes antes de pagar</h5>
-            <h6> Adultos </h6>
-            {% for i in rango_adultos %}
-              <div class="row mb-2">
-                <div class="col">
-                  <input type="text" name="nombre_{{ forloop.counter0 }}" class="form-control" placeholder="Nombre" required>
+      {% if reserva.inmueble %}
+        {% with total_huespedes=huespedes|length %}
+          {% if total_huespedes < reserva.cantidad_adultos|add:reserva.cantidad_ninos %}
+            <form id="form-huespedes" method="post" action="{% url 'completar_huespedes' reserva.id_reserva %}">
+              {% csrf_token %}
+              <h5>Completa los datos de los huéspedes antes de pagar</h5>
+              <h6> Adultos </h6>
+              {% for i in rango_adultos %}
+                <div class="row mb-2">
+                  <div class="col">
+                    <input type="text" name="nombre_{{ forloop.counter0 }}" class="form-control" placeholder="Nombre" required>
+                  </div>
+                  <div class="col">
+                    <input type="text" name="apellido_{{ forloop.counter0 }}" class="form-control" placeholder="Apellido" required>
+                  </div>
+                  <div class="col">
+                    <input type="text" name="dni_{{ forloop.counter0 }}" class="form-control" placeholder="DNI" required>
+                  </div>
+                  <div class="col">
+                    <input type="text" name="fecha_nacimiento_{{ forloop.counter0 }}" class="form-control fecha-adulto" required>
+                    <small class="text-muted">Debe ser mayor de 18 años</small>
+                  </div>
                 </div>
-                <div class="col">
-                  <input type="text" name="apellido_{{ forloop.counter0 }}" class="form-control" placeholder="Apellido" required>
+              {% endfor %}
+              <h6> Niños </h6>
+              {% for i in rango_ninos %}
+                <div class="row mb-2">
+                  <div class="col">
+                    <input type="text" name="nombre_{{ forloop.counter0|add:reserva.cantidad_adultos }}" class="form-control" placeholder="Nombre" required>
+                  </div>
+                  <div class="col">
+                    <input type="text" name="apellido_{{ forloop.counter0|add:reserva.cantidad_adultos }}" class="form-control" placeholder="Apellido" required>
+                  </div>
+                  <div class="col">
+                    <input type="text" name="dni_{{ forloop.counter0|add:reserva.cantidad_adultos }}" class="form-control" placeholder="DNI" required>
+                  </div>
+                  <div class="col">
+                    <input type="date" name="fecha_nacimiento_{{ forloop.counter0|add:reserva.cantidad_adultos }}" class="form-control fecha-nino" required>
+                  </div>
                 </div>
-                <div class="col">
-                  <input type="text" name="dni_{{ forloop.counter0 }}" class="form-control" placeholder="DNI" required>
-                </div>
-                <div class="col">
-                  <input type="text" name="fecha_nacimiento_{{ forloop.counter0 }}" class="form-control fecha-adulto" required>
-                  <small class="text-muted">Debe ser mayor de 18 años</small>
-                </div>
-              </div>
-            {% endfor %}
-            <h6> Niños </h6>
-            {% for i in rango_ninos %}
-              <div class="row mb-2">
-                <div class="col">
-                  <input type="text" name="nombre_{{ forloop.counter0|add:reserva.cantidad_adultos }}" class="form-control" placeholder="Nombre" required>
-                </div>
-                <div class="col">
-                  <input type="text" name="apellido_{{ forloop.counter0|add:reserva.cantidad_adultos }}" class="form-control" placeholder="Apellido" required>
-                </div>
-                <div class="col">
-                  <input type="text" name="dni_{{ forloop.counter0|add:reserva.cantidad_adultos }}" class="form-control" placeholder="DNI" required>
-                </div>
-                <div class="col">
-                  <input type="date" name="fecha_nacimiento_{{ forloop.counter0|add:reserva.cantidad_adultos }}" class="form-control fecha-nino" required>
-                </div>
-              </div>
-            {% endfor %}
-            <button type="submit" class="btn btn-primary">Guardar huéspedes</button>
-          </form>
-        {% endif %}
-      {% endwith %}
+              {% endfor %}
+              <button type="submit" class="btn btn-primary">Guardar huéspedes</button>
+            </form>
+          {% endif %}
+        {% endwith %}
+      {% endif %}
     </div>
   </div>
 </div>

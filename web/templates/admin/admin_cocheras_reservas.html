@@ -55,7 +55,7 @@
               {% elif reserva.estado.nombre == 'Aprobada' %}
                 <button class="btn btn-sm btn-success">Esperando Pago...</button>
               {% elif reserva.estado.nombre == 'Pagada' %}
-                <button class="btn btn-sm btn-success" onclick="cambiarEstado('{{ reserva.id_reserva }}', 'Confirmada')">Confirmar Alquiler</button>
+                <button class="btn btn-sm btn-success" onclick="cambiarEstado('{{ reserva.id_reserva }}', 'Confirmada')">Llaves Entregadas</button>
                 <button class="btn btn-sm btn-danger" onclick="cambiarEstado('{{ reserva.id_reserva }}', 'Cancelada')">Cancelar Alquiler</button>
               {% elif reserva.estado.nombre == 'Confirmada' %}
                 <button class="btn btn-sm btn-success" onclick="cambiarEstado('{{ reserva.id_reserva }}', 'Finalizada')">Terminar Alquiler</button>
