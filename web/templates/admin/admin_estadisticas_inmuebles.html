@@ -1,8 +1,156 @@
 {% extends 'admin/admin_base.html' %}
 {% load static %}
 
-{% block title %}Alta de Inmuebles | Panel Admin{% endblock %}
+{% block title %}Estadísticas de Viviendas | Panel Admin{% endblock %}
 
 {% block admin_content %}
-<p>Estadisticas de inmuebles</p>
+<div class="container mt-4">
+  <h2 class="mb-4">Estadísticas de Viviendas</h2>
+  <div class="row g-4">
+    <div class="col-md-4">
+      <div class="card text-bg-primary shadow">
+        <div class="card-body">
+          <h5 class="card-title">Total de Viviendas</h5>
+          <p class="display-5 fw-bold">{{ total_inmuebles }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-8">
+      <div class="card shadow">
+        <div class="card-body">
+          <h5 class="card-title">Viviendas por Estado</h5>
+          <canvas id="chartEstados" height="100"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4 mt-4">
+    <div class="col-md-12">
+      <div class="card shadow">
+        <div class="card-body">
+          <h5 class="card-title">Reservas por Día (últimos 30 días)</h5>
+          <canvas id="chartReservasDia" height="80"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-12">
+      <div class="card shadow">
+        <div class="card-body">
+          <h5 class="card-title">Reservas por Mes (últimos 12 meses)</h5>
+          <canvas id="chartReservasMes" height="80"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const estadosLabels = {{ estados_labels|safe }};
+  const estadosData = {{ estados_data|safe }};
+
+  // Colores Bootstrap para las barras
+  const bootstrapColors = [
+    '#0d6efd', // primary
+    '#198754', // success
+    '#ffc107', // warning
+    '#dc3545', // danger
+    '#6c757d', // secondary
+    '#6610f2', // info
+    '#fd7e14', // orange
+    '#20c997', // teal
+    '#0dcaf0', // cyan
+    '#adb5bd', // gray
+  ];
+
+  new Chart(document.getElementById('chartEstados'), {
+    type: 'bar',
+    data: {
+      labels: estadosLabels,
+      datasets: [{
+        label: 'Cantidad de viviendas',
+        data: estadosData,
+        backgroundColor: estadosLabels.map((_, i) => bootstrapColors[i % bootstrapColors.length]),
+        borderRadius: 8,
+        maxBarThickness: 40,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        title: {
+          display: false
+        }
+      },
+      scales: {
+        x: {
+          grid: { display: false }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: { stepSize: 1 }
+        }
+      }
+    }
+  });
+
+  // Gráfico de reservas por día
+  const reservasDiasLabels = {{ reservas_dias_labels|safe }};
+  const reservasDiasData = {{ reservas_dias_data|safe }};
+  new Chart(document.getElementById('chartReservasDia'), {
+    type: 'line',
+    data: {
+      labels: reservasDiasLabels,
+      datasets: [{
+        label: 'Reservas por día',
+        data: reservasDiasData,
+        fill: true,
+        borderColor: '#0d6efd',
+        backgroundColor: 'rgba(13,110,253,0.1)',
+        tension: 0.3,
+        pointRadius: 3
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        x: { grid: { display: false } },
+        y: { beginAtZero: true, ticks: { stepSize: 1 } }
+      }
+    }
+  });
+
+  // Gráfico de reservas por mes
+  const reservasMesesLabels = {{ reservas_meses_labels|safe }};
+  const reservasMesesData = {{ reservas_meses_data|safe }};
+  new Chart(document.getElementById('chartReservasMes'), {
+    type: 'bar',
+    data: {
+      labels: reservasMesesLabels,
+      datasets: [{
+        label: 'Reservas por mes',
+        data: reservasMesesData,
+        backgroundColor: '#198754'
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        x: { grid: { display: false } },
+        y: { beginAtZero: true, ticks: { stepSize: 1 } }
+      }
+    }
+  });
+});
+</script>
 {% endblock %}
