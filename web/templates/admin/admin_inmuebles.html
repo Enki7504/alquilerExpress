@@ -10,6 +10,8 @@
         <i class="bi bi-plus-circle"></i> Nueva Vivienda
     </a>
     {% endif %}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 </div>
 
 <form class="d-flex mb-4" role="search" method="GET" action="{% url 'admin_inmuebles' %}">
@@ -39,7 +41,27 @@
           <td>{{ inmueble.nombre }}</td>
           <td>{{ inmueble.direccion }}</td>
           <td>${{ inmueble.precio_por_dia|floatformat:2 }}</td>
-          <td>{{ inmueble.estado.nombre }}</td>
+          <td>
+            <form method="post" action="{% url 'cambiar_estado_inmueble' inmueble.id_inmueble %}" class="estado-form d-inline">
+              {% csrf_token %}
+              <select name="estado" class="form-select form-select-sm d-inline w-auto align-middle estado-select" data-inmueble="{{ inmueble.id_inmueble }}">
+                {% for estado in estados %}
+                  <option value="{{ estado.id_estado }}" {% if inmueble.estado.id_estado == estado.id_estado %}selected{% endif %}>
+                    {{ estado.nombre }}
+                  </option>
+                {% endfor %}
+              </select>
+              <div class="estado-extra" id="estado-extra-{{ inmueble.id_inmueble }}" style="display: none;">
+                <input type="date"
+                  name="fecha_estimacion"
+                  class="form-control form-control-sm my-1 fecha-flatpickr"
+                  id="fecha-flatpickr-{{ inmueble.id_inmueble }}"
+                  placeholder="Fecha estimada de fin">
+                <input type="text" name="razon" class="form-control form-control-sm my-1" placeholder="Razón del mantenimiento">
+              </div>
+              <button type="submit" class="btn btn-sm btn-secondary">Guardar</button>
+            </form>
+          </td>
           <td>
             <a href="{% url 'detalle_inmueble' inmueble.id_inmueble %}" class="btn btn-sm btn-info" title="Ver Detalles">Ver</a>
             <a href="{% url 'admin_inmuebles_reservas' inmueble.id_inmueble %}" class="btn btn-sm btn-primary" title="Ver Estado/Reservas">Reservas</a>
@@ -78,13 +100,31 @@
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+{{ fechas_ocupadas_dict|json_script:"fechasOcupadasJson" }}
+{{ fechas_max_ocupadas|json_script:"fechasMaxOcupadasJson" }}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+  const fechasOcupadasDict = JSON.parse(document.getElementById('fechasOcupadasJson').textContent);
+  const fechasMaxOcupadas = JSON.parse(document.getElementById('fechasMaxOcupadasJson').textContent);
+
+  document.querySelectorAll('.fecha-flatpickr').forEach(function(input) {
+    const inmuebleId = input.id.replace('fecha-flatpickr-', '');
+    const fechasOcupadas = fechasOcupadasDict[inmuebleId] || [];
+    const maxDate = fechasMaxOcupadas[inmuebleId] || false;
+    flatpickr(input, {
+      dateFormat: "Y-m-d",
+      minDate: new Date(Date.now() + 24 * 60 * 60 * 1000), // mañana
+      maxDate: maxDate || null,
+      disable: fechasOcupadas,
+      locale: "es"
+    });
+  });
+
+  // Eliminar inmueble (sin cambios)
   document.querySelectorAll('.eliminar-inmueble').forEach(btn => {
     btn.addEventListener('click', async function(e) {
       e.preventDefault();
       const id = this.getAttribute('data-id');
-      
       const result = await Swal.fire({
         title: '¿Eliminar vivienda?',
         text: "¿Está seguro que desea eliminar esta vivienda?.",
@@ -95,9 +135,7 @@ document.addEventListener('DOMContentLoaded', function() {
         confirmButtonText: 'Sí, eliminar',
         cancelButtonText: 'Cancelar'
       });
-
       if (!result.isConfirmed) return;
-
       try {
         const csrftoken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
         const response = await fetch(`/panel/inmuebles/eliminar/${id}/`, {
@@ -108,9 +146,7 @@ document.addEventListener('DOMContentLoaded', function() {
             'X-Requested-With': 'XMLHttpRequest'
           }
         });
-
         const data = await response.json();
-
         if (!response.ok) {
           if (response.status === 401) {
             Swal.fire('Error', 'No estás autenticado. Por favor, inicia sesión.', 'error');
@@ -119,11 +155,9 @@ document.addEventListener('DOMContentLoaded', function() {
             Swal.fire('Error', 'No tienes permisos para realizar esta acción.', 'error');
             return;
           }
-          // Mostrar el mensaje personalizado del backend si existe
           Swal.fire('Error', data.message || 'Ocurrió un error al eliminar la vivienda', 'error');
           return;
         }
-
         if (data.success) {
           await Swal.fire('Eliminado!', 'La vivienda ha sido eliminado.', 'success');
           btn.closest('tr').remove();
@@ -135,6 +169,21 @@ document.addEventListener('DOMContentLoaded', function() {
         Swal.fire('Error', error.message || 'Ocurrió un error al eliminar la vivienda', 'error');
       }
     });
+  });
+
+  // Mostrar/ocultar campos extra según el estado
+  document.querySelectorAll('.estado-select').forEach(function(select) {
+    function toggleExtra() {
+      const inmuebleId = select.getAttribute('data-inmueble');
+      const extraDiv = document.getElementById('estado-extra-' + inmuebleId);
+      if (select.options[select.selectedIndex].text === "En Mantenimiento") {
+        extraDiv.style.display = 'block';
+      } else {
+        extraDiv.style.display = 'none';
+      }
+    }
+    select.addEventListener('change', toggleExtra);
+    toggleExtra();
   });
 });
 </script>

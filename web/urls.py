@@ -39,6 +39,7 @@ urlpatterns = [
     path('panel/inmuebles/reservas/<int:id_inmueble>/', viewsAdminInmuebles.admin_inmuebles_reservas, name='admin_inmuebles_reservas'),
     path('panel/inmuebles/historial/<int:id_inmueble>/', viewsAdminInmuebles.admin_inmuebles_historial, name='admin_inmuebles_historial'),
     path('eliminar-imagen-inmueble/<int:imagen_id>/', viewsAdminInmuebles.eliminar_imagen_inmueble, name='eliminar_imagen_inmueble'),
+    path('panel/inmuebles/<int:id_inmueble>/cambiar-estado/', viewsAdminInmuebles.cambiar_estado_inmueble, name='cambiar_estado_inmueble'),
 
     # Gestión de cocheras
     path('panel/cocheras/', viewsAdminInmuebles.admin_cocheras, name='admin_cocheras'),

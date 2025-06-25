@@ -108,17 +108,19 @@ def admin_estadisticas_empleados(request):
     empleados = Perfil.objects.filter(usuario__groups__name="empleado")
     empleados_stats = []
     for emp in empleados:
-        reservas = Reserva.objects.filter(
-            inmueble__empleado=emp
-        ).count() + Reserva.objects.filter(
-            cochera__empleado=emp
-        ).count()
         cantidad_inmuebles = Inmueble.objects.filter(empleado=emp).count()
+        cantidad_cocheras = Cochera.objects.filter(empleado=emp).count()
+        respuestas = RespuestaComentario.objects.filter(usuario=emp).count()
+        fecha_alta = emp.usuario.date_joined
+        ultimo_acceso = emp.usuario.last_login
         empleados_stats.append({
             'nombre': emp.usuario.get_full_name(),
             'email': emp.usuario.email,
-            'reservas': reservas,
             'cantidad_inmuebles': cantidad_inmuebles,
+            'cantidad_cocheras': cantidad_cocheras,
+            'respuestas': respuestas,
+            'fecha_alta': fecha_alta,
+            'ultimo_acceso': ultimo_acceso,
         })
     return render(request, 'admin/admin_estadisticas_empleados.html', {
         'empleados_stats': empleados_stats

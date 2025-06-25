@@ -12,8 +12,11 @@
         <tr>
           <th>Nombre</th>
           <th>Email</th>
-          <th>Reservas gestionadas</th>
-          <th>Inmuebles asignados</th>
+          <th>Viviendas asignadas</th>
+          <th>Cocheras asignadas</th>
+          <th>Respuestas a comentarios</th>
+          <th>Fecha de alta</th>
+          <th>Último acceso</th>
         </tr>
       </thead>
       <tbody>
@@ -22,15 +25,26 @@
           <td>{{ emp.nombre }}</td>
           <td>{{ emp.email }}</td>
           <td>
-            <span class="badge bg-primary fs-6">{{ emp.reservas }}</span>
+            <span class="badge bg-primary fs-6">{{ emp.cantidad_inmuebles }}</span>
           </td>
           <td>
-            <span class="badge bg-info fs-6">{{ emp.cantidad_inmuebles }}</span>
+            <span class="badge bg-primary fs-6">{{ emp.cantidad_cocheras }}</span>
+          </td>
+          <td>
+            <span class="badge bg-success fs-6">{{ emp.respuestas }}</span>
+          </td>
+          <td>{{ emp.fecha_alta|date:"d/m/Y" }}</td>
+          <td>
+            {% if emp.ultimo_acceso %}
+              {{ emp.ultimo_acceso|date:"d/m/Y H:i" }}
+            {% else %}
+              <span class="text-muted">Nunca</span>
+            {% endif %}
           </td>
         </tr>
         {% empty %}
         <tr>
-          <td colspan="4" class="text-center">No hay empleados registrados.</td>
+          <td colspan="7" class="text-center">No hay empleados registrados.</td>
         </tr>
         {% endfor %}
       </tbody>

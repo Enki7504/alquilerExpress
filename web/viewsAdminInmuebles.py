@@ -19,7 +19,7 @@ from django.utils.http import urlsafe_base64_decode
 from django.views.decorators.http import require_POST
 from django.db import IntegrityError, transaction
 from django.db.models import Q
-from datetime import timedelta
+from datetime import timedelta, date
 from django.template.loader import render_to_string
 # mercado pago
 from django.views.decorators.csrf import csrf_exempt
@@ -97,11 +97,30 @@ def admin_inmuebles(request):
     empleados = Perfil.objects.filter(usuario__groups__name="empleado")
     admins = Perfil.objects.filter(usuario__is_staff=True).distinct()
 
+    estados = Estado.objects.filter(nombre__in=["Disponible", "En Mantenimiento"])
+
+    # Fechas ocupadas por reservas activas para cada inmueble
+    fechas_max_ocupadas = {}
+    for inmueble in inmuebles:
+        reservas_activas = Reserva.objects.filter(
+            inmueble=inmueble,
+            estado__nombre__in=['Aprobada', 'Pagada', 'Confirmada'],
+            fecha_inicio__gte=date.today()
+        ).order_by('fecha_inicio')
+        if reservas_activas.exists():
+            # Tomar la fecha de inicio más próxima y restar un día
+            fecha_bloqueo = reservas_activas.first().fecha_inicio - timedelta(days=1)
+            fechas_max_ocupadas[inmueble.id_inmueble] = fecha_bloqueo.strftime('%Y-%m-%d')
+        else:
+            fechas_max_ocupadas[inmueble.id_inmueble] = None
+
     return render(request, 'admin/admin_inmuebles.html', {
         'inmuebles': inmuebles,
         'query': query,
         'empleados': empleados,
-        'admins': admins
+        'admins': admins,
+        'estados': estados,
+        'fechas_max_ocupadas': fechas_max_ocupadas,
     })
 
 @login_required
@@ -376,6 +395,37 @@ def admin_inmuebles_historial(request, id_inmueble):
         'historial': historial,
         'reservas': reservas,
     })
+
+@login_required
+@user_passes_test(is_admin)
+@require_POST
+def cambiar_estado_inmueble(request, id_inmueble):
+    inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
+    nuevo_estado_id = request.POST.get("estado")
+    fecha_estimacion = request.POST.get("fecha_estimacion")
+    razon = request.POST.get("razon")
+
+    if not nuevo_estado_id:
+        messages.error(request, "Debe seleccionar un estado.")
+        return redirect('admin_inmuebles')
+
+    estado = get_object_or_404(Estado, id_estado=nuevo_estado_id)
+    inmueble.estado = estado
+    inmueble.save()
+
+    # Si es "En mantenimiento", guardar fecha y razón en el historial
+    if estado.nombre == "En Mantenimiento":
+        InmuebleEstado.objects.create(
+            inmueble=inmueble,
+            estado=estado,
+            fecha_inicio=timezone.now().date(),
+            fecha_fin=fecha_estimacion if fecha_estimacion else None,
+        )
+        # Puedes guardar la razón en un campo extra o en un comentario/log si tienes uno
+        # Por ejemplo, podrías agregar un campo "razon" a InmuebleEstado si lo deseas
+
+    messages.success(request, "Estado actualizado correctamente.")
+    return redirect('admin_inmuebles')
 
 ################################################################################################################
 # --- Vistas de Gestión de Cocheras ---
