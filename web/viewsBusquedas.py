@@ -337,6 +337,23 @@ def detalle_inmueble(request, id_inmueble):
             "fecha_nac": perfil.fecha_nacimiento.strftime("%Y-%m-%d") if perfil.fecha_nacimiento else "",
         }
 
+    # Buscar el último estado "En Mantenimiento" con fecha_fin futura o sin fecha_fin
+    hoy = timezone.now().date()
+    mantenimiento_activo = (
+        InmuebleEstado.objects
+        .filter(
+            inmueble=inmueble,
+            estado__nombre="En Mantenimiento",
+            fecha_inicio__lte=hoy,
+            fecha_fin__gte=hoy
+        )
+        .order_by('-fecha_fin')
+        .first()
+    )
+    fecha_fin_mantenimiento = None
+    if mantenimiento_activo and mantenimiento_activo.fecha_fin:
+        fecha_fin_mantenimiento = mantenimiento_activo.fecha_fin.strftime('%Y-%m-%d')
+
     return render(request, 'detalle_inmueble.html', {
         'inmueble': inmueble,
         'resenias': resenias,
@@ -354,6 +371,7 @@ def detalle_inmueble(request, id_inmueble):
         'is_admin': is_admin_var,
         'puede_reseñar': puede_reseñar,
         'datos_cliente': datos_cliente, 
+        'fecha_fin_mantenimiento': fecha_fin_mantenimiento,
     })
 
 def detalle_cochera(request, id_cochera):

@@ -97,7 +97,7 @@ def admin_inmuebles(request):
     empleados = Perfil.objects.filter(usuario__groups__name="empleado")
     admins = Perfil.objects.filter(usuario__is_staff=True).distinct()
 
-    estados = Estado.objects.filter(nombre__in=["Disponible", "En Mantenimiento"])
+    #estados = Estado.objects.filter(nombre__in=["Disponible", "En Mantenimiento"])
 
     # Fechas ocupadas por reservas activas para cada inmueble
     fechas_max_ocupadas = {}
@@ -113,6 +113,9 @@ def admin_inmuebles(request):
             fechas_max_ocupadas[inmueble.id_inmueble] = fecha_bloqueo.strftime('%Y-%m-%d')
         else:
             fechas_max_ocupadas[inmueble.id_inmueble] = None
+    estados = list(Estado.objects.filter(nombre__in=["Disponible", "En Mantenimiento"]).values('id_estado', 'nombre'))
+    id_disponible = next((e['id_estado'] for e in estados if e['nombre'] == "Disponible"), None)
+    id_mantenimiento = next((e['id_estado'] for e in estados if e['nombre'] == "En Mantenimiento"), None)
 
     return render(request, 'admin/admin_inmuebles.html', {
         'inmuebles': inmuebles,
@@ -120,6 +123,8 @@ def admin_inmuebles(request):
         'empleados': empleados,
         'admins': admins,
         'estados': estados,
+        'id_disponible': id_disponible,
+        'id_mantenimiento': id_mantenimiento,
         'fechas_max_ocupadas': fechas_max_ocupadas,
     })
 
@@ -415,14 +420,36 @@ def cambiar_estado_inmueble(request, id_inmueble):
 
     # Si es "En mantenimiento", guardar fecha y razón en el historial
     if estado.nombre == "En Mantenimiento":
+        # Cerrar el último historial de "Disponible" (si existe)
+        ultimo_disponible = InmuebleEstado.objects.filter(
+            inmueble=inmueble,
+            estado__nombre="Disponible"
+        ).order_by('-fecha_inicio').first()
+        if ultimo_disponible:
+            ultimo_disponible.fecha_fin = timezone.now().date()
+            ultimo_disponible.save()
+        # Crear el nuevo historial de "En Mantenimiento"
         InmuebleEstado.objects.create(
             inmueble=inmueble,
             estado=estado,
             fecha_inicio=timezone.now().date(),
             fecha_fin=fecha_estimacion if fecha_estimacion else None,
         )
-        # Puedes guardar la razón en un campo extra o en un comentario/log si tienes uno
-        # Por ejemplo, podrías agregar un campo "razon" a InmuebleEstado si lo deseas
+    # Si es "Disponible", cerrar el historial anterior y crear uno nuevo
+    elif estado.nombre == "Disponible":
+        # Buscar el último historial de En Mantenimiento (el más reciente que no sea Disponible)
+        ultimo_historial = InmuebleEstado.objects.filter(
+            inmueble=inmueble
+        ).exclude(estado__nombre="Disponible").order_by('-fecha_inicio').first()
+        if ultimo_historial:
+            ultimo_historial.fecha_fin = timezone.now().date()
+            ultimo_historial.save()
+        InmuebleEstado.objects.create(
+            inmueble=inmueble,
+            estado=estado,
+            fecha_inicio=timezone.now().date(),
+            fecha_fin=None,  # No hay fecha de fin para "Disponible"
+        )
 
     messages.success(request, "Estado actualizado correctamente.")
     return redirect('admin_inmuebles')

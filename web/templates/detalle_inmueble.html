@@ -283,6 +283,11 @@
   {{ fechas_ocupadas_propias|json_script:"fechasOcupadasPropiasJSON" }}
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script>
+    {% if fecha_fin_mantenimiento %}
+      var fechaFinMantenimiento = "{{ fecha_fin_mantenimiento }}";
+    {% else %}
+      var fechaFinMantenimiento = null;
+    {% endif %}
     // Convertir los mensajes de Django a SweetAlert
     const messageElements = document.querySelectorAll('.django-message');
     messageElements.forEach(element => {
@@ -317,11 +322,24 @@
           dayElem.classList.add('flatpickr-day-propia');
         }
       }
+      console.log("Fechas ocupadas:", fechasOcupadas);
+      console.log("Fechas ocupadas propias:", fechasOcupadasPropias);
+      console.log("Fecha fin mantenimiento:", fechaFinMantenimiento);
+      console.log(getMinDate());
+      // Sumar un día a la fecha de fin de mantenimiento si existe
+      function getMinDate() {
+        if (fechaFinMantenimiento) {
+          const fecha = new Date(fechaFinMantenimiento);
+          fecha.setDate(fecha.getDate() + 1);
+          return fecha.toISOString().slice(0, 10);
+        }
+        return "today";
+      }
 
       flatpickr("#fecha_inicio", {
         disable: fechasOcupadas,
         dateFormat: "Y-m-d",
-        minDate: "today",
+        minDate: getMinDate(),
         onDayCreate: function(dObj, dStr, fp, dayElem) {
           marcarPropias(dayElem);
         }
@@ -330,7 +348,7 @@
       flatpickr("#fecha_fin", {
         disable: fechasOcupadas,
         dateFormat: "Y-m-d",
-        minDate: "today",
+        minDate: getMinDate(),
         onDayCreate: function(dObj, dStr, fp, dayElem) {
           marcarPropias(dayElem);
         }
@@ -547,3 +565,4 @@
     });
   </script>
 {% endblock extra_js %}
+
