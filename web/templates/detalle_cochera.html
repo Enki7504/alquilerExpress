@@ -1,0 +1,355 @@
+{% extends 'base/base.html' %}
+{% load static %}
+{% load user_groups %}
+{% load dict_extras %}
+
+{% block title %}Detalle de la Cochera - {{ cochera.nombre }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/inmueble.css' %}">
+<!-- Incluye flatpickr -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<style>
+  .carousel-inner,
+  .carousel-item {
+    width: 100%;
+    height: 500px; /* Altura fija para el carrusel */
+    border-radius: 1rem !important;
+    overflow: hidden !important;
+    background: #eee !important;
+  }
+  .img-carrusel-inmueble {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    border-radius: 0 !important;
+    display: block !important;
+    background: #eee !important;
+  }
+
+  .flatpickr-day.flatpickr-day-propia {
+    background: #FFEFD5 !important;
+    color: #E67E22 !important;
+    border-radius: 50% !important;
+  }
+
+  .flatpickr-day.flatpickr-day-propia:hover {
+    background: #F0D5BB !important; /* Un tono ligeramente más oscuro del durazno */
+    color: #CD6E1B !important; /* Un naranja ligeramente más oscuro para el texto en hover */
+    cursor: pointer; /* Cambia el cursor a una mano para indicar que es interactivo */
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="container mt-5 pt-5">
+  <div id="detalle-cochera" class="row">
+    <!-- Info de la cochera -->
+    <div class="col-lg-8">
+      <!-- Carrusel de imágenes -->
+      <div id="cocheraCarousel" class="carousel slide mb-4 shadow-sm rounded" data-bs-ride="carousel">
+        <div class="carousel-inner rounded">
+          {% for imagen in cochera.imagenes.all %}
+            <div class="carousel-item {% if forloop.first %}active{% endif %}">
+              <img src="{{ imagen.imagen.url }}" class="d-block w-100 cochera-hero-img" alt="{{ cochera.nombre }}">
+            </div>
+          {% empty %}
+            <div class="carousel-item active">
+              <img src="{% static 'img/default-garage-large.jpg' %}" class="d-block w-100 cochera-hero-img" alt="Imagen por defecto">
+            </div>
+          {% endfor %}
+        </div>
+        {% if cochera.imagenes.count > 1 %}
+          <button class="carousel-control-prev" type="button" data-bs-target="#cocheraCarousel" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Previous</span>
+          </button>
+          <button class="carousel-control-next" type="button" data-bs-target="#cocheraCarousel" data-bs-slide="next">
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Next</span>
+          </button>
+        {% endif %}
+      </div>
+      <!-- Información detallada -->
+      <div class="card mb-4 shadow-sm">
+        <div class="card-body">
+          <h1 class="h2 mb-3">{{ cochera.nombre }}</h1>
+          <div class="d-flex align-items-center mb-3">
+            <i class="bi bi-geo-alt-fill text-primary me-2"></i>
+            <span class="text-muted">
+              {{ cochera.provincia.nombre }}, {{ cochera.ciudad.nombre }}, {{ cochera.direccion }}
+            </span>
+          </div>
+          <div class="d-flex flex-wrap gap-3 mb-4">
+            <div class="d-flex align-items-center">
+              <i class="bi bi-car-front text-primary me-2"></i>
+              <span>{{ cochera.cantidad_vehiculos }} vehículo{{ cochera.cantidad_vehiculos|pluralize }}</span>
+            </div>
+            <div class="d-flex align-items-center">
+              <i class="bi bi-arrows-angle-expand text-primary me-2"></i>
+              <span>{{ cochera.ancho }}m × {{ cochera.largo }}m × {{ cochera.alto }}m</span>
+            </div>
+            <div class="d-flex align-items-center">
+              <i class="bi bi-building text-primary me-2"></i>
+              <span>Techo: {{ cochera.con_techo|yesno:"Sí,No" }}</span>
+            </div>
+            <div class="d-flex align-items-center">
+              <i class="bi bi-calendar-range text-primary me-2"></i>
+              <span>Mínimo {{ cochera.minimo_dias_alquiler }} noche{{ cochera.minimo_dias_alquiler|pluralize }}</span>
+            </div>
+            <p class="text-muted small mt-2">
+              <i class="bi bi-calendar-date me-1"></i>
+              Publicado el {{ cochera.fecha_publicacion|date:"d/m/Y" }}
+            </p>
+            {% if cochera.estado %}
+            <span class="badge bg-{% if cochera.estado.nombre == 'Disponible' %}success{% else %}warning{% endif %}">
+              {{ cochera.estado.nombre }}
+            </span>
+            {% endif %}
+          </div>
+          <h3 class="h4 mb-3">Descripción</h3>
+          <p class="mb-4">{{ cochera.descripcion }}</p>
+          <h3 class="h4 mb-3">Política de cancelación</h3>
+          <p>{{ cochera.politica_cancelacion }}</p>
+        </div>
+      </div>
+    </div>
+    <!-- Sidebar - Panel administrativo o reserva -->
+    <div class="col-lg-4">
+      <div class="card shadow-sm sticky-top" style="top: 20px;">
+        <div class="card-body">
+          {% if is_admin_or_empleado %}
+            <h3 class="h4 mb-3">Gestión de la Cochera</h3>
+            <div class="d-flex align-items-end mb-3">
+              <span class="h3 text-primary">${{ cochera.precio_por_dia|floatformat:"0" }}</span>
+              <span class="text-muted ms-1">/ día</span>
+            </div>
+            <!-- <div class="d-grid gap-2">
+              <a href="{% url 'admin_cocheras_reservas' id_cochera=cochera.id_cochera %}" class="btn btn-primary">
+                <i class="bi bi-calendar-check me-2"></i> Ver Reservas
+              </a>
+              <a href="{% url 'admin_cocheras_historial' id_cochera=cochera.id_cochera %}" class="btn btn-secondary">
+                <i class="bi bi-clock-history me-2"></i> Ver Historial
+              </a>
+              {% if is_admin %}
+              <a href="{% url 'admin_cocheras_editar' id_cochera=cochera.id_cochera %}" class="btn btn-warning">
+                <i class="bi bi-pencil-square me-2"></i> Editar Cochera
+              </a>
+              <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">
+                <i class="bi bi-trash me-2"></i> Eliminar Cochera
+              </button>
+            </div> -->
+            {% endif %}
+          {% else %}
+            <h3 class="h4 mb-3">Reservar</h3>
+            <div class="d-flex align-items-end mb-3">
+              <span class="h3 text-primary">${{ cochera.precio_por_dia|floatformat:"0" }}</span>
+              <span class="text-muted ms-1">/ noche</span>
+            </div>
+            <form method="post" action="{% url 'crear_reserva_cochera' id_cochera=cochera.id_cochera %}">
+              {% csrf_token %}
+              <div class="mb-3">
+                <label for="fecha_inicio" class="form-label">Fecha de llegada</label>
+                <input type="text" class="form-control" id="fecha_inicio" name="fecha_inicio" required autocomplete="off">
+              </div>
+              <div class="mb-3">
+                <label for="fecha_fin" class="form-label">Fecha de salida</label>
+                <input type="text" class="form-control" id="fecha_fin" name="fecha_fin" required autocomplete="off">
+              </div>
+              <button type="submit" class="btn btn-primary btn-azul w-100 py-2">
+                <i class="bi bi-calendar-check me-2"></i> Reservar ahora
+              </button>
+              <div id="django-messages" style="display: none;">
+                {% if messages %}
+                  {% for message in messages %}
+                    <div class="django-message" data-tags="{{ message.tags }}" data-message="{{ message }}"></div>
+                  {% endfor %}
+                {% endif %}
+              </div>
+            </form>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Modal de confirmación para eliminar -->
+  <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="confirmDeleteModalLabel">Confirmar Eliminación</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          ¿Estás seguro de que quieres eliminar la cochera "{{ cochera.nombre }}"? Esta acción no se puede deshacer.
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <form method="post" action="{% url 'admin_cocheras_eliminar' id_cochera=cochera.id_cochera %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">Eliminar</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+{% if not user.is_authenticated %}
+  <!-- Cartelito para autenticarte -->
+  <section class="container mt-5">
+    <div class="card shadow-sm border-0 text-center py-4 mb-5">
+      <div class="card-body">
+        <i class="bi bi-lock-fill display-4 text-muted mb-3"></i>
+        <h3 class="h4 mb-3">Iniciá sesión para dejar tu reseña o comentario</h3>
+        <p class="mb-4">Compartí tu experiencia con este alojamiento</p>
+        <div class="d-flex justify-content-center gap-3">
+          <a href="{% url 'login' %}" class="btn btn-primary btn-azul">
+            Iniciar sesión
+          </a>
+          <a href="{% url 'register' %}" class="btn btn-outline-primary">
+            Registrarse
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+{% endif %}
+  {% include '_comentarios.html' %}
+  {% comment %} {% include '_resenias.html' %} {% endcomment %}
+{% endblock %}
+
+
+
+
+{% block extra_js %}
+  {{ fechas_ocupadas|json_script:"fechasOcupadasJSON" }}
+  {{ fechas_ocupadas_propias|json_script:"fechasOcupadasPropiasJSON" }}
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script>
+    // Convertir los mensajes de Django a SweetAlert
+    const messageElements = document.querySelectorAll('.django-message');
+
+    messageElements.forEach(element => {
+        const tags = element.getAttribute('data-tags');
+        const message = element.getAttribute('data-message');
+        
+        // Mapear las etiquetas de Django a iconos de SweetAlert
+        let icon = 'info';
+        if (tags.includes('success')) icon = 'success';
+        if (tags.includes('error') || tags.includes('danger')) icon = 'error';
+        if (tags.includes('warning')) icon = 'warning';
+        
+        // Mostrar la notificación tipo toast
+        Swal.fire({
+            position: 'top-end',
+            icon: icon,
+            title: message,
+            showConfirmButton: false,
+            timer: 3000,
+            toast: true,
+            timerProgressBar: true
+        });
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+      var fechasOcupadas = JSON.parse(document.getElementById('fechasOcupadasJSON').textContent);
+      var fechasOcupadasPropias = JSON.parse(document.getElementById('fechasOcupadasPropiasJSON').textContent);
+
+      function marcarPropias(date, domElement) {
+        const fechaStr = date.toISOString().slice(0, 10);
+        if (fechasOcupadasPropias.includes(fechaStr)) {
+          domElement.classList.add('flatpickr-day-propia');
+        }
+      }
+
+      flatpickr("#fecha_inicio", {
+        disable: fechasOcupadas,
+        dateFormat: "Y-m-d",
+        minDate: "today",
+        onDayCreate: function(dObj, dStr, fp, dayElem) {
+          marcarPropias(dayElem.dateObj, dayElem);
+        }
+      });
+      flatpickr("#fecha_fin", {
+        disable: fechasOcupadas,
+        dateFormat: "Y-m-d",
+        minDate: "today",
+        onDayCreate: function(dObj, dStr, fp, dayElem) {
+          marcarPropias(dayElem.dateObj, dayElem);
+        }
+      });
+    });
+
+     document.addEventListener('DOMContentLoaded', function() {
+      // Manejo del botón "Responder"
+      document.querySelectorAll('.btn-responder-comentario').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const id = this.getAttribute('data-comentario');
+          // Oculta todos los formularios de respuesta
+          document.querySelectorAll('.form-respuesta-comentario').forEach(form => {
+            form.style.display = 'none';
+          });
+          // Restaura todos los botones "Responder" a su estado original
+          document.querySelectorAll('.btn-responder-comentario').forEach(b => {
+            b.classList.remove('btn-primary');
+            b.classList.add('btn-outline-primary');
+          });
+          // Muestra el formulario de respuesta para este comentario específico
+          const formRespuesta = document.getElementById('form-respuesta-' + id);
+          if (formRespuesta) {
+            formRespuesta.style.display = 'block';
+          }
+          // Marca el botón "Responder" de este comentario
+          const btnResponder = document.getElementById('btn-responder-' + id);
+          if (btnResponder) {
+            btnResponder.classList.remove('btn-outline-primary');
+            btnResponder.classList.add('btn-primary');
+          }
+        });
+      });
+
+      // Manejo del botón "Cancelar"
+      document.querySelectorAll('.btn-cancelar-respuesta').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const id = this.getAttribute('data-comentario');
+          // Oculta el formulario de respuesta
+          const formRespuesta = document.getElementById('form-respuesta-' + id);
+          if (formRespuesta) {
+            formRespuesta.style.display = 'none';
+          }
+          // Restaura el botón "Responder" a su estado original
+          const btnResponder = document.getElementById('btn-responder-' + id);
+          if (btnResponder) {
+            btnResponder.classList.remove('btn-primary');
+            btnResponder.classList.add('btn-outline-primary');
+          }
+        });
+      });
+
+      // Confirmación para eliminar comentario (sin cambios)
+      document.querySelectorAll('.btn-eliminar-comentario').forEach(btn => {
+        btn.addEventListener('click', async function() {
+          const id = this.getAttribute('data-comentario');
+          const result = await Swal.fire({
+            title: '¿Eliminar comentario?',
+            text: "¿Está seguro que desea eliminar este comentario?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Confirmar',
+            cancelButtonText: 'Cancelar'
+          });
+          if (result.isConfirmed) {
+            const formEliminar = document.getElementById('form-eliminar-' + id);
+            if (formEliminar) {
+              formEliminar.submit();
+            }
+          }
+        });
+      });
+    });
+  </script>
+{% endblock %}

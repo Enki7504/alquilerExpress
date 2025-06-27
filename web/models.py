@@ -47,7 +47,7 @@ class Cochera(models.Model):
     cantidad_vehiculos = models.IntegerField()
     con_techo = models.BooleanField()
     descripcion = models.TextField()
-    ubicacion = models.TextField()
+    direccion = models.TextField()
     provincia = models.ForeignKey(Provincia, on_delete=models.SET_NULL, null=True)
     ciudad = models.ForeignKey(Ciudad, on_delete=models.SET_NULL, null=True)
     precio_por_dia = models.DecimalField(max_digits=10, decimal_places=2)
@@ -59,6 +59,8 @@ class Cochera(models.Model):
 
     minimo_dias_alquiler = models.PositiveIntegerField(default=1, verbose_name="Mínimo de días de alquiler")
 
+    def first_image(self):
+            return self.imagenes.first()
 
     def __str__(self):
         return self.nombre
@@ -66,7 +68,7 @@ class Cochera(models.Model):
 class Inmueble(models.Model):
     id_inmueble = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=100, unique=True)
-    ubicacion = models.TextField()
+    direccion = models.TextField()
     provincia = models.ForeignKey(Provincia, on_delete=models.SET_NULL, null=True)
     ciudad = models.ForeignKey(Ciudad, on_delete=models.SET_NULL, null=True)
     descripcion = models.TextField()
@@ -83,6 +85,9 @@ class Inmueble(models.Model):
     empleado = models.ForeignKey(Perfil, null=True, blank=True, on_delete=models.SET_NULL)
     minimo_dias_alquiler = models.PositiveIntegerField(default=1, verbose_name="Mínimo de días de alquiler")
 
+    def first_image(self):
+            return self.imagenes.first() 
+    
     def __str__(self):
         return self.nombre
 
@@ -95,7 +100,11 @@ class Reserva(models.Model):
     inmueble = models.ForeignKey(Inmueble, null=True, blank=True, on_delete=models.SET_NULL)
     cochera = models.ForeignKey(Cochera, null=True, blank=True, on_delete=models.SET_NULL)
     descripcion = models.TextField()
+    creada_en = models.DateTimeField(default=timezone.now)
     aprobada_en = models.DateTimeField(null=True, blank=True)
+    # Se agregan 2 campos para contar cantidad de adultos y niños
+    cantidad_adultos = models.PositiveIntegerField(default=1, verbose_name="Cantidad de adultos")
+    cantidad_ninos = models.PositiveIntegerField(default=0, verbose_name="Cantidad de niños")
     
     def cliente(self):
         rel = ClienteInmueble.objects.filter(reserva=self).first()

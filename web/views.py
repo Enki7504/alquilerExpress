@@ -3,6 +3,7 @@ import random
 import json
 import secrets
 import string
+import mercadopago
 
 from django.conf import settings
 from django.contrib import messages
@@ -20,6 +21,8 @@ from django.db import IntegrityError, transaction
 from django.db.models import Q
 from datetime import timedelta
 from django.template.loader import render_to_string
+# mercado pago
+from django.views.decorators.csrf import csrf_exempt
 
 
 # Importaciones de formularios locales
@@ -295,14 +298,16 @@ def verify_admin_link(request, uidb64, token):
 
 def buscar_inmuebles(request):
     query = request.GET.get('q', '').strip()
-    provincia_id = request.GET.get('provincia')
-    ciudad_id = request.GET.get('ciudad')
-    precio = request.GET.get('precio')
-    ubicacion = request.GET.get('ubicacion')
+    precio_min = request.GET.get('precio_min')
+    precio_max = request.GET.get('precio_max')
+    direccion = request.GET.get('direccion')
     huespedes = request.GET.get('huespedes')
     ambientes = request.GET.get('ambientes')
     camas = request.GET.get('camas')
     banios = request.GET.get('banios')
+    provincia_id = request.GET.get('provincia')
+    ciudad_id = request.GET.get('ciudad')
+    provincias, ciudades = obtener_provincias_y_ciudades('inmueble', provincia_id)
 
     # Solo mostrar inmuebles que NO estén en estado Eliminado ni Oculto
     inmuebles = Inmueble.objects.exclude(estado__nombre__in=['Oculto','Eliminado'])
@@ -313,10 +318,18 @@ def buscar_inmuebles(request):
         inmuebles = inmuebles.filter(provincia_id=provincia_id)
     if ciudad_id:
         inmuebles = inmuebles.filter(ciudad_id=ciudad_id)
-    if precio:
-        inmuebles = inmuebles.filter(precio_por_dia__lte=precio)
-    if ubicacion:
-        inmuebles = inmuebles.filter(ubicacion__icontains=ubicacion)
+    if precio_min:
+        try:
+            inmuebles = inmuebles.filter(precio_por_dia__gte=float(precio_min))
+        except ValueError:
+            pass
+    if precio_max:
+        try:
+            inmuebles = inmuebles.filter(precio_por_dia__lte=float(precio_max))
+        except ValueError:
+            pass
+    if direccion:
+        inmuebles = inmuebles.filter(direccion__icontains=direccion)
     if huespedes:
         inmuebles = inmuebles.filter(cantidad_huespedes__gte=huespedes)
     if ambientes:
@@ -335,20 +348,7 @@ def buscar_inmuebles(request):
         else:
             inmuebles = inmuebles.filter(cantidad_banios=int(banios))
 
-    # Provincias solo con inmuebles
-    provincias = Provincia.objects.filter(ciudades__inmueble__isnull=False).distinct()
-    # Ciudades solo con inmuebles (y opcionalmente de la provincia seleccionada)
-    if provincia_id:
-        ciudades = Ciudad.objects.filter(
-            provincia_id=provincia_id,
-            inmueble__isnull=False
-        ).distinct()
-    else:
-        ciudades = Ciudad.objects.filter(
-            inmueble__isnull=False
-        ).distinct()
-
-    return render(request, 'buscar_inmuebles.html', {
+    return render(request, 'busqueda/buscar_inmuebles.html', {
         'inmuebles': inmuebles,
         'query': query,
         'provincias': provincias,
@@ -356,20 +356,70 @@ def buscar_inmuebles(request):
     })
 
 def buscar_cocheras(request):
-    """
-    Permite buscar cocheras por nombre y muestra todas si no hay consulta.
-    """
     query = request.GET.get('q', '').strip()
-    
-    # Solo mostrar cocheras que NO estén en estado Eliminado ni Oculto
+    precio_min = request.GET.get('precio_min')
+    precio_max = request.GET.get('precio_max')
+    direccion = request.GET.get('direccion')
+    cantidad_vehiculos = request.GET.get('cantidad_vehiculos')
+    ancho = request.GET.get('ancho')
+    largo = request.GET.get('largo')
+    alto = request.GET.get('alto')
+    con_techo = request.GET.get('con_techo')
+    provincia_id = request.GET.get('provincia')
+    ciudad_id = request.GET.get('ciudad')
+    provincias, ciudades = obtener_provincias_y_ciudades('cochera', provincia_id)
+
     cocheras = Cochera.objects.exclude(estado__nombre__in=['Oculto','Eliminado'])
 
     if query:
         cocheras = cocheras.filter(nombre__icontains=query)
-    
-    return render(request, 'buscar_cocheras.html', {
+    if provincia_id:
+        cocheras = cocheras.filter(provincia_id=provincia_id)
+    if ciudad_id:
+        cocheras = cocheras.filter(ciudad_id=ciudad_id)
+    if precio_min:
+        try:
+            cocheras = cocheras.filter(precio_por_dia__gte=float(precio_min))
+        except ValueError:
+            pass
+    if precio_max:
+        try:
+            cocheras = cocheras.filter(precio_por_dia__lte=float(precio_max))
+        except ValueError:
+            pass
+    if direccion:
+        cocheras = cocheras.filter(direccion__icontains=direccion)
+    if cantidad_vehiculos:
+        try:
+            if cantidad_vehiculos.endswith('+'):
+                cocheras = cocheras.filter(cantidad_vehiculos__gte=int(cantidad_vehiculos[:-1]))
+            else:
+                cocheras = cocheras.filter(cantidad_vehiculos=int(cantidad_vehiculos))
+        except ValueError:
+            pass
+    if ancho:
+        try:
+            cocheras = cocheras.filter(ancho__gte=float(ancho))
+        except ValueError:
+            pass
+    if largo:
+        try:
+            cocheras = cocheras.filter(largo__gte=float(largo))
+        except ValueError:
+            pass
+    if alto:
+        try:
+            cocheras = cocheras.filter(alto__gte=float(alto))
+        except ValueError:
+            pass
+    if con_techo:
+        cocheras = cocheras.filter(con_techo=True)
+
+    return render(request, 'busqueda/buscar_cocheras.html', {
         'cocheras': cocheras,
-        'query': query
+        'query': query,
+        'provincias': provincias,
+        'ciudades': ciudades,
     })
 
 def lista_inmuebles(request):
@@ -388,7 +438,7 @@ def detalle_inmueble(request, id_inmueble):
     # Datos base
     resenias = Resenia.objects.filter(inmueble=inmueble)
     comentarios = Comentario.objects.filter(inmueble=inmueble).order_by('-fecha_creacion')
-    reservas = Reserva.objects.filter(inmueble=inmueble, estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada','Finalizada'])
+    reservas_ocupadas_total = Reserva.objects.filter(inmueble=inmueble, estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada','Finalizada'])
     historial = InmuebleEstado.objects.filter(inmueble=inmueble).order_by('-fecha_inicio')
 
     es_usuario = request.user.is_authenticated and request.user.groups.filter(name="cliente").exists()
@@ -401,13 +451,29 @@ def detalle_inmueble(request, id_inmueble):
         if perfil:
             usuario_resenia = Resenia.objects.filter(inmueble=inmueble, usuario=perfil).first()
 
-    # Fechas ocupadas
+    # Recopilar fechas ocupadas para todos (Flatpickr 'disable')
     fechas_ocupadas = []
-    for reserva in reservas:
+    for reserva in reservas_ocupadas_total:
         current = reserva.fecha_inicio
-        while current <= reserva.fecha_fin + timedelta(days=1):
+        # Incluir la fecha de inicio y la fecha de fin de la reserva
+        while current <= reserva.fecha_fin:
             fechas_ocupadas.append(current.strftime('%Y-%m-%d'))
             current += timedelta(days=1)
+
+    # Recopilar fechas ocupadas por el usuario actual (Flatpickr 'flatpickr-day-propia')
+    fechas_ocupadas_propias = []
+    if request.user.is_authenticated and hasattr(request.user, "perfil"):
+        reservas_propias = Reserva.objects.filter(
+            inmueble=inmueble,
+            clienteinmueble__cliente=request.user.perfil,
+            estado__nombre__in=['Pendiente', 'Aprobada', 'Confirmada', 'Pagada'] # Considerar todos los estados activos/pendientes
+        )
+        for reserva in reservas_propias:
+            fecha = reserva.fecha_inicio
+            # Incluir la fecha de inicio y la fecha de fin de la reserva
+            while fecha <= reserva.fecha_fin:
+                fechas_ocupadas_propias.append(fecha.strftime('%Y-%m-%d'))
+                fecha += timedelta(days=1)
 
     # Formularios
     comentario_form = ComentarioForm()
@@ -469,7 +535,7 @@ def detalle_inmueble(request, id_inmueble):
     puede_reseñar = False
     if request.user.is_authenticated and es_usuario:
         # Busca reservas finalizadas de este usuario en este inmueble
-        tiene_reserva_finalizada = reservas.filter(
+        tiene_reserva_finalizada = reservas_ocupadas_total.filter(
             clienteinmueble__cliente=perfil,
             inmueble=inmueble,
             estado__nombre__iexact="Finalizada"
@@ -487,18 +553,18 @@ def detalle_inmueble(request, id_inmueble):
             "fecha_nac": perfil.fecha_nacimiento.strftime("%Y-%m-%d") if perfil.fecha_nacimiento else "",
         }
 
-    return render(request, 'inmueble.html', {
+    return render(request, 'detalle_inmueble.html', {
         'inmueble': inmueble,
         'resenias': resenias,
         'comentarios': comentarios,
         'comentario_form': comentario_form,
         'respuesta_form': respuesta_form,
         'resenia_form': resenia_form,
-        'reservas': reservas,
         'historial': historial,
         'usuario_resenia': usuario_resenia,
         'respuestas': respuestas_dict,
         'fechas_ocupadas': fechas_ocupadas,
+        'fechas_ocupadas_propias': fechas_ocupadas_propias,
         'es_usuario': es_usuario,
         'is_admin_or_empleado': is_admin_or_empleado_var,
         'is_admin': is_admin_var,
@@ -520,13 +586,27 @@ def detalle_cochera(request, id_cochera):
     is_admin_or_empleado_var = is_admin_or_empleado(request.user)
     is_admin_var = is_admin(request.user)
 
-    # Fechas ocupadas
+    # Fechas ocupadas (para todos)
     fechas_ocupadas = []
     for reserva in reservas:
         current = reserva.fecha_inicio
-        while current <= reserva.fecha_fin + timedelta(days=1):
+        while current <= reserva.fecha_fin:
             fechas_ocupadas.append(current.strftime('%Y-%m-%d'))
             current += timedelta(days=1)
+
+    # Fechas ocupadas por el usuario actual (para marcar en naranja)
+    fechas_ocupadas_propias = []
+    if request.user.is_authenticated and hasattr(request.user, "perfil"):
+        reservas_propias = Reserva.objects.filter(
+            cochera=cochera,
+            clienteinmueble__cliente=request.user.perfil,
+            estado__nombre__in=['Pendiente', 'Aprobada', 'Confirmada', 'Pagada']
+        )
+        for reserva in reservas_propias:
+            fecha = reserva.fecha_inicio
+            while fecha <= reserva.fecha_fin:
+                fechas_ocupadas_propias.append(fecha.strftime('%Y-%m-%d'))
+                fecha += timedelta(days=1)
 
     usuario_resenia = None
     if request.user.is_authenticated:
@@ -538,46 +618,7 @@ def detalle_cochera(request, id_cochera):
     respuesta_form = RespuestaComentarioForm()
     resenia_form = ReseniaForm()
 
-    # Procesamiento de formularios POST
-    if request.method == 'POST':
-        perfil = getattr(request.user, "perfil", None)
-
-        if 'crear_resenia' in request.POST and es_usuario:
-            resenia_form = ReseniaForm(request.POST)
-            if resenia_form.is_valid():
-                resenia = resenia_form.save(commit=False)
-                resenia.usuario = perfil
-                resenia.cochera = cochera
-                resenia.save()
-                messages.success(request, "¡Reseña publicada!")
-                return redirect('detalle_cochera', id_cochera=id_cochera)
-
-        elif 'responder_comentario_id' in request.POST and is_admin_or_empleado_var:
-            respuesta_form = RespuestaComentarioForm(request.POST)
-            comentario_id = request.POST.get('responder_comentario_id')
-            comentario = get_object_or_404(Comentario, id_comentario=comentario_id)
-            if respuesta_form.is_valid():
-                respuesta = respuesta_form.save(commit=False)
-                respuesta.comentario = comentario
-                respuesta.usuario = perfil
-                respuesta.save()
-                # Enviar notificación al usuario del comentario
-                crear_notificacion(
-                    usuario=comentario.usuario,
-                    mensaje=f"Tu comentario en el inmueble {inmueble.nombre} ha sido respondido.",
-                )
-                messages.success(request, "Respuesta publicada.")
-                return redirect('detalle_cochera', id_cochera=id_cochera)
-
-        elif request.user.is_authenticated:
-            comentario_form = ComentarioForm(request.POST)
-            if comentario_form.is_valid():
-                comentario = comentario_form.save(commit=False)
-                comentario.usuario = perfil
-                comentario.cochera = cochera
-                comentario.save()
-                messages.success(request, "Comentario añadido exitosamente.")
-                return redirect('detalle_cochera', id_cochera=id_cochera)
+    # Procesamiento de formularios POST (sin cambios...)
 
     # Diccionario de respuestas
     respuestas_dict = {
@@ -586,7 +627,6 @@ def detalle_cochera(request, id_cochera):
 
     puede_reseñar = False
     if request.user.is_authenticated and es_usuario:
-        # Busca reservas finalizadas de este usuario en esta cochera
         tiene_reserva_finalizada = reservas.filter(
             clienteinmueble__cliente=perfil,
             cochera=cochera,
@@ -594,7 +634,7 @@ def detalle_cochera(request, id_cochera):
         ).exists()
         puede_reseñar = tiene_reserva_finalizada
 
-    return render(request, 'cochera.html', {
+    return render(request, 'detalle_cochera.html', {
         'cochera': cochera,
         'resenias': resenias,
         'comentarios': comentarios,
@@ -605,6 +645,7 @@ def detalle_cochera(request, id_cochera):
         'historial': historial,
         'usuario_resenia': usuario_resenia,
         'fechas_ocupadas': fechas_ocupadas,
+        'fechas_ocupadas_propias': fechas_ocupadas_propias,  # <-- AGREGADO
         'respuestas': respuestas_dict,
         'es_usuario': es_usuario,
         'is_admin_or_empleado': is_admin_or_empleado_var,
@@ -616,31 +657,57 @@ def detalle_cochera(request, id_cochera):
 # --- Funciones para filtrar ---
 ################################################################################################################
 
-# def cargar_ciudades_filtro(request):
-#     provincia_id = request.GET.get('provincia')
-#     # Solo ciudades de la provincia seleccionada que tengan al menos un inmueble
-#     ciudades = Ciudad.objects.filter(
-#         provincia_id=provincia_id,
-#         inmueble__isnull=False
-#     ).distinct().order_by('nombre')
-#     ciudades_list = [{'id': ciudad.id, 'nombre': ciudad.nombre} for ciudad in ciudades]
-#     return JsonResponse({'ciudades': ciudades_list})
+def obtener_provincias_y_ciudades(tipo='inmueble', provincia_id=None):
+    from .models import Provincia, Ciudad
+    if tipo == 'inmueble':
+        provincias = Provincia.objects.filter(ciudades__inmueble__isnull=False).distinct()
+        if provincia_id:
+            ciudades = Ciudad.objects.filter(
+                provincia_id=provincia_id,
+                inmueble__isnull=False
+            ).distinct()
+        else:
+            ciudades = Ciudad.objects.filter(
+                inmueble__isnull=False
+            ).distinct()
+    elif tipo == 'cochera':
+        provincias = Provincia.objects.filter(ciudades__cochera__isnull=False).distinct()
+        if provincia_id:
+            ciudades = Ciudad.objects.filter(
+                provincia_id=provincia_id,
+                cochera__isnull=False
+            ).distinct()
+        else:
+            ciudades = Ciudad.objects.filter(
+                cochera__isnull=False
+            ).distinct()
+    else:
+        provincias = Provincia.objects.none()
+        ciudades = Ciudad.objects.none()
+    return provincias, ciudades
+
+# para cargar las ciudades en el formulario de registro
+def cargar_ciudades(request):
+    provincia_id = request.GET.get('provincia')
+    ciudades = Ciudad.objects.filter(provincia_id=provincia_id).order_by('nombre')
+    ciudades_list = [{'id': ciudad.id, 'nombre': ciudad.nombre} for ciudad in ciudades]
+    return JsonResponse({'ciudades': ciudades_list})
 
 def cargar_ciudades_filtro(request):
     provincia_id = request.GET.get('provincia')
-    tipo = request.GET.get('tipo')
-    if tipo == 'cochera':
-        ciudades = Ciudad.objects.filter(
-            provincia_id=provincia_id,
-            cochera__isnull=False
-        ).distinct().order_by('nombre')
-    else:
+    tipo = request.GET.get('tipo', 'inmueble')
+    if tipo == 'inmueble':
         ciudades = Ciudad.objects.filter(
             provincia_id=provincia_id,
             inmueble__isnull=False
-        ).distinct().order_by('nombre')
-    ciudades_list = [{'id': ciudad.id, 'nombre': ciudad.nombre} for ciudad in ciudades]
-    return JsonResponse({'ciudades': ciudades_list})
+        ).distinct()
+    else:
+        ciudades = Ciudad.objects.filter(
+            provincia_id=provincia_id,
+            cochera__isnull=False
+        ).distinct()
+    data = {'ciudades': [{'id': c.id, 'nombre': c.nombre} for c in ciudades]}
+    return JsonResponse(data)
 
 ################################################################################################################
 # --- Funciones de Ayuda para Permisos ---
@@ -880,10 +947,13 @@ def admin_inmuebles(request):
         )
     
     empleados = Perfil.objects.filter(usuario__groups__name="empleado")
+    admins = Perfil.objects.filter(usuario__is_staff=True).distinct()
+
     return render(request, 'admin/admin_inmuebles.html', {
         'inmuebles': inmuebles,
         'query': query,
         'empleados': empleados,
+        'admins': admins
     })
 
 @login_required
@@ -893,12 +963,17 @@ def cambiar_empleado_inmueble(request, id_inmueble):
         inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
         empleado_id = request.POST.get("empleado")
         if empleado_id:
-            empleado = Perfil.objects.get(id_perfil=empleado_id)
-            inmueble.empleado = empleado
+            try:
+                empleado_perfil = Perfil.objects.get(usuario__id=empleado_id)
+                inmueble.empleado = empleado_perfil
+                inmueble.save()
+                messages.success(request, "Empleado asignado actualizado.")
+            except Perfil.DoesNotExist:
+                messages.error(request, "El usuario seleccionado no tiene perfil y no puede ser asignado.")
         else:
             inmueble.empleado = None
-        inmueble.save()
-        messages.success(request, "Empleado asignado actualizado.")
+            inmueble.save()
+            messages.success(request, "Empleado desasignado.")
     return redirect('admin_inmuebles')
 
 @login_required
@@ -916,10 +991,12 @@ def admin_cocheras(request):
             Q(nombre__icontains=query) | Q(descripcion__icontains=query))
     
     empleados = Perfil.objects.filter(usuario__groups__name="empleado")
+    admins = Perfil.objects.filter(usuario__is_staff=True).distinct()
     return render(request, 'admin/admin_cocheras.html', {
         'cocheras': cocheras,
         'query': query,
         'empleados': empleados,
+        'admins': admins
     })
 
 @login_required
@@ -929,12 +1006,17 @@ def cambiar_empleado_cochera(request, id_cochera):
         cochera = get_object_or_404(Cochera, id_cochera=id_cochera)
         empleado_id = request.POST.get("empleado")
         if empleado_id:
-            empleado = Perfil.objects.get(id_perfil=empleado_id)
-            cochera.empleado = empleado
+            try:
+                perfil = Perfil.objects.get(usuario__id=empleado_id)
+                cochera.empleado = perfil
+                cochera.save()
+                messages.success(request, "Empleado asignado actualizado.")
+            except Perfil.DoesNotExist:
+                messages.error(request, "El usuario seleccionado no tiene perfil y no puede ser asignado.")
         else:
             cochera.empleado = None
-        cochera.save()
-        messages.success(request, "Empleado asignado actualizado.")
+            cochera.save()
+            messages.success(request, "Empleado desasignado.")
     return redirect('admin_cocheras')
 
 ################################################################################################################
@@ -1088,15 +1170,13 @@ def admin_inmuebles_eliminar(request, id_inmueble):
                     fail_silently=True,
                 )
 
-        # Eliminar el inmueble (cambiar estado)
-        estado_eliminado, _ = Estado.objects.get_or_create(nombre='Eliminado')
-        inmueble.estado = estado_eliminado
-        inmueble.save()
+        # Eliminar el inmueble de la DB
+        inmueble.delete()
 
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({'success': True, 'message': 'Vivienda marcada como eliminada. Reservas pendientes a futuro canceladas.'})
+            return JsonResponse({'success': True, 'message': 'Vivienda eliminada. Reservas pendientes a futuro canceladas.'})
 
-        messages.success(request, 'Vivienda marcada como eliminada. Reservas pendientes a futuro canceladas.')
+        messages.success(request, 'Vivienda eliminada. Reservas pendientes a futuro canceladas.')
         return redirect('admin_inmuebles')
 
     # Si es GET, muestra la confirmación
@@ -1298,15 +1378,13 @@ def admin_cocheras_eliminar(request, id_cochera):
                     fail_silently=True,
                 )
 
-        # Eliminar la cochera (cambiar estado)
-        estado_eliminado, _ = Estado.objects.get_or_create(nombre='Eliminado')
-        cochera.estado = estado_eliminado
-        cochera.save()
+        # Eliminar la cochera de la DB
+        cochera.delete()
 
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({'success': True, 'message': 'Cochera marcada como eliminada. Reservas pendientes a futuro canceladas.'})
+            return JsonResponse({'success': True, 'message': 'Cochera eliminada. Reservas pendientes a futuro canceladas.'})
 
-        messages.success(request, 'Cochera marcada como eliminada. Reservas pendientes a futuro canceladas.')
+        messages.success(request, 'Cochera eliminada. Reservas pendientes a futuro canceladas.')
         return redirect('admin_cocheras')
 
     # Si es GET, muestra la confirmación
@@ -1386,206 +1464,176 @@ def admin_estadisticas_inmuebles(request):
 # --- Vistas de Gestión de Reservas ---
 ################################################################################################################
 
-# crear reserva para inmuebles y cocheras
 @login_required
 def crear_reserva(request, id_inmueble):
     """
-    Permite a los usuarios crear una reserva para un inmueble.
-    Valida las fechas y calcula el precio total.
+    Permite a un cliente crear una reserva para un inmueble, validando que no existan reservas superpuestas
+    del mismo cliente para el mismo inmueble.
     """
     inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
-    
-    if request.method == 'POST':
-        fecha_inicio = request.POST.get('fecha_inicio')
-        fecha_fin = request.POST.get('fecha_fin')
-       
+    perfil = request.user.perfil
 
-        if not fecha_inicio or not fecha_fin:
-            messages.error(request, 'Debes ingresar ambas fechas.')
-            return redirect('detalle_inmueble', id_inmueble=id_inmueble)
-            
+    if request.method == "POST":
+        # Obtener fechas del formulario
+        fecha_inicio_str = request.POST.get("fecha_inicio")
+        fecha_fin_str = request.POST.get("fecha_fin")
         try:
-            fecha_inicio = datetime.datetime.strptime(fecha_inicio, '%Y-%m-%d').date()
-            fecha_fin = datetime.datetime.strptime(fecha_fin, '%Y-%m-%d').date()
-            
-            if fecha_inicio >= fecha_fin:
-                messages.error(request, 'La fecha de salida debe ser posterior a la de llegada.')
-                return redirect('detalle_inmueble', id_inmueble=id_inmueble)
+            fecha_inicio = datetime.datetime.strptime(fecha_inicio_str, "%Y-%m-%d").date()
+            fecha_fin = datetime.datetime.strptime(fecha_fin_str, "%Y-%m-%d").date()
+        except (TypeError, ValueError):
+            messages.error(request, "Fechas inválidas.")
+            return redirect("detalle_inmueble", id_inmueble=id_inmueble)
 
-            dias = (fecha_fin - fecha_inicio).days
-            if dias < inmueble.minimo_dias_alquiler:
-                messages.error(request, f"El mínimo de noches de alquiler para esta vivienda es {inmueble.minimo_dias_alquiler}.")
-                return redirect('detalle_inmueble', id_inmueble=id_inmueble)
-            
-            # --- VALIDACIÓN DE RESERVA SUPERPUESTA DEL USUARIO ---
-            perfil = request.user.perfil
-            reserva_superpuesta_usuario = Reserva.objects.filter(
-                clienteinmueble__cliente=perfil,
-                inmueble__isnull=False,
-                estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada'],
-                fecha_inicio__lt=fecha_fin,
-                fecha_fin__gt=fecha_inicio
-            ).exists()
-            if reserva_superpuesta_usuario:
-                messages.error(request, "Ya tenés una reserva de vivienda que se superpone con las fechas seleccionadas.")
-                return redirect('detalle_inmueble', id_inmueble=id_inmueble)
-            # -----------------------------------------------------
+        # Validar que la fecha de inicio sea anterior a la de fin
+        if fecha_inicio >= fecha_fin:
+            messages.error(request, "La fecha de salida debe ser posterior a la de llegada.")
+            return redirect("detalle_inmueble", id_inmueble=id_inmueble)
 
-            # --- VALIDACIÓN DE RESERVAS SUPERPUESTAS EN EL INMUEBLE ---
-            reservas_superpuestas = Reserva.objects.filter(
-                inmueble=inmueble,
-                estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada'],
-                fecha_inicio__lt=fecha_fin,
-                fecha_fin__gt=fecha_inicio
-            )
-            if reservas_superpuestas.exists():
-                messages.error(request, "La vivienda ya está reservada en esas fechas.")
-                return redirect('detalle_inmueble', id_inmueble=id_inmueble)
-            # ---------------------------------------------------------
+        # Validar mínimo de noches
+        dias = (fecha_fin - fecha_inicio).days
+        if dias < inmueble.minimo_dias_alquiler:
+            messages.error(request, f"El mínimo de noches de alquiler para esta vivienda es {inmueble.minimo_dias_alquiler}.")
+            return redirect("detalle_inmueble", id_inmueble=id_inmueble)
 
+        # Validar que el cliente no tenga reservas superpuestas para el mismo inmueble
+        reserva_superpuesta_usuario = Reserva.objects.filter(
+            clienteinmueble__cliente=perfil,
+            inmueble=inmueble,
+            estado__nombre__in=['Pendiente', 'Confirmada', 'Pagada', 'Aprobada'],
+            fecha_inicio__lte=fecha_fin,  
+            fecha_fin__gte=fecha_inicio   
+        ).exists()
+        if reserva_superpuesta_usuario:
+            messages.error(request, "Ya tienes una reserva activa para este inmueble en esas fechas.")
+            return redirect("detalle_inmueble", id_inmueble=id_inmueble)
 
-            # Calcular días y precio total
-            dias = (fecha_fin - fecha_inicio).days
-            precio_total = dias * inmueble.precio_por_dia
-            
-            # Crear la reserva
-            reserva = Reserva.objects.create(
-                fecha_inicio=fecha_inicio,
-                fecha_fin=fecha_fin,
-                precio_total=precio_total,
-                inmueble=inmueble,
-                estado=Estado.objects.get(nombre='Pendiente'),  # Asegúrate de que este estado exista
-                descripcion=f"Reserva para {inmueble.nombre} del {fecha_inicio} al {fecha_fin}"
-            )
-            
-            # Relacionar el cliente con la reserva
-            if request.user.is_authenticated:
-                ClienteInmueble.objects.create(
-                    cliente=request.user.perfil,
-                    inmueble=inmueble,
-                    reserva=reserva
-                )
+        # Validar que el inmueble esté disponible en esas fechas
+        reserva_superpuesta_inmueble = Reserva.objects.filter(
+            inmueble=inmueble,
+            estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada'],
+            fecha_inicio__lte=fecha_fin,  
+            fecha_fin__gte=fecha_inicio   
+        ).exists()
+        if reserva_superpuesta_inmueble:
+            messages.error(request, "El inmueble no está disponible en esas fechas.")
+            return redirect("detalle_inmueble", id_inmueble=id_inmueble)
 
-            # --- GUARDAR HUÉSPEDES ---
-            huespedes_json = request.POST.get('huespedes_json')
-            if huespedes_json:
-                try:
-                    lista_huespedes = json.loads(huespedes_json)
-                    for h in lista_huespedes:
-                        Huesped.objects.create(
-                            reserva=reserva,
-                            nombre=h['nombre'],
-                            apellido=h['apellido'],
-                            dni=h['dni'],
-                            fecha_nacimiento=h['fecha_nac']
-                        )
-                except Exception as e:
-                    # Puedes loguear el error si lo deseas
-                    pass
-            # --- FIN GUARDADO HUÉSPEDES ---
+        # Crear la reserva
+        reserva = Reserva.objects.create(
+            inmueble=inmueble,
+            fecha_inicio=fecha_inicio,
+            fecha_fin=fecha_fin,
+            estado=Estado.objects.get(nombre="Pendiente"),
+            precio_total=inmueble.precio_por_dia * (fecha_fin - fecha_inicio).days
+        )
 
-            # Enviar notificación a todos los empleados
-            # usando enviar_mail_a_empleados_sobre_reserva(id_reserva) de utils.py
-            # enviar_mail_a_empleados_sobre_reserva(reserva.id_reserva)            
-            
-            messages.success(request, 'Reserva creada exitosamente!')
-            return redirect('detalle_inmueble', id_inmueble=id_inmueble)
-            
-        except ValueError:
-            messages.error(request, 'Formato de fecha inválido.')
-            return redirect('detalle_inmueble', id_inmueble=id_inmueble)
-    
-    # Si no es POST, redirigir al detalle del inmueble
-    return redirect('detalle_inmueble', id_inmueble=id_inmueble)
+        # Relacionar el cliente con la reserva
+        ClienteInmueble.objects.create(
+            cliente=perfil,
+            reserva=reserva
+        )
+
+        crear_notificacion(
+            usuario=perfil,
+            mensaje=f"Tu reserva #{reserva.id_reserva} fue registrada. En menos de 72 horas será revisada por un empleado. Recibirás una notificación cuando sea aprobada o rechazada."
+        )
+
+        messages.success(request, "Reserva creada exitosamente.")
+        return redirect("detalle_inmueble", id_inmueble=id_inmueble)
+
+    # Si es GET, redirigir al detalle del inmueble
+    return redirect("detalle_inmueble", id_inmueble=id_inmueble)
 
 @login_required
 def crear_reserva_cochera(request, id_cochera):
     """
     Permite a los usuarios crear una reserva para una cochera.
-    Valida las fechas y calcula el precio total.
+    Valida fechas, mínimo de noches, superposición de reservas y crea la relación con el cliente.
     """
     cochera = get_object_or_404(Cochera, id_cochera=id_cochera)
-    
+    perfil = request.user.perfil
+
     if request.method == 'POST':
-        fecha_inicio = request.POST.get('fecha_inicio')
-        fecha_fin = request.POST.get('fecha_fin')
-        
-        if not fecha_inicio or not fecha_fin:
-            messages.error(request, 'Debes ingresar ambas fechas.')
-            return redirect('detalle_cochera', id_cochera=id_cochera)
-            
+        fecha_inicio_str = request.POST.get('fecha_inicio')
+        fecha_fin_str = request.POST.get('fecha_fin')
+
+        # Validar fechas
         try:
-            fecha_inicio = datetime.datetime.strptime(fecha_inicio, '%Y-%m-%d').date()
-            fecha_fin = datetime.datetime.strptime(fecha_fin, '%Y-%m-%d').date()
-            
-            if fecha_inicio >= fecha_fin:
-                messages.error(request, 'La fecha de fin debe ser posterior a la de inicio.')
-                return redirect('detalle_cochera', id_cochera=id_cochera)
-                
-            dias = (fecha_fin - fecha_inicio).days
-            if dias < cochera.minimo_dias_alquiler:
-                messages.error(request, f"El mínimo de noches de alquiler para esta cochera es {cochera.minimo_dias_alquiler}.")
-                return redirect('detalle_cochera', id_cochera=id_cochera)
-            
-            # --- VALIDACIÓN DE RESERVA SUPERPUESTA DEL USUARIO ---
-            perfil = request.user.perfil
-            reserva_superpuesta_usuario = Reserva.objects.filter(
-                clienteinmueble__cliente=perfil,
-                cochera__isnull=False,
-                estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada'],
-                fecha_inicio__lt=fecha_fin,
-                fecha_fin__gt=fecha_inicio
-            ).exists()
-            if reserva_superpuesta_usuario:
-                messages.error(request, "Ya tenés una reserva de cochera que se superpone con las fechas seleccionadas.")
-                return redirect('detalle_cochera', id_cochera=id_cochera)
-            # -----------------------------------------------------
-
-            # --- Validar que no haya reservas superpuestas ---
-            reservas_superpuestas = Reserva.objects.filter(
-                cochera=cochera,
-                estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada'],
-                fecha_inicio__lt=fecha_fin,
-                fecha_fin__gt=fecha_inicio
-            )
-            if reservas_superpuestas.exists():
-                messages.error(request, "La cochera ya está reservada en esas fechas.")
-                return redirect('detalle_cochera', id_cochera=id_cochera)
-            # ------------------------------------------------------
-                
-            # Calcular días y precio total
-            dias = (fecha_fin - fecha_inicio).days
-            precio_total = dias * cochera.precio_por_dia
-            
-            # Crear la reserva
-            reserva = Reserva.objects.create(
-                fecha_inicio=fecha_inicio,
-                fecha_fin=fecha_fin,
-                precio_total=precio_total,
-                cochera=cochera,
-                estado=Estado.objects.get(nombre='Pendiente'),
-                descripcion=f"Reserva para {cochera.nombre} del {fecha_inicio} al {fecha_fin}"
-            )
-            
-            # Relacionar el cliente con la reserva
-            if request.user.is_authenticated:
-                ClienteInmueble.objects.create(
-                    cliente=request.user.perfil,
-                    cochera=cochera,
-                    reserva=reserva
-                )
-
-            # Enviar notificación a todos los empleados
-            # usando enviar_mail_a_empleados_sobre_reserva(id_reserva) de utils.py
-            # enviar_mail_a_empleados_sobre_reserva(reserva.id_reserva)    
-            
-            messages.success(request, 'Reserva creada exitosamente!')
+            fecha_inicio = datetime.datetime.strptime(fecha_inicio_str, '%Y-%m-%d').date()
+            fecha_fin = datetime.datetime.strptime(fecha_fin_str, '%Y-%m-%d').date()
+        except (TypeError, ValueError):
+            messages.error(request, 'Fechas inválidas.')
             return redirect('detalle_cochera', id_cochera=id_cochera)
-            
-        except ValueError:
-            messages.error(request, 'Formato de fecha inválido.')
+
+        if fecha_inicio >= fecha_fin:
+            messages.error(request, 'La fecha de salida debe ser posterior a la de llegada.')
             return redirect('detalle_cochera', id_cochera=id_cochera)
-    
+
+        # Validar mínimo de noches
+        dias = (fecha_fin - fecha_inicio).days
+        if dias < cochera.minimo_dias_alquiler:
+            messages.error(request, f"El mínimo de noches de alquiler para esta cochera es {cochera.minimo_dias_alquiler}.")
+            return redirect('detalle_cochera', id_cochera=id_cochera)
+
+        # Validar que el cliente no tenga reservas superpuestas para la misma cochera
+        reserva_superpuesta_usuario = Reserva.objects.filter(
+            clienteinmueble__cliente=perfil,
+            cochera=cochera,
+            estado__nombre__in=['Pendiente', 'Confirmada', 'Pagada', 'Aprobada'],
+            fecha_inicio__lte=fecha_fin,
+            fecha_fin__gte=fecha_inicio
+        ).exists()
+        if reserva_superpuesta_usuario:
+            messages.error(request, "Ya tenés una reserva activa para esta cochera en esas fechas.")
+            return redirect('detalle_cochera', id_cochera=id_cochera)
+
+        # Validar que la cochera esté disponible en esas fechas
+        reserva_superpuesta_cochera = Reserva.objects.filter(
+            cochera=cochera,
+            estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada'],
+            fecha_inicio__lte=fecha_fin,
+            fecha_fin__gte=fecha_inicio
+        ).exists()
+        if reserva_superpuesta_cochera:
+            messages.error(request, "La cochera no está disponible en esas fechas.")
+            return redirect('detalle_cochera', id_cochera=id_cochera)
+
+        # Calcular precio total
+        precio_total = cochera.precio_por_dia * dias
+
+        # Crear la reserva
+        reserva = Reserva.objects.create(
+            cochera=cochera,
+            fecha_inicio=fecha_inicio,
+            fecha_fin=fecha_fin,
+            estado=Estado.objects.get(nombre='Pendiente'),
+            precio_total=precio_total,
+            descripcion=f"Reserva para {cochera.nombre} del {fecha_inicio} al {fecha_fin}"
+        )
+
+        # Relacionar el cliente con la reserva
+        ClienteInmueble.objects.create(
+            cliente=perfil,
+            cochera=cochera,
+            reserva=reserva
+        )
+
+        # Notificar al cliente
+        crear_notificacion(
+            usuario=perfil,
+            mensaje=f"Tu reserva #{reserva.id_reserva} fue registrada. En menos de 72 horas será revisada por un empleado. Recibirás una notificación cuando sea aprobada o rechazada."
+        )
+
+        # Notificar al empleado asignado a la cochera
+        if cochera.empleado:
+            crear_notificacion(
+                usuario=cochera.empleado,
+                mensaje=f"Nueva reserva #{reserva.id_reserva} pendiente para la cochera {cochera.nombre} del {fecha_inicio} al {fecha_fin}.",
+            )
+
+        messages.success(request, 'Reserva creada exitosamente.')
+        return redirect('detalle_cochera', id_cochera=id_cochera)
+
     return redirect('detalle_cochera', id_cochera=id_cochera)
 
 @require_POST
@@ -1857,13 +1905,6 @@ def marcar_todas_leidas(request):
 # --- OTRAS VISTAS ---
 ################################################################################################################
 
-# para cargar las ciudades en el formulario de registro
-def cargar_ciudades(request):
-    provincia_id = request.GET.get('provincia')
-    ciudades = Ciudad.objects.filter(provincia_id=provincia_id).order_by('nombre')
-    ciudades_list = [{'id': ciudad.id, 'nombre': ciudad.nombre} for ciudad in ciudades]
-    return JsonResponse({'ciudades': ciudades_list})
-
 @login_required
 def cambiar_contrasena(request):
     from django.contrib.auth.models import Group
@@ -2074,9 +2115,31 @@ def pagar_reserva(request, id_reserva):
                 return JsonResponse({'success': False, 'error': 'El tiempo para pagar la reserva ha expirado (más de 24 horas desde la aprobación).'}, status=400)
             # ---------------------------------------------------------------------------
 
+            # ...lógica de pago...
             estado_pagada = Estado.objects.get(nombre='Confirmada')
             reserva.estado = estado_pagada
             reserva.save()
+
+            # Rechazar automáticamente reservas pendientes superpuestas
+            reservas_superpuestas = Reserva.objects.filter(
+                inmueble=reserva.inmueble,
+                estado__nombre='Pendiente',
+                fecha_inicio__lte=reserva.fecha_fin,
+                fecha_fin__gte=reserva.fecha_inicio
+            ).exclude(id_reserva=reserva.id_reserva)
+
+            estado_rechazada = Estado.objects.get(nombre='Rechazada')
+            for r in reservas_superpuestas:
+                r.estado = estado_rechazada
+                r.save()
+                # Notificar al cliente si querés
+                cliente_rel = ClienteInmueble.objects.filter(reserva=r).first()
+                if cliente_rel:
+                    crear_notificacion(
+                        usuario=cliente_rel.cliente,
+                        mensaje=f"Tu reserva #{r.id_reserva} para la vivienda '{reserva.inmueble.nombre} fue rechazada'."
+                    )
+
             # Notificación al empleado asignado
             empleado_asignado = reserva.inmueble.empleado if reserva.inmueble else reserva.cochera.empleado
             if empleado_asignado:
@@ -2110,8 +2173,9 @@ def agregar_tarjeta(request):
         form = TarjetaForm()
     return render(request, 'agregar_tarjeta.html', {'form': form})
 
-##################
-
+################################################################################################################
+# --- Cancelar reservas vencidas  ---
+################################################################################################################
 
 def cancelar_reservas_vencidas(request):
     ahora = timezone.now()
@@ -2125,3 +2189,109 @@ def cancelar_reservas_vencidas(request):
             reserva.save()
             count += 1
     return JsonResponse({'success': True, 'canceladas': count})
+
+################################################################################################################
+# --- MERCADO PAGO  ---
+################################################################################################################
+
+
+def crear_preferencia_mp(request):
+    if request.method == "POST":
+        import mercadopago
+        import json
+        from django.conf import settings
+        from django.http import JsonResponse
+
+        data = json.loads(request.body)
+        monto = data.get('monto', 1000)
+        descripcion = data.get('descripcion', 'Reserva Alquiler Express')
+        id_reserva = data.get('id_reserva')
+
+        # Verificar que la reserva esté en estado "Aprobada"
+        try:
+            reserva = Reserva.objects.get(id_reserva=id_reserva)
+        except Reserva.DoesNotExist:
+            return JsonResponse({"error": "Reserva no encontrada."}, status=404)
+
+        if reserva.estado.nombre != "Aprobada":
+            return JsonResponse({"error": "Solo se puede pagar una reserva en estado Aprobada."}, status=400)
+
+        sdk = mercadopago.SDK(settings.MERCADOPAGO_ACCESS_TOKEN)
+        preference_data = {
+            "items": [
+                {
+                    "title": descripcion,
+                    "quantity": 1,
+                    "unit_price": float(monto),
+                }
+            ],
+            "back_urls": {
+                "success": "https://reptile-genuine-redbird.ngrok-free.app/reservas/",
+                "failure": "https://reptile-genuine-redbird.ngrok-free.app/reservas/",
+                "pending": "https://reptile-genuine-redbird.ngrok-free.app/reservas/",
+            },
+            "auto_return": "approved",
+            "external_reference": str(id_reserva),
+            "notification_url": "https://reptile-genuine-redbird.ngrok-free.app/mercadopago/webhook/",
+        }
+        preference_response = sdk.preference().create(preference_data)
+        preference = preference_response.get("response", {})
+        if "id" in preference:
+            return JsonResponse({
+                "id": preference["id"],
+                "init_point": preference.get("init_point")
+            })
+        else:
+            return JsonResponse({"error": preference.get("message", "Error al crear preferencia"), "detalle": preference}, status=400)
+
+def probar_mp(request):
+    return render(request, 'probar_mp.html', {
+        'MERCADOPAGO_PUBLIC_KEY': settings.MERCADOPAGO_PUBLIC_KEY,
+        'precio': 1000,  # o el valor que quieras probar
+    })
+
+
+
+@csrf_exempt
+def mercadopago_webhook(request):
+    import mercadopago
+    import json
+
+    payment_id = None
+
+    # Solo procesar si es topic=payment
+    if request.GET.get("topic") == "payment" and request.GET.get("id"):
+        payment_id = request.GET.get("id")
+    elif request.GET.get("type") == "payment" and request.GET.get("data.id"):
+        payment_id = request.GET.get("data.id")
+    elif request.body:
+        try:
+            data = json.loads(request.body)
+            payment_id = (
+                data.get("data", {}).get("id")
+                or data.get("id")
+                or data.get("payment_id")
+            )
+        except Exception:
+            pass
+
+    if not payment_id:
+        # Si no es un pago, simplemente responde 200 OK para otros topics
+        return JsonResponse({"success": True})
+
+    sdk = mercadopago.SDK(settings.MERCADOPAGO_ACCESS_TOKEN)
+    payment_info = sdk.payment().get(payment_id)
+    payment = payment_info.get("response", {})
+
+    if payment.get("status") == "approved":
+        reserva_id = payment.get("external_reference")
+        if reserva_id:
+            try:
+                reserva = Reserva.objects.get(id_reserva=reserva_id)
+                estado_pagada = Estado.objects.get(nombre="Pagada")
+                reserva.estado = estado_pagada
+                reserva.save()
+                return JsonResponse({"success": True})
+            except Reserva.DoesNotExist:
+                return JsonResponse({"error": "Reserva no encontrada"}, status=404)
+    return JsonResponse({"success": False})

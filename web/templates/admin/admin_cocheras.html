@@ -37,7 +37,7 @@
         {% for cochera in cocheras %}
         <tr>
           <td>{{ cochera.nombre }}</td>
-          <td>{{ cochera.ubicacion }}</td>
+          <td>{{ cochera.direccion }}</td>
           <td>${{ cochera.precio_por_dia|floatformat:2 }}</td>
           <td>{{ cochera.estado.nombre }}</td>
           <td>
@@ -51,10 +51,14 @@
               <form method="post" action="{% url 'cambiar_empleado_cochera' cochera.id_cochera %}" style="display:inline;">
                 {% csrf_token %}
                 <select name="empleado" class="form-select form-select-sm d-inline w-auto align-middle" onchange="this.form.submit()">
-                  <option value="">Sin asignar</option>
                   {% for empleado in empleados %}
-                    <option value="{{ empleado.id_perfil }}" {% if cochera.empleado and cochera.empleado.id_perfil == empleado.id_perfil %}selected{% endif %}>
-                      {{ empleado.usuario.get_full_name|default:empleado.usuario.username }}
+                    <option value="{{ empleado.usuario.id }}" {% if cochera.empleado and cochera.empleado.usuario.id == empleado.usuario.id %}selected{% endif %}>
+                      {{ empleado.usuario.get_full_name }}
+                    </option>
+                  {% endfor %}
+                  {% for admin in admins %}
+                    <option value="{{ admin.usuario.id }}" style="color: #F26A1B;" {% if cochera.empleado and cochera.empleado.usuario.id == admin.usuario.id %}selected{% endif %}>
+                      {{ admin.usuario.get_full_name }}
                     </option>
                   {% endfor %}
                 </select>

@@ -30,6 +30,14 @@ pip install django
 pip install Pillow
 # Para personalizar los formularios en las plantillas de Django (lo use con el login del admin)
 pip install django-widget-tweaks
+# Para la creacion de tareas asincronicas en segundo plano
+pip install celery redis django-celery-beat
+# Para mercado pago
+pip install mercadopago
+
+# Ejecutar ngrok.exe, iniciar sesion y seguir los pasos de https://dashboard.ngrok.com/get-started/setup/windows 
+# tienen que poner lo de ngrok config add-authtoken <token_de_su_cuenta>
+# 
 
 # Aplicar migraciones
 python manage.py migrate

@@ -1,0 +1,35 @@
+<!-- crear_preferencia_mp.html -->
+<script src="https://sdk.mercadopago.com/js/v2"></script>
+<button id="btnMercadoPago" class="btn btn-primary">Pagar con Mercado Pago</button>
+<div id="wallet_container"></div>
+<script>
+const mp = new MercadoPago('{{ MERCADOPAGO_PUBLIC_KEY }}', {
+    locale: 'es-AR'
+});
+
+document.getElementById('btnMercadoPago').onclick = function() {
+    fetch('{% url "crear_preferencia_mp" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+            monto: {{ precio }},
+            descripcion: 'Reserva Alquiler Express'
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        mp.checkout({
+            preference: {
+                id: data.id
+            },
+            render: {
+                container: '#wallet_container',
+                label: 'Pagar con Mercado Pago'
+            }
+        });
+    });
+};
+</script>
