@@ -50,6 +50,7 @@ urlpatterns = [
     path('panel/cocheras/reservas/<int:id_cochera>/', viewsAdminInmuebles.admin_cocheras_reservas, name='admin_cocheras_reservas'),
     path('panel/cocheras/historial/<int:id_cochera>/', viewsAdminInmuebles.admin_cocheras_historial, name='admin_cocheras_historial'),
     path('eliminar-imagen-cochera/<int:id_imagen>/', viewsAdminInmuebles.eliminar_imagen_cochera, name='eliminar_imagen_cochera'),
+    path('panel/cocheras/<int:id_cochera>/cambiar-estado/', viewsAdminInmuebles.cambiar_estado_cochera, name='cambiar_estado_cochera'),
 
     # Estadísiticas
     path('panel/estadisticas-empleados/', viewsAdminEstadisticas.admin_estadisticas_empleados, name='admin_estadisticas_empleados'),

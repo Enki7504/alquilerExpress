@@ -157,19 +157,62 @@ def admin_cocheras(request):
     """
     query = request.GET.get('q', '').strip()
     cocheras = Cochera.objects.exclude(estado__nombre='Eliminado').order_by('nombre')
-    
+
     if query:
         cocheras = cocheras.filter(
-            Q(nombre__icontains=query) | Q(descripcion__icontains=query))
-    
+            Q(nombre__icontains=query) | Q(descripcion__icontains=query)
+        )
+
     empleados = Perfil.objects.filter(usuario__groups__name="empleado")
     admins = Perfil.objects.filter(usuario__is_staff=True).distinct()
+
+    # Fechas ocupadas por reservas activas para cada cochera
+    fechas_max_ocupadas = {}
+    for cochera in cocheras:
+        reservas_activas = Reserva.objects.filter(
+            cochera=cochera,
+            estado__nombre__in=['Aprobada', 'Pagada', 'Confirmada'],
+            fecha_inicio__gte=date.today()
+        ).order_by('fecha_inicio')
+        if reservas_activas.exists():
+            fecha_bloqueo = reservas_activas.first().fecha_inicio - timedelta(days=1)
+            fechas_max_ocupadas[cochera.id_cochera] = fecha_bloqueo.strftime('%Y-%m-%d')
+        else:
+            fechas_max_ocupadas[cochera.id_cochera] = None
+
+    # Fechas ocupadas por estados "En Mantenimiento" para cada cochera (NUEVO O CORREGIDO)
+    fechas_ocupadas_dict = {}
+    for cochera in cocheras:
+        estados_mantenimiento = CocheraEstado.objects.filter(
+            cochera=cochera,
+            estado__nombre='En Mantenimiento',
+            fecha_fin__gte=date.today()
+        ).order_by('fecha_inicio')
+
+        fechas_bloqueadas_cochera = []
+        for estado_mantenimiento in estados_mantenimiento:
+            if estado_mantenimiento.fecha_inicio and estado_mantenimiento.fecha_fin:
+                delta = estado_mantenimiento.fecha_fin - estado_mantenimiento.fecha_inicio
+                for i in range(delta.days + 1):
+                    day = estado_mantenimiento.fecha_inicio + timedelta(days=i)
+                    fechas_bloqueadas_cochera.append(day.strftime('%Y-%m-%d'))
+        fechas_ocupadas_dict[cochera.id_cochera] = fechas_bloqueadas_cochera
+
+    estados = list(Estado.objects.filter(nombre__in=["Disponible", "En Mantenimiento"]).values('id_estado', 'nombre'))
+    id_disponible = next((e['id_estado'] for e in estados if e['nombre'] == "Disponible"), None)
+    id_mantenimiento = next((e['id_estado'] for e in estados if e['nombre'] == "En Mantenimiento"), None)
+
     return render(request, 'admin/admin_cocheras.html', {
         'cocheras': cocheras,
         'query': query,
         'empleados': empleados,
-        'admins': admins
+        'id_disponible': id_disponible,
+        'id_mantenimiento': id_mantenimiento,
+        'admins': admins,
+        'fechas_max_ocupadas': fechas_max_ocupadas,  # Asegúrate de pasar esta variable
+        'fechas_ocupadas_dict': fechas_ocupadas_dict, # Asegúrate de pasar esta variable
     })
+
 
 @login_required
 @user_passes_test(is_admin)
@@ -453,6 +496,55 @@ def cambiar_estado_inmueble(request, id_inmueble):
 
     messages.success(request, "Estado actualizado correctamente.")
     return redirect('admin_inmuebles')
+
+@require_POST
+@login_required
+@user_passes_test(is_admin)
+def cambiar_estado_cochera(request, id_cochera):
+    cochera = get_object_or_404(Cochera, id_cochera=id_cochera)
+    nuevo_estado_id = request.POST.get("estado")
+    fecha_estimacion = request.POST.get("fecha_estimacion")
+    razon = request.POST.get("razon")
+
+    if not nuevo_estado_id:
+        return JsonResponse({'success': False, 'message': 'Debe seleccionar un estado.'}, status=400)
+
+    estado = get_object_or_404(Estado, id_estado=nuevo_estado_id)
+    cochera.estado = estado
+    cochera.save()
+
+    # Guardar historial
+    if estado.nombre == "En Mantenimiento":
+        ultimo_disponible = CocheraEstado.objects.filter(
+            cochera=cochera,
+            estado__nombre="Disponible"
+        ).order_by('-fecha_inicio').first()
+        if ultimo_disponible:
+            ultimo_disponible.fecha_fin = timezone.now().date()
+            ultimo_disponible.save()
+        CocheraEstado.objects.create(
+            cochera=cochera,
+            estado=estado,
+            fecha_inicio=timezone.now().date(),
+            fecha_fin=fecha_estimacion if fecha_estimacion else None,
+            descripcion=razon or ""
+        )
+    elif estado.nombre == "Disponible":
+        ultimo_historial = CocheraEstado.objects.filter(
+            cochera=cochera
+        ).exclude(estado__nombre="Disponible").order_by('-fecha_inicio').first()
+        if ultimo_historial:
+            ultimo_historial.fecha_fin = timezone.now().date()
+            ultimo_historial.save()
+        CocheraEstado.objects.create(
+            cochera=cochera,
+            estado=estado,
+            fecha_inicio=timezone.now().date(),
+            fecha_fin=None,
+            descripcion=""
+        )
+
+    return JsonResponse({'success': True, 'message': 'Estado actualizado correctamente.'})
 
 ################################################################################################################
 # --- Vistas de Gestión de Cocheras ---
