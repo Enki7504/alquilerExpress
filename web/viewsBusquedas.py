@@ -132,11 +132,15 @@ def buscar_inmuebles(request):
         else:
             inmuebles = inmuebles.filter(cantidad_banios=int(banios))
 
+    # Add a variable to check if any provinces were found
+    no_provinces_found = not provincias.exists()
+
     return render(request, 'busqueda/buscar_inmuebles.html', {
         'inmuebles': inmuebles,
         'query': query,
         'provincias': provincias,
         'ciudades': ciudades,
+        'no_provinces_found': no_provinces_found, # Pass this to the template
     })
 
 def buscar_cocheras(request):
@@ -199,11 +203,15 @@ def buscar_cocheras(request):
     if con_techo:
         cocheras = cocheras.filter(con_techo=True)
 
+    # Add a variable to check if any provinces were found
+    no_provinces_found = not provincias.exists()
+
     return render(request, 'busqueda/buscar_cocheras.html', {
         'cocheras': cocheras,
         'query': query,
         'provincias': provincias,
         'ciudades': ciudades,
+        'no_provinces_found': no_provinces_found, # Pass this to the template
     })
 
 def lista_inmuebles(request):
@@ -454,3 +462,39 @@ def detalle_cochera(request, id_cochera):
         'is_admin': is_admin_var,
         'puede_reseñar': puede_reseñar,
     })
+
+def obtener_provincias_y_ciudades(tipo='inmueble', provincia_id=None):
+    from .models import Provincia, Ciudad, Inmueble, Cochera
+
+    if tipo == 'inmueble':
+        inmuebles_validos = Inmueble.objects.exclude(estado__nombre__in=['Oculto', 'Eliminado'])
+        if provincia_id:
+            ciudades = Ciudad.objects.filter(
+                provincia_id=provincia_id,
+                inmueble__in=inmuebles_validos
+            ).distinct()
+        else:
+            ciudades = Ciudad.objects.filter(
+                inmueble__in=inmuebles_validos
+            ).distinct()
+        provincias = Provincia.objects.filter(
+            ciudades__inmueble__in=inmuebles_validos
+        ).distinct()
+    elif tipo == 'cochera':
+        cocheras_validas = Cochera.objects.exclude(estado__nombre__in=['Oculto', 'Eliminado'])
+        if provincia_id:
+            ciudades = Ciudad.objects.filter(
+                provincia_id=provincia_id,
+                cochera__in=cocheras_validas
+            ).distinct()
+        else:
+            ciudades = Ciudad.objects.filter(
+                cochera__in=cocheras_validas
+            ).distinct()
+        provincias = Provincia.objects.filter(
+            ciudades__cochera__in=cocheras_validas
+        ).distinct()
+    else:
+        provincias = Provincia.objects.none()
+        ciudades = Ciudad.objects.none()
+    return provincias, ciudades
