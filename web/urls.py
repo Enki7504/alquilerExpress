@@ -86,6 +86,7 @@ urlpatterns = [
 
     # Reseñas y comentarios
     path('comentario/eliminar/<int:id_comentario>/', views.eliminar_comentario, name='eliminar_comentario'),
+    path('resenias/eliminar/<int:id_resenia>/', views.eliminar_resenia, name='eliminar_resenia'),
 
     # Mercado Pago
     path('simulador-mercadopago/', views.simulador_mercadopago, name='simulador_mercadopago'),

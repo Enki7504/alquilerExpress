@@ -653,6 +653,8 @@ def detalle_cochera(request, id_cochera):
         'puede_reseñar': puede_reseñar,
     })
 
+
+
 ################################################################################################################
 # --- Funciones para filtrar ---
 ################################################################################################################
@@ -1936,6 +1938,23 @@ def eliminar_comentario(request, id_comentario):
         messages.success(request, "Comentario eliminado correctamente.")
     return redirect(request.META.get('HTTP_REFERER', 'index'))
 
+@require_POST
+@login_required
+@user_passes_test(is_admin_or_empleado)
+def eliminar_resenia(request, id_resenia):
+    resenia = get_object_or_404(Resenia, id_resenia=id_resenia)
+    
+    # Verificar si la reseña pertenece a un inmueble o cochera que el empleado administra
+    if (resenia.inmueble and resenia.inmueble.empleado != request.user.perfil) or \
+       (resenia.cochera and resenia.cochera.empleado != request.user.perfil):
+        if not request.user.is_staff:  # Solo el admin puede eliminar cualquier reseña
+            messages.error(request, "No tienes permiso para eliminar esta reseña.")
+            return redirect(request.META.get('HTTP_REFERER', 'index'))
+    
+    # Eliminar la reseña
+    resenia.delete()
+    messages.success(request, "Reseña eliminada correctamente.")
+    return redirect(request.META.get('HTTP_REFERER', 'index'))
 
 def simulador_mercadopago(request):
     saldo = request.GET.get('saldo', '0.00')
