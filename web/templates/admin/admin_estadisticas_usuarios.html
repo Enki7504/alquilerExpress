@@ -1,8 +1,60 @@
 {% extends 'admin/admin_base.html' %}
 {% load static %}
 
-{% block title %}Alta de Inmuebles | Panel Admin{% endblock %}
+{% block title %}Estadísticas de Usuarios | Panel Admin{% endblock %}
 
 {% block admin_content %}
-<p>Estadisticas de usuaios</p>
+<div class="container mt-4">
+  <h2 class="mb-4">Estadísticas de Usuarios</h2>
+  <div class="row g-4">
+    <div class="col-md-4">
+      <div class="card text-bg-primary shadow">
+        <div class="card-body">
+          <h5 class="card-title">Usuarios totales</h5>
+          <p class="display-5 fw-bold">{{ total_usuarios }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card text-bg-success shadow">
+        <div class="card-body">
+          <h5 class="card-title">Clientes</h5>
+          <p class="display-5 fw-bold">{{ total_clientes }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card text-bg-info shadow">
+        <div class="card-body">
+          <h5 class="card-title">Empleados</h5>
+          <p class="display-5 fw-bold">{{ total_empleados }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card text-bg-warning shadow">
+        <div class="card-body">
+          <h5 class="card-title">Reservas realizadas</h5>
+          <p class="display-5 fw-bold">{{ total_reservas }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card text-bg-secondary shadow">
+        <div class="card-body">
+          <h5 class="card-title">Reseñas</h5>
+          <p class="display-5 fw-bold">{{ total_resenias }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card text-bg-dark shadow">
+        <div class="card-body">
+          <h5 class="card-title">Comentarios</h5>
+          <p class="display-5 fw-bold">{{ total_comentarios }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}

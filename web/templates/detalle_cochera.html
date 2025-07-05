@@ -138,6 +138,30 @@
       </div>
     </div>
   </div>
+</main>
+
+{% if not user.is_authenticated %}
+  <!-- Cartelito para autenticarte -->
+  <section class="container mt-5">
+    <div class="card shadow-sm border-0 text-center py-4 mb-5">
+      <div class="card-body">
+        <i class="bi bi-lock-fill display-4 text-muted mb-3"></i>
+        <h3 class="h4 mb-3">Iniciá sesión para dejar tu reseña o comentario</h3>
+        <p class="mb-4">Compartí tu experiencia con este alojamiento</p>
+        <div class="d-flex justify-content-center gap-3">
+          <a href="{% url 'login' %}" class="btn btn-primary btn-azul">
+            Iniciar sesión
+          </a>
+          <a href="{% url 'register' %}" class="btn btn-outline-primary">
+            Registrarse
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+{% endif %}
+  {% include '_comentarios.html' %}
+  {% include '_resenias.html' %}
 {% endblock %}
 
 {# No need for an extra_js block here, as the common JS is in detalle_base.html #}

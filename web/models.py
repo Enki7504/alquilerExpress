@@ -102,6 +102,9 @@ class Reserva(models.Model):
     descripcion = models.TextField()
     creada_en = models.DateTimeField(default=timezone.now)
     aprobada_en = models.DateTimeField(null=True, blank=True)
+    # Se agregan 2 campos para contar cantidad de adultos y niños
+    cantidad_adultos = models.PositiveIntegerField(default=1, verbose_name="Cantidad de adultos")
+    cantidad_ninos = models.PositiveIntegerField(default=0, verbose_name="Cantidad de niños")
     
     def cliente(self):
         rel = ClienteInmueble.objects.filter(reserva=self).first()

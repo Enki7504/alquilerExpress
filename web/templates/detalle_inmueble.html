@@ -41,50 +41,90 @@
           {{ inmueble.provincia.nombre }}, {{ inmueble.ciudad.nombre }}, {{ inmueble.direccion }}
         </span>
       </div>
-      <div class="d-flex flex-wrap gap-3 mb-4">
-        <div class="d-flex align-items-center">
-          <i class="bi bi-door-open text-primary me-2"></i>
-          <span>{{ inmueble.cantidad_ambientes }} ambientes</span>
-        </div>
-        <div class="d-flex align-items-center">
-          <i class="bi bi-bootstrap text-primary me-2"></i>
-          <span>{{ inmueble.cantidad_banios }} baño{{ inmueble.cantidad_banios|pluralize }}</span>
-        </div>
-        <div class="d-flex align-items-center">
-          <i class="bi bi-c-square text-primary me-2"></i>
-          <span>{{ inmueble.cantidad_camas }} cama{{ inmueble.cantidad_camas|pluralize }}</span>
-        </div>
-        <div class="d-flex align-items-center">
-          <i class="bi bi-people text-primary me-2"></i>
-          <span>{{ inmueble.cantidad_huespedes }} huesped{{ inmueble.cantidad_huespedes|pluralize:"es" }}</span>
-        </div>
-        <div class="d-flex align-items-center">
-          <i class="bi bi-calendar-range text-primary me-2"></i>
-          <span>Mínimo {{ inmueble.minimo_dias_alquiler }} noche{{ inmueble.minimo_dias_alquiler|pluralize }}</span>
-        </div>
-        <p class="text-muted small mt-2">
-          <i class="bi bi-calendar-date text-primary me-1"></i>
-          Publicado el {{ inmueble.fecha_publicacion|date:"d/m/Y" }}
-        </p>
-        {% if inmueble.inmueble %} {# This condition seems incorrect, as inmueble.inmueble would likely be a recursive reference or always true #}
-        <div class="d-flex align-items-center">
-          <i class="bi bi-car-front text-primary me-2"></i>
-          <span>inmueble</span>
-        </div>
-        {% endif %}
-        {% if inmueble.estado %}
-        <span class="badge bg-{% if inmueble.estado.nombre == 'Disponible' %}success{% else %}warning{% endif %}">
-          {{ inmueble.estado.nombre }}
-        </span>
-        {% endif %}
-      </div>
-      <h3 class="h4 mb-3">Descripción</h3>
-      <p class="mb-4">{{ inmueble.descripcion }}</p>
-      <h3 class="h4 mb-3">Política de cancelación</h3>
-      <p>{{ inmueble.politica_cancelacion }}</p>
-    </div>
-  </div>
-{% endblock %}
+      <!-- Sidebar - Panel administrativo o reserva -->
+      <div class="col-lg-4">
+        <div class="card shadow-sm sticky-top" style="top: 20px;">
+          <div class="card-body">
+            {% if is_admin_or_empleado %}
+              <h3 class="h4 mb-3">Gestión del Inmueble</h3>
+              <div class="d-flex align-items-end mb-3">
+                <span class="h3 text-primary">${{ inmueble.precio_por_dia|floatformat:"0" }}</span>
+                <span class="text-muted ms-1">/ noche</span>
+              </div>
+              <!-- <div class="d-grid gap-2">
+                <a href="{% url 'admin_inmuebles_reservas' id_inmueble=inmueble.id_inmueble %}" class="btn btn-primary">
+                  <i class="bi bi-calendar-check me-2"></i> Ver Reservas
+                </a>
+                <a href="{% url 'admin_inmuebles_historial' id_inmueble=inmueble.id_inmueble %}" class="btn btn-secondary">
+                  <i class="bi bi-clock-history me-2"></i> Ver Historial
+                </a>
+                {% if is_admin %}
+                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">
+                  <i class="bi bi-trash me-2"></i> Eliminar inmueble
+                </button>
+                <a href="{% url 'admin_inmuebles_editar' id_inmueble=inmueble.id_inmueble %}" class="btn btn-warning">
+                  <i class="bi bi-pencil-square me-2"></i> Editar inmueble
+                </a>
+              </div> -->
+              {% endif %}
+            {% else %}
+              <h3 class="h4 mb-3">Reservar</h3>
+              <div class="d-flex align-items-end mb-3">
+                <span class="h3 text-primary">${{ inmueble.precio_por_dia|floatformat:"0" }}</span>
+                <span class="text-muted ms-1">/ noche</span>
+              </div>
+              
+              <form method="post" action="{% url 'crear_reserva' id_inmueble=inmueble.id_inmueble %}">
+                {% csrf_token %}
+                <div class="mb-3">
+                  <label for="fecha_inicio" class="form-label">Fecha de llegada</label>
+                  <input type="text" class="form-control" id="fecha_inicio" name="fecha_inicio" required autocomplete="off">
+                </div>
+                <div class="mb-3">
+                  <label for="fecha_fin" class="form-label">Fecha de salida</label>
+                  <input type="text" class="form-control" id="fecha_fin" name="fecha_fin" required autocomplete="off">
+                </div>
+                <!-- aca se pide la cantidad de adultos y niños -->
+                <div class="mb-3">
+                  <label for="cantidad_adultos" class="form-label">Cantidad de adultos</label>
+                  <input type="number" class="form-control" id="cantidad_adultos" name="cantidad_adultos" min="1" max="{{ inmueble.cantidad_huespedes }}" required>
+                </div>
+                <div class="mb-3">
+                  <label for="cantidad_ninos" class="form-label">Cantidad de niños</label>
+                  <input type="number" class="form-control" id="cantidad_ninos" name="cantidad_ninos" min="0" max="{{ inmueble.cantidad_huespedes }}" required>
+                </div>
+                <!-- Formulario oculto para agregar huésped
+                <div class="mb-3">
+                  <ul id="lista-huespedes" class="list-group mb-2" data-max-huespedes="{{ inmueble.cantidad_huespedes }}"></ul>
+                  <button type="button" class="btn btn-outline-primary btn-sm w-100" id="btn-agregar-huesped">
+                    <i class="bi bi-person-plus"></i> Agregar huésped
+                  </button>
+                </div>
+                <div id="form-huesped" class="card card-body mb-3" style="display:none; max-width: 500px;">
+                  <div class="mb-3">
+                    <label for="huesped-nombre" class="form-label">Nombre</label>
+                    <input type="text" class="form-control" id="huesped-nombre" placeholder="Nombre">
+                  </div>
+                  <div class="mb-3">
+                    <label for="huesped-apellido" class="form-label">Apellido</label>
+                    <input type="text" class="form-control" id="huesped-apellido" placeholder="Apellido">
+                  </div>
+                  <div class="mb-3">
+                    <label for="huesped-dni" class="form-label">DNI</label>
+                    <input type="text" class="form-control" id="huesped-dni" placeholder="DNI">
+                  </div>
+                  <div class="mb-3">
+                    <label for="huesped-fecha-nac" class="form-label">Fecha de nacimiento</label>
+                    <input type="date" class="form-control" id="huesped-fecha-nac" placeholder="Fecha de nacimiento">
+                  </div>
+                  <div class="mt-2 text-end">
+                    <button type="button" class="btn btn-naranja btn-sm" id="btn-aceptar-huesped">Aceptar</button>
+                    <button type="button" class="btn btn-azul btn-secondary btn-sm" id="btn-cancelar-huesped">Cancelar</button>
+                  </div>
+                </div>
+                <!-- Campo oculto para enviar los huéspedes como JSON 
+                <input type="hidden" name="huespedes_json" id="huespedes-json">
+                -->
 
 {% block sidebar_reserva_o_admin %}
   <div class="card shadow-sm sticky-top" style="top: 20px;">
@@ -154,7 +194,53 @@
         </form>
       {% endif %}
     </div>
-  </div>
+
+    <!-- Modal de confirmación para eliminar -->
+    <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="confirmDeleteModalLabel">Confirmar Eliminación</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            ¿Estás seguro de que quieres eliminar el inmueble "{{ inmueble.nombre }}"? Esta acción no se puede deshacer.
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <form method="post" action="{% url 'admin_inmuebles_eliminar' id_inmueble=inmueble.id_inmueble %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-danger">Eliminar</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+
+{% if not user.is_authenticated %}
+  <!-- Cartelito para autenticarte -->
+  <section class="container mt-5">
+    <div class="card shadow-sm border-0 text-center py-4 mb-5">
+      <div class="card-body">
+        <i class="bi bi-lock-fill display-4 text-muted mb-3"></i>
+        <h3 class="h4 mb-3">Iniciá sesión para dejar tu reseña o comentario</h3>
+        <p class="mb-4">Compartí tu experiencia con este alojamiento</p>
+        <div class="d-flex justify-content-center gap-3">
+          <a href="{% url 'login' %}" class="btn btn-primary btn-azul">
+            Iniciar sesión
+          </a>
+          <a href="{% url 'register' %}" class="btn btn-outline-primary">
+            Registrarse
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+{% endif %}
+  {% include '_comentarios.html' %}
+  {% include '_resenias.html' %}
 {% endblock %}
 
 {% block modal_eliminar %}
@@ -182,9 +268,16 @@
 
 {% block extra_js_custom %}
   <script>
-    // Lógica de agregar huésped
-    let huespedes = [];
-    const maxHuespedes = parseInt(document.getElementById('lista-huespedes').dataset.maxHuespedes);
+    {% if fecha_fin_mantenimiento %}
+      var fechaFinMantenimiento = "{{ fecha_fin_mantenimiento }}";
+    {% else %}
+      var fechaFinMantenimiento = null;
+    {% endif %}
+    // Convertir los mensajes de Django a SweetAlert
+    const messageElements = document.querySelectorAll('.django-message');
+    messageElements.forEach(element => {
+      const tags = element.getAttribute('data-tags');
+      const message = element.getAttribute('data-message');
 
     // Si hay datos de cliente, precargarlos como primer huésped
     const datosClienteJSON = document.getElementById('datosClienteJSON');
@@ -223,20 +316,115 @@
       limpiarErroresHuesped();
     });
 
-    document.getElementById('btn-aceptar-huesped').addEventListener('click', function() {
-      limpiarErroresHuesped();
-      const nombre = document.getElementById('huesped-nombre').value.trim();
-      const apellido = document.getElementById('huesped-apellido').value.trim();
-      const dni = document.getElementById('huesped-dni').value.trim();
-      const fechaNac = document.getElementById('huesped-fecha-nac').value;
+      function marcarPropias(dayElem) {
+        const fechaStr = dayElem.dateObj.toISOString().slice(0, 10);
+        if (fechasOcupadasPropias.includes(fechaStr)) {
+          dayElem.classList.add('flatpickr-day-propia');
+        }
+      }
+      console.log("Fechas ocupadas:", fechasOcupadas);
+      console.log("Fechas ocupadas propias:", fechasOcupadasPropias);
+      console.log("Fecha fin mantenimiento:", fechaFinMantenimiento);
+      console.log(getMinDate());
+      // Sumar un día a la fecha de fin de mantenimiento si existe
+      function getMinDate() {
+        if (fechaFinMantenimiento) {
+          const fecha = new Date(fechaFinMantenimiento);
+          fecha.setDate(fecha.getDate() + 1);
+          return fecha.toISOString().slice(0, 10);
+        }
+        return "today";
+      }
 
-      let errores = false;
-      if (!nombre) { mostrarError('huesped-nombre', 'El nombre es obligatorio.'); errores = true; }
-      if (!apellido) { mostrarError('huesped-apellido', 'El apellido es obligatorio.'); errores = true; }
-      if (!dni) { mostrarError('huesped-dni', 'El DNI es obligatorio.'); errores = true; }
-      if (!fechaNac) { mostrarError('huesped-fecha-nac', 'La fecha de nacimiento es obligatoria.'); errores = true; }
+      flatpickr("#fecha_inicio", {
+        disable: fechasOcupadas,
+        dateFormat: "Y-m-d",
+        minDate: getMinDate(),
+        onDayCreate: function(dObj, dStr, fp, dayElem) {
+          marcarPropias(dayElem);
+        }
+      });
 
-      if (errores) {
+      flatpickr("#fecha_fin", {
+        disable: fechasOcupadas,
+        dateFormat: "Y-m-d",
+        minDate: getMinDate(),
+        onDayCreate: function(dObj, dStr, fp, dayElem) {
+          marcarPropias(dayElem);
+        }
+      });
+
+      // Lógica de agregar huésped
+      let huespedes = [];
+      const maxHuespedes = parseInt(document.getElementById('lista-huespedes').dataset.maxHuespedes);
+
+      // Si hay datos de cliente, precargarlos como primer huésped
+      const datosClienteJSON = document.getElementById('datosClienteJSON');
+      if (datosClienteJSON && datosClienteJSON.textContent) {
+          try {
+              const datosCliente = JSON.parse(datosClienteJSON.textContent);
+              if (datosCliente.nombre && datosCliente.apellido && datosCliente.dni) {
+                  huespedes.push(datosCliente);
+                  actualizarListaHuespedes();
+              }
+          } catch (e) {
+              console.error("Error al parsear datosClienteJSON:", e);
+          }
+      }
+
+
+      document.getElementById('btn-agregar-huesped').addEventListener('click', function() {
+        if (huespedes.length >= maxHuespedes) {
+          Swal.fire({
+            position: 'top-end',
+            icon: 'warning',
+            title: `Ya agregaste el máximo de ${maxHuespedes} huéspedes.`,
+            showConfirmButton: false,
+            timer: 3000,
+            toast: true,
+            timerProgressBar: true
+          });
+          return;
+        }
+        document.getElementById('form-huesped').style.display = 'block';
+        limpiarFormHuesped();
+      });
+
+      document.getElementById('btn-cancelar-huesped').addEventListener('click', function() {
+        document.getElementById('form-huesped').style.display = 'none';
+        limpiarErroresHuesped();
+      });
+
+      document.getElementById('btn-aceptar-huesped').addEventListener('click', function() {
+        limpiarErroresHuesped();
+        const nombre = document.getElementById('huesped-nombre').value.trim();
+        const apellido = document.getElementById('huesped-apellido').value.trim();
+        const dni = document.getElementById('huesped-dni').value.trim();
+        const fechaNac = document.getElementById('huesped-fecha-nac').value;
+
+        let errores = false;
+        if (!nombre) { mostrarError('huesped-nombre', 'El nombre es obligatorio.'); errores = true; }
+        if (!apellido) { mostrarError('huesped-apellido', 'El apellido es obligatorio.'); errores = true; }
+        if (!dni) { mostrarError('huesped-dni', 'El DNI es obligatorio.'); errores = true; }
+        if (!fechaNac) { mostrarError('huesped-fecha-nac', 'La fecha de nacimiento es obligatoria.'); errores = true; }
+
+        if (errores) {
+          Swal.fire({
+            position: 'top-end',
+            icon: 'error',
+            title: 'Por favor, completa todos los campos del huésped.',
+            showConfirmButton: false,
+            timer: 3000,
+            toast: true,
+            timerProgressBar: true
+          });
+          return;
+        }
+
+        const huesped = { nombre, apellido, dni, fecha_nac: fechaNac };
+        huespedes.push(huesped);
+        actualizarListaHuespedes();
+        document.getElementById('form-huesped').style.display = 'none';
         Swal.fire({
           position: 'top-end',
           icon: 'error',
@@ -338,4 +526,5 @@
       document.querySelectorAll('#form-huesped .error-message').forEach(el => el.remove());
     }
   </script>
-{% endblock extra_js_custom %}
+{% endblock extra_js %}
+

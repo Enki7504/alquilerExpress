@@ -1,8 +1,54 @@
 {% extends 'admin/admin_base.html' %}
 {% load static %}
 
-{% block title %}Alta de Inmuebles | Panel Admin{% endblock %}
+{% block title %}Estadísticas de Empleados | Panel Admin{% endblock %}
 
 {% block admin_content %}
-<p>Estadisticas de empleados</p>
+<div class="container mt-4">
+  <h2 class="mb-4">Estadísticas de Empleados</h2>
+  <div class="table-responsive">
+    <table class="table table-striped align-middle">
+      <thead class="table-dark">
+        <tr>
+          <th>Nombre</th>
+          <th>Email</th>
+          <th>Viviendas asignadas</th>
+          <th>Cocheras asignadas</th>
+          <th>Respuestas a comentarios</th>
+          <th>Fecha de alta</th>
+          <th>Último acceso</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for emp in empleados_stats %}
+        <tr>
+          <td>{{ emp.nombre }}</td>
+          <td>{{ emp.email }}</td>
+          <td>
+            <span class="badge bg-primary fs-6">{{ emp.cantidad_inmuebles }}</span>
+          </td>
+          <td>
+            <span class="badge bg-primary fs-6">{{ emp.cantidad_cocheras }}</span>
+          </td>
+          <td>
+            <span class="badge bg-success fs-6">{{ emp.respuestas }}</span>
+          </td>
+          <td>{{ emp.fecha_alta|date:"d/m/Y" }}</td>
+          <td>
+            {% if emp.ultimo_acceso %}
+              {{ emp.ultimo_acceso|date:"d/m/Y H:i" }}
+            {% else %}
+              <span class="text-muted">Nunca</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="text-center">No hay empleados registrados.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
 {% endblock %}
