@@ -54,7 +54,7 @@
                       class="btn btn-sm btn-secondary cambiar-estado-btn"
                       data-cochera="{{ cochera.id_cochera }}"
                       data-estado-actual="{{ cochera.estado.nombre }}">
-                Mantenimiento
+                Cambiar Estado
               </button>
               <!-- Select de empleado asignado -->
               <form method="post" action="{% url 'cambiar_empleado_cochera' cochera.id_cochera %}" style="display:inline;">
