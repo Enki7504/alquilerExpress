@@ -41,15 +41,7 @@
           <td>{{ inmueble.nombre }}</td>
           <td>{{ inmueble.direccion }}</td>
           <td>${{ inmueble.precio_por_dia|floatformat:2 }}</td>
-          <td>
-            <span class="badge bg-info">{{ inmueble.estado.nombre }}</span>
-            <button type="button"
-                    class="btn btn-sm btn-secondary cambiar-estado-btn ms-2"
-                    data-inmueble="{{ inmueble.id_inmueble }}"
-                    data-estado-actual="{{ inmueble.estado.nombre }}">
-              Cambiar estado
-            </button>
-          </td>
+          <td>{{ inmueble.estado.nombre }}</td>
           <td>
             <a href="{% url 'detalle_inmueble' inmueble.id_inmueble %}" class="btn btn-sm btn-info" title="Ver Detalles">Ver</a>
             <a href="{% url 'admin_inmuebles_reservas' inmueble.id_inmueble %}" class="btn btn-sm btn-primary" title="Ver Estado/Reservas">Reservas</a>
@@ -57,6 +49,13 @@
             {% if user.is_staff %}
               <a href="{% url 'admin_inmuebles_editar' inmueble.id_inmueble %}" class="btn btn-sm btn-warning" title="Editar">Editar</a>
               <a href="#" class="btn btn-sm btn-danger eliminar-inmueble" data-id="{{ inmueble.id_inmueble }}" title="Eliminar">Eliminar</a>
+              <!-- Botón de mantenimiento -->
+              <button type="button"
+                      class="btn btn-sm btn-secondary cambiar-estado-btn"
+                      data-inmueble="{{ inmueble.id_inmueble }}"
+                      data-estado-actual="{{ inmueble.estado.nombre }}">
+                Mantenimiento
+              </button>
               <!-- Select de empleado asignado -->
               <form method="post" action="{% url 'cambiar_empleado_inmueble' inmueble.id_inmueble %}" style="display:inline;">
                 {% csrf_token %}

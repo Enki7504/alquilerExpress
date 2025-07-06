@@ -20,7 +20,7 @@
       </div>
       <div class="mb-3">
         <label class="form-label">Provincia</label>
-        <select class="form-select filtros__campo" name="provincia" id="provincia-select">
+        <select class="form-select filtros__campo" name="provincia" id="provincia-select" {% if no_provinces_found %}disabled{% endif %}>
           <option value="">Todas</option>
           {% for provincia in provincias %}
             <option value="{{ provincia.id }}" {% if request.GET.provincia == provincia.id|stringformat:"s" %}selected{% endif %}>{{ provincia.nombre }}</option>
@@ -143,7 +143,7 @@
       {% empty %}
       <div class="col-12">
         <div class="mensaje-vacio alert alert-info" role="alert">
-          <i class="bi bi-info-circle"></i> No se encontraron inmuebles disponibles.
+          <i class="bi bi-info-circle"></i> No se encontraron viviendas disponibles.
         </div>
       </div>
       {% endfor %}
