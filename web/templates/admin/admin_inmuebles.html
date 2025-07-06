@@ -54,7 +54,7 @@
                       class="btn btn-sm btn-secondary cambiar-estado-btn"
                       data-inmueble="{{ inmueble.id_inmueble }}"
                       data-estado-actual="{{ inmueble.estado.nombre }}">
-                Mantenimiento
+                Cambiar Estado
               </button>
               <!-- Select de empleado asignado -->
               <form method="post" action="{% url 'cambiar_empleado_inmueble' inmueble.id_inmueble %}" style="display:inline;">

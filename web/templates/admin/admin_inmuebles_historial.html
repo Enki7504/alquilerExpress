@@ -15,7 +15,6 @@
       <table class="table table-hover">
         <thead>
           <tr>
-            <th>ID</th>
             <th>Cliente</th>
             <th>Fechas</th>
             <th>Estado</th>
@@ -25,7 +24,6 @@
         <tbody>
           {% for reserva in reservas %}
           <tr>
-            <td>{{ reserva.id_reserva }}</td>
             <td>
               {% with relacion=reserva.clienteinmueble_set.first %}
                 {% if relacion and relacion.cliente %}
@@ -46,13 +44,12 @@
               </span>
             </td>
             <td>
-              <a href="{% url 'detalle_inmueble' inmueble.id_inmueble %}" class="btn btn-sm btn-info">Ver Vivienda</a>
               <a href="{% url 'ver_detalle_reserva' reserva.id_reserva %}" class="btn btn-sm btn-secondary">Ver Detalle</a>
             </td>
           </tr>
           {% empty %}
           <tr>
-            <td colspan="5" class="text-center">No hay reservas en el historial</td>
+            <td colspan="4" class="text-center">No hay reservas en el historial</td>
           </tr>
           {% endfor %}
         </tbody>
