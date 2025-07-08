@@ -106,7 +106,7 @@ class InmuebleForm(forms.ModelForm):
         widget=forms.Select(attrs={'class': 'form-select', 'id': 'cocheraSelect'})
     )
     empleado = forms.ModelChoiceField(
-        queryset=Perfil.objects.filter(usuario__groups__name="empleado"),
+        queryset=Perfil.objects.none(),
         required=False,
         label="Empleado asignado",
         widget=forms.Select(attrs={'class': 'form-select'})
@@ -119,7 +119,10 @@ class InmuebleForm(forms.ModelForm):
     )
 
     def __init__(self, *args, **kwargs):
+        perfiles_empleados = kwargs.pop('perfiles_empleados', None)
         super().__init__(*args, **kwargs)
+    
+        # ciudades
         if 'provincia' in self.data:
             try:
                 provincia_id = int(self.data.get('provincia'))
@@ -130,13 +133,17 @@ class InmuebleForm(forms.ModelForm):
             self.fields['ciudad'].queryset = Ciudad.objects.filter(provincia=self.instance.provincia).order_by('nombre')
         else:
             self.fields['ciudad'].queryset = Ciudad.objects.none()
+
+        # cocheras
         if self.instance.pk and self.instance.cochera:
-            cocheras = Cochera.objects.filter(
-                Q(estado__nombre="Disponible") | Q(pk=self.instance.cochera.pk)
-            )
+            cocheras = Cochera.objects.filter(Q(estado__nombre="Disponible") | Q(pk=self.instance.cochera.pk))
         else:
             cocheras = Cochera.objects.filter(estado__nombre="Disponible")
         self.fields['cochera'].queryset = cocheras
+
+        # empleados
+        if perfiles_empleados is not None:
+            self.fields['empleado'].queryset = perfiles_empleados
 
     class Meta:
         model = Inmueble
@@ -219,7 +226,7 @@ class CocheraForm(forms.ModelForm):
         label="Estado"
     )
     empleado = forms.ModelChoiceField(
-        queryset=Perfil.objects.filter(usuario__groups__name="empleado"),
+        queryset=Perfil.objects.none(),
         required=False,
         label="Empleado asignado",
         widget=forms.Select(attrs={'class': 'form-select'})
@@ -232,7 +239,11 @@ class CocheraForm(forms.ModelForm):
     )
 
     def __init__(self, *args, **kwargs):
+
+        perfiles_empleados = kwargs.pop('perfiles_empleados', None)
         super().__init__(*args, **kwargs)
+
+        # ciudades
         if 'provincia' in self.data:
             try:
                 provincia_id = int(self.data.get('provincia'))
@@ -243,6 +254,17 @@ class CocheraForm(forms.ModelForm):
             self.fields['ciudad'].queryset = Ciudad.objects.filter(provincia=self.instance.provincia).order_by('nombre')
         else:
             self.fields['ciudad'].queryset = Ciudad.objects.none()
+
+        # cocheras
+        if self.instance.pk and self.instance.cochera:
+            cocheras = Cochera.objects.filter(Q(estado__nombre="Disponible") | Q(pk=self.instance.cochera.pk))
+        else:
+            cocheras = Cochera.objects.filter(estado__nombre="Disponible")
+        self.fields['cochera'].queryset = cocheras
+
+        # empleados
+        if perfiles_empleados is not None:
+            self.fields['empleado'].queryset = perfiles_empleados
 
     class Meta:
         model = Cochera

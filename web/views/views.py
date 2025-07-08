@@ -3,7 +3,6 @@ import random
 import json
 import secrets
 import string
-import mercadopago
 
 from django.conf import settings
 from django.contrib import messages
@@ -17,33 +16,28 @@ from django.utils import timezone
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
 from django.views.decorators.http import require_POST
-from django.db import IntegrityError, transaction
 from django.db.models import Q
 from datetime import timedelta
-from django.template.loader import render_to_string
 # mercado pago
 from django.views.decorators.csrf import csrf_exempt
 
-
 # Importaciones de formularios locales
-from .forms import (
+from ..forms import (
     RegistroUsuarioForm,
     InmuebleForm,
     CocheraForm,
     ComentarioForm,
     LoginForm,
-    ClienteCreationForm,
-    EmpleadoCreationForm,
     EmpleadoAdminCreationForm,
-    ClienteAdminCreationForm,
     ChangePasswordForm,
     ReseniaForm,
     RespuestaComentarioForm,
     NotificarImprevistoForm,
+    ClienteAdminCreationForm
 )
 
 # Importaciones de modelos locales
-from .models import (
+from ..models import (
     Inmueble,
     InmuebleImagen,
     InmuebleEstado,
@@ -60,23 +54,18 @@ from .models import (
     Perfil,
     ReservaEstado,
     Ciudad,
-    Provincia,
     Cochera,
     RespuestaComentario,
-    Huesped,
-    Tarjeta
+    Tarjeta,
+    Provincia,
 )
 
 # Importaciones de utilidades locales
-from .utils import (
+from ..utils import (
     email_link_token,
     crear_notificacion,
     cambiar_estado_inmueble
 )
-
-# para enviar correos a empleados sobre reservas
-from .utils import enviar_mail_a_empleados_sobre_reserva
-
 
 ################################################################################################################
 # --- Vistas Públicas Generales ---
@@ -660,7 +649,6 @@ def detalle_cochera(request, id_cochera):
 ################################################################################################################
 
 def obtener_provincias_y_ciudades(tipo='inmueble', provincia_id=None):
-    from .models import Provincia, Ciudad
     if tipo == 'inmueble':
         provincias = Provincia.objects.filter(ciudades__inmueble__isnull=False).distinct()
         if provincia_id:
@@ -819,10 +807,6 @@ def admin_alta_cliente(request):
     Permite a administradores y empleados dar de alta un cliente.
     El cliente es agregado al grupo 'cliente' y 'firstlogincliente' para forzar cambio de contraseña.
     """
-    from django.contrib.auth.models import Group
-    from .forms import ClienteAdminCreationForm
-    import secrets, string
-
     if request.method == "POST":
         form = ClienteAdminCreationForm(request.POST)
         if form.is_valid():
@@ -1909,7 +1893,6 @@ def marcar_todas_leidas(request):
 
 @login_required
 def cambiar_contrasena(request):
-    from django.contrib.auth.models import Group
     if request.method == "POST":
         form = ChangePasswordForm(request.user, request.POST)
         if form.is_valid():

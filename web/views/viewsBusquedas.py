@@ -1,84 +1,38 @@
-import datetime
-import random
-import json
-import secrets
-import string
-import mercadopago
-
-from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.decorators import login_required, user_passes_test
-from django.contrib.auth.models import User, Group
-from django.core.mail import send_mail
-from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
-from django.utils.encoding import force_str
-from django.utils.http import urlsafe_base64_decode
-from django.views.decorators.http import require_POST
-from django.db import IntegrityError, transaction
-from django.db.models import Q
 from datetime import timedelta
-from django.template.loader import render_to_string
-# mercado pago
-from django.views.decorators.csrf import csrf_exempt
 
 
 # Importaciones de formularios locales
-from .forms import (
-    RegistroUsuarioForm,
-    InmuebleForm,
-    CocheraForm,
+from ..forms import (
     ComentarioForm,
-    LoginForm,
-    ClienteCreationForm,
-    EmpleadoCreationForm,
-    EmpleadoAdminCreationForm,
-    ClienteAdminCreationForm,
-    ChangePasswordForm,
     ReseniaForm,
     RespuestaComentarioForm,
-    NotificarImprevistoForm,
 )
 
 # Importaciones de modelos locales
-from .models import (
+from ..models import (
     Inmueble,
-    InmuebleImagen,
     InmuebleEstado,
     CocheraEstado,
-    CocheraImagen,
-    Notificacion,
     Resenia,
     Comentario,
-    LoginOTP,
     Reserva,
-    ClienteInmueble,
-    Estado,
     Cochera,
-    Perfil,
-    ReservaEstado,
+    Cochera,
     Ciudad,
-    Provincia,
-    Cochera,
     RespuestaComentario,
-    Huesped,
-    Tarjeta
+    Provincia
 )
 
 # Importaciones de utilidades locales
-from .utils import (
-    email_link_token,
+from ..utils import (
     crear_notificacion,
-    cambiar_estado_inmueble,
     is_admin,
     is_admin_or_empleado,
     obtener_provincias_y_ciudades
 )
-
-# para enviar correos a empleados sobre reservas
-from .utils import enviar_mail_a_empleados_sobre_reserva
 
 def buscar_inmuebles(request):
     query = request.GET.get('q', '').strip()
@@ -464,7 +418,6 @@ def detalle_cochera(request, id_cochera):
     })
 
 def obtener_provincias_y_ciudades(tipo='inmueble', provincia_id=None):
-    from .models import Provincia, Ciudad, Inmueble, Cochera
 
     if tipo == 'inmueble':
         inmuebles_validos = Inmueble.objects.exclude(estado__nombre__in=['Oculto', 'Eliminado'])

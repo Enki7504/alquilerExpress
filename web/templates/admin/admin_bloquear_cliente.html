@@ -1,0 +1,109 @@
+{% extends 'admin/admin_base.html' %}
+{% load static %}
+
+{% block title %}Bloquear Clientes | Admin{% endblock %}
+
+{% block extra_css %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'css/admin_bloquear_cliente.css' %}">
+{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">Bloquear Clientes</h1>
+</div>
+
+<!-- Barra de búsqueda -->
+<form class="d-flex mb-4" role="search" method="GET" action="{% url 'admin_bloquear_cliente' %}">
+    <input class="form-control me-2" type="search" placeholder="Ingresar nombre, apellido o username..." aria-label="Search" name="q" value="{{ query }}">
+    <button class="btn btn-outline-primary" type="submit">Buscar</button>
+</form>
+
+<!-- Clientes activos -->
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <h5 class="card-title">Clientes Activos</h5>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle table-fixed table-cliente">
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Apellido</th>
+            <th>Correo</th>
+            <th>Username</th>
+            <th>Acción</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for cliente in clientes_activos %}
+          <tr>
+            <td>{{ cliente.first_name }}</td>
+            <td>{{ cliente.last_name }}</td>
+            <td>{{ cliente.email }}</td>
+            <td>{{ cliente.username }}</td>
+            <td>
+              <form method="post" action="{% url 'admin_bloquear_cliente' %}" style="display:inline;">
+                {% csrf_token %}
+                <input type="hidden" name="cliente_id" value="{{ cliente.id }}">
+                <input type="hidden" name="accion" value="bloquear">
+                <button type="submit" class="btn btn-danger btn-sm">
+                  <i class="bi bi-lock-fill"></i> Bloquear
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="text-center">No hay clientes activos para mostrar.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Clientes bloqueados -->
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <h5 class="card-title">Clientes Bloqueados</h5>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle table-fixed table-cliente">
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Apellido</th>
+            <th>Correo</th>
+            <th>Username</th>
+            <th>Acción</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for cliente in clientes_bloqueados %}
+          <tr>
+            <td>{{ cliente.first_name }}</td>
+            <td>{{ cliente.last_name }}</td>
+            <td>{{ cliente.email }}</td>
+            <td>{{ cliente.username }}</td>
+            <td>
+              <form method="post" action="{% url 'admin_bloquear_cliente' %}" style="display:inline;">
+                {% csrf_token %}
+                <input type="hidden" name="cliente_id" value="{{ cliente.id }}">
+                <input type="hidden" name="accion" value="desbloquear">
+                <button type="submit" class="btn btn-success btn-sm">
+                  <i class="bi bi-unlock-fill"></i> Desbloquear
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="text-center">No hay clientes bloqueados.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

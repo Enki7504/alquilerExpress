@@ -1,91 +1,36 @@
-import datetime
-import random
-import json
-import secrets
-import string
-import mercadopago
-
-from django.conf import settings
-from django.contrib import messages
-from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.contrib.auth.models import User, Group
-from django.core.mail import send_mail
-from django.http import JsonResponse
-from django.shortcuts import get_object_or_404, redirect, render
-from django.utils import timezone
-from django.utils.encoding import force_str
-from django.utils.http import urlsafe_base64_decode
-from django.views.decorators.http import require_POST
-from django.db import IntegrityError, transaction
-from django.db.models import Q, Count
-from django.db.models.functions import TruncDate, TruncMonth
-from django.utils.dateformat import DateFormat
+from django.shortcuts import render
+from django.db.models import Count
 from datetime import timedelta, date
-from django.template.loader import render_to_string
 # mercado pago
-from django.views.decorators.csrf import csrf_exempt
 from collections import Counter
 
 
 # Importaciones de formularios locales
-from .forms import (
-    RegistroUsuarioForm,
-    InmuebleForm,
-    CocheraForm,
-    ComentarioForm,
-    LoginForm,
-    ClienteCreationForm,
-    EmpleadoCreationForm,
-    EmpleadoAdminCreationForm,
-    ClienteAdminCreationForm,
-    ChangePasswordForm,
-    ReseniaForm,
-    RespuestaComentarioForm,
-    NotificarImprevistoForm,
-)
 
 # Importaciones de modelos locales
-from .models import (
-    Inmueble,
-    InmuebleImagen,
-    InmuebleEstado,
-    CocheraEstado,
-    CocheraImagen,
-    Notificacion,
-    Resenia,
-    Comentario,
-    LoginOTP,
+from ..models import (
     Reserva,
-    ClienteInmueble,
     Estado,
     Cochera,
-    Perfil,
-    ReservaEstado,
-    Ciudad,
-    Provincia,
     Cochera,
     RespuestaComentario,
-    Huesped,
-    Tarjeta
+    Perfil,
+    User, 
+    Perfil, 
+    Resenia, 
+    Comentario,
+    Inmueble
 )
 
 # Importaciones de utilidades locales
-from .utils import (
-    email_link_token,
-    crear_notificacion,
-    cambiar_estado_inmueble,
-    is_admin,
+from ..utils import (
     is_admin_or_empleado,
 )
-
-# para enviar correos a empleados sobre reservas
-from .utils import enviar_mail_a_empleados_sobre_reserva
 
 @login_required
 @user_passes_test(is_admin_or_empleado)
 def admin_estadisticas_usuarios(request):
-    from .models import User, Perfil, Reserva, Resenia, Comentario
     total_usuarios = User.objects.count()
     total_clientes = Perfil.objects.filter(usuario__groups__name="cliente").count()
     total_empleados = Perfil.objects.filter(usuario__groups__name="empleado").count()
@@ -104,7 +49,6 @@ def admin_estadisticas_usuarios(request):
 @login_required
 @user_passes_test(is_admin_or_empleado)
 def admin_estadisticas_empleados(request):
-    from .models import Perfil, Reserva, Inmueble
     empleados = Perfil.objects.filter(usuario__groups__name="empleado")
     empleados_stats = []
     for emp in empleados:
@@ -129,8 +73,6 @@ def admin_estadisticas_empleados(request):
 @login_required
 @user_passes_test(is_admin_or_empleado)
 def admin_estadisticas_inmuebles(request):
-    from .models import Inmueble, Estado, Reserva
-
     total_inmuebles = Inmueble.objects.count()
 
     # Estadísticas por estado

@@ -1,83 +1,31 @@
-import datetime
-import random
-import json
 import secrets
 import string
-import mercadopago
 
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User, Group
 from django.core.mail import send_mail
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.utils import timezone
-from django.utils.encoding import force_str
-from django.utils.http import urlsafe_base64_decode
-from django.views.decorators.http import require_POST
-from django.db import IntegrityError, transaction
 from django.db.models import Q
-from datetime import timedelta
-from django.template.loader import render_to_string
-# mercado pago
-from django.views.decorators.csrf import csrf_exempt
-
 
 # Importaciones de formularios locales
-from .forms import (
-    RegistroUsuarioForm,
-    InmuebleForm,
-    CocheraForm,
-    ComentarioForm,
-    LoginForm,
-    ClienteCreationForm,
-    EmpleadoCreationForm,
+from ..forms import (
     EmpleadoAdminCreationForm,
-    ClienteAdminCreationForm,
-    ChangePasswordForm,
-    ReseniaForm,
-    RespuestaComentarioForm,
-    NotificarImprevistoForm,
+    ClienteAdminCreationForm
 )
 
 # Importaciones de modelos locales
-from .models import (
-    Inmueble,
-    InmuebleImagen,
-    InmuebleEstado,
-    CocheraEstado,
-    CocheraImagen,
-    Notificacion,
-    Resenia,
-    Comentario,
-    LoginOTP,
-    Reserva,
-    ClienteInmueble,
-    Estado,
-    Cochera,
+from ..models import (
     Perfil,
-    ReservaEstado,
-    Ciudad,
-    Provincia,
-    Cochera,
-    RespuestaComentario,
-    Huesped,
-    Tarjeta
 )
 
 # Importaciones de utilidades locales
-from .utils import (
-    email_link_token,
-    crear_notificacion,
-    cambiar_estado_inmueble,
+from ..utils import (
     is_admin,
     is_admin_or_empleado,
 )
-
-# para enviar correos a empleados sobre reservas
-from .utils import enviar_mail_a_empleados_sobre_reserva
 
 @login_required
 @user_passes_test(is_admin_or_empleado)
@@ -86,6 +34,10 @@ def admin_panel(request):
     Renderiza el panel principal de administración/empleado.
     """
     return render(request, 'admin/admin_base.html')
+
+##################
+# Gestion de Usuarios
+##################
 
 @login_required
 @user_passes_test(is_admin)
@@ -163,10 +115,6 @@ def admin_alta_cliente(request):
     Permite a administradores y empleados dar de alta un cliente.
     El cliente es agregado al grupo 'cliente' y 'firstlogincliente' para forzar cambio de contraseña.
     """
-    from django.contrib.auth.models import Group
-    from .forms import ClienteAdminCreationForm
-    import secrets, string
-
     if request.method == "POST":
         form = ClienteAdminCreationForm(request.POST)
         if form.is_valid():
@@ -220,6 +168,46 @@ def admin_alta_cliente(request):
     else:
         form = ClienteAdminCreationForm()
     return render(request, 'admin/admin_alta_cliente.html', {'form': form})
+
+from django.contrib import messages
+
+@login_required
+@user_passes_test(is_admin)
+def admin_bloquear_cliente(request):
+    query = request.GET.get('q', '').strip()
+
+    clientes_activos = User.objects.filter(is_active=True, is_staff=False)
+    if query:
+        clientes_activos = clientes_activos.filter(
+            Q(first_name__icontains=query) |
+            Q(last_name__icontains=query) |
+            Q(username__icontains=query)
+        )
+
+    clientes_bloqueados = User.objects.filter(is_active=False, is_staff=False)
+
+    if request.method == 'POST':
+        cliente_id = request.POST.get('cliente_id')
+        accion = request.POST.get('accion')
+
+        cliente = get_object_or_404(User, id=cliente_id)
+
+        if accion == 'bloquear':
+            cliente.is_active = False
+            messages.success(request, 'Cliente bloqueado correctamente.')
+        elif accion == 'desbloquear':
+            cliente.is_active = True
+            messages.success(request, 'Cliente desbloqueado correctamente.')
+
+        cliente.save()
+        return redirect('admin_bloquear_cliente')
+
+    return render(request, 'admin/admin_bloquear_cliente.html', {
+        'clientes_activos': clientes_activos,
+        'clientes_bloqueados': clientes_bloqueados,
+        'query': query
+    })
+
 
 ##################
 # Complementarias

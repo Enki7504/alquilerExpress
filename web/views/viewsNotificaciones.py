@@ -1,87 +1,30 @@
-import datetime
-import random
-import json
-import secrets
-import string
-import mercadopago
-
-from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.contrib.auth.models import User, Group
-from django.core.mail import send_mail
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.utils import timezone
-from django.utils.encoding import force_str
-from django.utils.http import urlsafe_base64_decode
 from django.views.decorators.http import require_POST
-from django.db import IntegrityError, transaction
-from django.db.models import Q
-from datetime import timedelta
-from django.template.loader import render_to_string
-# mercado pago
-from django.views.decorators.csrf import csrf_exempt
-
 
 # Importaciones de formularios locales
-from .forms import (
-    RegistroUsuarioForm,
-    InmuebleForm,
-    CocheraForm,
-    ComentarioForm,
-    LoginForm,
-    ClienteCreationForm,
-    EmpleadoCreationForm,
-    EmpleadoAdminCreationForm,
-    ClienteAdminCreationForm,
-    ChangePasswordForm,
-    ReseniaForm,
-    RespuestaComentarioForm,
+from ..forms import (
     NotificarImprevistoForm,
 )
 
 # Importaciones de modelos locales
-from .models import (
-    Inmueble,
-    InmuebleImagen,
-    InmuebleEstado,
-    CocheraEstado,
-    CocheraImagen,
+from ..models import (
     Notificacion,
-    Resenia,
-    Comentario,
-    LoginOTP,
-    Reserva,
-    ClienteInmueble,
-    Estado,
-    Cochera,
-    Perfil,
-    ReservaEstado,
-    Ciudad,
-    Provincia,
-    Cochera,
-    RespuestaComentario,
-    Huesped,
-    Tarjeta
+    Reserva
 )
 
 # Importaciones de utilidades locales
-from .utils import (
-    email_link_token,
+from ..utils import (
     crear_notificacion,
-    cambiar_estado_inmueble,
-    is_admin,
     is_admin_or_empleado,
 )
-
-# para enviar correos a empleados sobre reservas
-from .utils import enviar_mail_a_empleados_sobre_reserva
 
 @login_required
 @user_passes_test(is_admin_or_empleado)
 def admin_notificar_imprevisto(request):
+<<<<<<< HEAD:web/viewsNotificaciones.py
     inmuebles = Inmueble.objects.all()
     cocheras = Cochera.objects.all()
     if request.method == "POST" and request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -169,6 +112,30 @@ def admin_notificar_imprevisto(request):
         "inmuebles": inmuebles,
         "cocheras": cocheras,
     })
+=======
+    if request.method == 'POST':
+        form = NotificarImprevistoForm(request.POST)
+        if form.is_valid():
+            inmueble = form.cleaned_data['inmueble']
+            mensaje = form.cleaned_data['mensaje']
+
+            # Notificar al empleado asignado
+            if hasattr(inmueble, 'empleado_asignado') and inmueble.empleado_asignado:
+                crear_notificacion(inmueble.empleado_asignado, f"Imprevisto en {inmueble}: {mensaje}")
+
+            # Notificar a todos los clientes con reservas activas
+            reservas_activas = Reserva.objects.filter(inmueble=inmueble, estado='Pagada')
+            for reserva in reservas_activas:
+                crear_notificacion(reserva.cliente, f"Imprevisto en {inmueble}: {mensaje}")
+
+            messages.success(request, "Se notificó al empleado y a los clientes con reservas activas.")
+            return redirect('admin_notificar_imprevisto')
+    else:
+        form = NotificarImprevistoForm()
+
+    return render(request, 'admin/admin_notificar_imprevisto.html', {'form': form})
+
+>>>>>>> 8587b242383f39ff38e11fd6019fca443f9429c8:web/views/viewsNotificaciones.py
 
 ################################################################################################################
 # --- Vistas de Notificaciones ---

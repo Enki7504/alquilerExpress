@@ -1,6 +1,16 @@
 from django.urls import path
-from . import views, viewsLogin, viewsBusquedas, viewsFiltros, viewsAdmin, viewsAdminInmuebles, viewsAdminEstadisticas
-from . import viewsNotificaciones, viewsReservas, viewsMercadoPago
+from .views import (
+  views, 
+  viewsAdminPropiedades, 
+  viewsLogin, 
+  viewsBusquedas, 
+  viewsFiltros, 
+  viewsAdmin, 
+  viewsAdminEstadisticas,
+  viewsNotificaciones, 
+  viewsReservas, 
+  viewsMercadoPago
+)
 from django.conf.urls.static import static
 from django.conf import settings
 
@@ -26,31 +36,36 @@ urlpatterns = [
     #########################################################################################################
     # URLs del Panel de Administración                                                                       
     #########################################################################################################
+
+    # URL Base del Panel de Administración
     path('panel/', viewsAdmin.admin_panel, name='admin_panel'),
+
     # Gestión de usuarios
     path('panel/alta-empleados/', viewsAdmin.admin_alta_empleados, name='admin_alta_empleados'),
     path('panel/alta-cliente/', viewsAdmin.admin_alta_cliente, name='admin_alta_cliente'),
+    path('panel/bloquear-cliente/', viewsAdmin.admin_bloquear_cliente, name='admin_bloquear_cliente'),
     
     # Gestión de inmuebles
-    path('panel/inmuebles/', viewsAdminInmuebles.admin_inmuebles, name='admin_inmuebles'),
-    path('panel/inmuebles/<int:id_inmueble>/cambiar-empleado/', viewsAdminInmuebles.cambiar_empleado_inmueble, name='cambiar_empleado_inmueble'),    path('panel/inmuebles/alta/', views.admin_inmuebles_alta, name='admin_inmuebles_alta'), # Mantener la alta separada o como parte del CRUD
-    path('panel/inmuebles/editar/<int:id_inmueble>/', viewsAdminInmuebles.admin_inmuebles_editar, name='admin_inmuebles_editar'),
-    path('panel/inmuebles/eliminar/<int:id_inmueble>/', viewsAdminInmuebles.admin_inmuebles_eliminar, name='admin_inmuebles_eliminar'),
-    path('panel/inmuebles/reservas/<int:id_inmueble>/', viewsAdminInmuebles.admin_inmuebles_reservas, name='admin_inmuebles_reservas'),
-    path('panel/inmuebles/historial/<int:id_inmueble>/', viewsAdminInmuebles.admin_inmuebles_historial, name='admin_inmuebles_historial'),
-    path('eliminar-imagen-inmueble/<int:imagen_id>/', viewsAdminInmuebles.eliminar_imagen_inmueble, name='eliminar_imagen_inmueble'),
-    path('panel/inmuebles/<int:id_inmueble>/cambiar-estado/', viewsAdminInmuebles.cambiar_estado_inmueble, name='cambiar_estado_inmueble'),
+    path('panel/inmuebles/', viewsAdminPropiedades.admin_inmuebles, name='admin_inmuebles'),
+    path('panel/inmuebles/<int:id_inmueble>/cambiar-empleado/', viewsAdminPropiedades.cambiar_empleado_inmueble, name='cambiar_empleado_inmueble'),    
+    path('panel/inmuebles/alta/', views.admin_inmuebles_alta, name='admin_inmuebles_alta'), # Mantener la alta separada o como parte del CRUD
+    path('panel/inmuebles/editar/<int:id_inmueble>/', viewsAdminPropiedades.admin_inmuebles_editar, name='admin_inmuebles_editar'),
+    path('panel/inmuebles/eliminar/<int:id_inmueble>/', viewsAdminPropiedades.admin_inmuebles_eliminar, name='admin_inmuebles_eliminar'),
+    path('panel/inmuebles/reservas/<int:id_inmueble>/', viewsAdminPropiedades.admin_inmuebles_reservas, name='admin_inmuebles_reservas'),
+    path('panel/inmuebles/historial/<int:id_inmueble>/', viewsAdminPropiedades.admin_inmuebles_historial, name='admin_inmuebles_historial'),
+    path('eliminar-imagen-inmueble/<int:imagen_id>/', viewsAdminPropiedades.eliminar_imagen_inmueble, name='eliminar_imagen_inmueble'),
+    path('panel/inmuebles/<int:id_inmueble>/cambiar-estado/', viewsAdminPropiedades.cambiar_estado_inmueble, name='cambiar_estado_inmueble'),
 
     # Gestión de cocheras
-    path('panel/cocheras/', viewsAdminInmuebles.admin_cocheras, name='admin_cocheras'),
-    path('panel/cocheras/<int:id_cochera>/cambiar-empleado/', viewsAdminInmuebles.cambiar_empleado_cochera, name='cambiar_empleado_cochera'),
-    path('panel/cocheras/alta/', viewsAdminInmuebles.admin_cocheras_alta, name='admin_cocheras_alta'), # Mantener la alta separada o como parte del CRUD
-    path('panel/cocheras/editar/<int:id_cochera>/', viewsAdminInmuebles.admin_cocheras_editar, name='admin_cocheras_editar'),
-    path('panel/cocheras/eliminar/<int:id_cochera>/', viewsAdminInmuebles.admin_cocheras_eliminar, name='admin_cocheras_eliminar'),
-    path('panel/cocheras/reservas/<int:id_cochera>/', viewsAdminInmuebles.admin_cocheras_reservas, name='admin_cocheras_reservas'),
-    path('panel/cocheras/historial/<int:id_cochera>/', viewsAdminInmuebles.admin_cocheras_historial, name='admin_cocheras_historial'),
-    path('eliminar-imagen-cochera/<int:id_imagen>/', viewsAdminInmuebles.eliminar_imagen_cochera, name='eliminar_imagen_cochera'),
-    path('panel/cocheras/<int:id_cochera>/cambiar-estado/', viewsAdminInmuebles.cambiar_estado_cochera, name='cambiar_estado_cochera'),
+    path('panel/cocheras/', viewsAdminPropiedades.admin_cocheras, name='admin_cocheras'),
+    path('panel/cocheras/<int:id_cochera>/cambiar-empleado/', viewsAdminPropiedades.cambiar_empleado_cochera, name='cambiar_empleado_cochera'),
+    path('panel/cocheras/alta/', viewsAdminPropiedades.admin_cocheras_alta, name='admin_cocheras_alta'), # Mantener la alta separada o como parte del CRUD
+    path('panel/cocheras/editar/<int:id_cochera>/', viewsAdminPropiedades.admin_cocheras_editar, name='admin_cocheras_editar'),
+    path('panel/cocheras/eliminar/<int:id_cochera>/', viewsAdminPropiedades.admin_cocheras_eliminar, name='admin_cocheras_eliminar'),
+    path('panel/cocheras/reservas/<int:id_cochera>/', viewsAdminPropiedades.admin_cocheras_reservas, name='admin_cocheras_reservas'),
+    path('panel/cocheras/historial/<int:id_cochera>/', viewsAdminPropiedades.admin_cocheras_historial, name='admin_cocheras_historial'),
+    path('eliminar-imagen-cochera/<int:id_imagen>/', viewsAdminPropiedades.eliminar_imagen_cochera, name='eliminar_imagen_cochera'),
+    path('panel/cocheras/<int:id_cochera>/cambiar-estado/', viewsAdminPropiedades.cambiar_estado_cochera, name='cambiar_estado_cochera'),
 
     # Estadísiticas
     path('panel/estadisticas-empleados/', viewsAdminEstadisticas.admin_estadisticas_empleados, name='admin_estadisticas_empleados'),
@@ -58,7 +73,7 @@ urlpatterns = [
     path('panel/estadisticas-inmuebles/', viewsAdminEstadisticas.admin_estadisticas_inmuebles, name='admin_estadisticas_inmuebles'),
     path('panel/estadisticas-cocheras/', viewsAdminEstadisticas.admin_estadisticas_cocheras, name='admin_estadisticas_cocheras'),
 
-    # Gestion de Notificaciones
+    # Notificar Imprevisto
     path('panel/notificar-imprevisto/', viewsNotificaciones.admin_notificar_imprevisto, name='admin_notificar_imprevisto'),
     
     # Reservas
