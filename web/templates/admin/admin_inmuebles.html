@@ -256,7 +256,14 @@ document.addEventListener('DOMContentLoaded', function() {
         })
       });
       if (response.ok) {
-        Swal.fire('¡Listo!', 'El estado fue actualizado.', 'success').then(() => {
+        Swal.fire({
+          title: '¡Listo!',
+          text: 'El estado fue actualizado.',
+          icon: 'success',
+          timer: 2000,
+          showConfirmButton: false,
+          timerProgressBar: true
+        }).then(() => {
           location.reload();
         });
       } else {
