@@ -1,14 +1,29 @@
 {% extends 'admin/admin_base.html' %}
 {% load static %}
+
+{% block title %}Notificar imprevisto | Panel Admin{% endblock %}
+
 {% block admin_content %}
 <div class="container mt-4">
   <h2>Notificar Imprevisto</h2>
-  <form method="post">
+  <form method="post" id="imprevisto-form">
     {% csrf_token %}
     <div class="mb-3">
-      {{ form.usuario.label_tag }}
-      {{ form.usuario }}
-      {{ form.usuario.errors }}
+      {{ form.objeto.label_tag }}
+      <select name="objeto" id="id_objeto" class="form-control" required>
+        <option value="" disabled selected>Seleccionar vivienda o cochera...</option>
+        {% for inmueble in inmuebles %}
+          <option value="Vivienda #{{ inmueble.id_inmueble }} - {{ inmueble.nombre }}">
+            Vivienda #{{ inmueble.id_inmueble }} - {{ inmueble.nombre }}
+          </option>
+        {% endfor %}
+        {% for cochera in cocheras %}
+          <option value="Cochera #{{ cochera.id_cochera }} - {{ cochera.nombre }}">
+            Cochera #{{ cochera.id_cochera }} - {{ cochera.nombre }}
+          </option>
+        {% endfor %}
+      </select>
+      {{ form.objeto.errors }}
     </div>
     <div class="mb-3">
       {{ form.mensaje.label_tag }}
@@ -20,4 +35,60 @@
     </button>
   </form>
 </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script>
+    console.log("Cargando script de notificación de imprevistos");
+    document.addEventListener('DOMContentLoaded', function() {
+      const form = document.getElementById('imprevisto-form');
+      const submitBtn = form.querySelector('button[type="submit"]');
+      let enviando = false;
+
+      form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        if (enviando) return;
+        enviando = true;
+        submitBtn.disabled = true;
+
+        const formData = new FormData(form);
+        const csrftoken = form.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        try {
+          const response = await fetch("", {
+            method: "POST",
+            headers: {
+              "X-CSRFToken": csrftoken,
+              "X-Requested-With": "XMLHttpRequest"
+            },
+            body: formData
+          });
+          const data = await response.json();
+          Swal.fire({
+            icon: data.icon || 'info',
+            title: data.title || '',
+            text: data.text || '',
+            timer: 2500,
+            showConfirmButton: false,
+            timerProgressBar: true
+          }).then(() => {
+            if (data.success) {
+              location.reload();
+            }
+          });
+        } catch (err) {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Ocurrió un error al enviar el formulario.',
+            timer: 2500,
+            showConfirmButton: false,
+            timerProgressBar: true
+          });
+        } finally {
+          submitBtn.disabled = false;
+          enviando = false;
+        }
+      });
+    });
+  </script>
 {% endblock %}

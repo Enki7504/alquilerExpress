@@ -583,10 +583,14 @@ class RespuestaComentarioForm(forms.ModelForm):
         fields = ['texto']
 
 class NotificarImprevistoForm(forms.Form):
-    usuario = forms.ModelChoiceField(
-        queryset=Perfil.objects.all(),
-        label="Usuario afectado",
-        widget=forms.Select(attrs={'class': 'form-select'})
+    objeto = forms.CharField(
+        label="Vivienda o cochera afectada",
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'list': 'objetos-list',
+            'autocomplete': 'off',
+            'placeholder': 'Buscar vivienda o cochera...'
+        })
     )
     mensaje = forms.CharField(
         label="Mensaje del imprevisto",

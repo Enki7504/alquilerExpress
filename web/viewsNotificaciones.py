@@ -82,17 +82,93 @@ from .utils import enviar_mail_a_empleados_sobre_reserva
 @login_required
 @user_passes_test(is_admin_or_empleado)
 def admin_notificar_imprevisto(request):
-    if request.method == "POST":
+    inmuebles = Inmueble.objects.all()
+    cocheras = Cochera.objects.all()
+    if request.method == "POST" and request.headers.get('x-requested-with') == 'XMLHttpRequest':
         form = NotificarImprevistoForm(request.POST)
         if form.is_valid():
-            usuario = form.cleaned_data["usuario"]
+            objeto = form.cleaned_data["objeto"]
             mensaje = form.cleaned_data["mensaje"]
-            crear_notificacion(usuario, mensaje)
-            messages.success(request, "Imprevisto notificado correctamente.")
-            return redirect('admin_panel')
+
+            empleado = None
+            if objeto.startswith("Vivienda #"):
+                try:
+                    id_inmueble = int(objeto.split("#")[1].split("-")[0].strip())
+                    inmueble = Inmueble.objects.get(id_inmueble=id_inmueble)
+                    empleado = inmueble.empleado
+                except (ValueError, Inmueble.DoesNotExist):
+                    empleado = None
+            elif objeto.startswith("Cochera #"):
+                try:
+                    id_cochera = int(objeto.split("#")[1].split("-")[0].strip())
+                    cochera = Cochera.objects.get(id_cochera=id_cochera)
+                    empleado = cochera.empleado
+                except (ValueError, Cochera.DoesNotExist):
+                    empleado = None
+
+            if empleado:
+                crear_notificacion(
+                    usuario=empleado,
+                    mensaje=f"Imprevisto reportado en {objeto}: {mensaje}"
+                )
+
+                # Notificar a todos los clientes con reservas a futuro
+                hoy = timezone.now().date()
+                if objeto.startswith("Vivienda #"):
+                    reservas_futuras = Reserva.objects.filter(
+                        inmueble=inmueble,
+                        fecha_inicio__gte=hoy,
+                        estado__nombre__in=["Pendiente", "Confirmada","Aceptada"]
+                    )
+                elif objeto.startswith("Cochera #"):
+                    reservas_futuras = Reserva.objects.filter(
+                        cochera=cochera,
+                        fecha_inicio__gte=hoy,
+                        estado__nombre__in=["Pendiente", "Confirmada","Aceptada"]
+                    )
+                else:
+                    reservas_futuras = Reserva.objects.none()
+
+                for reserva in reservas_futuras:
+                    if hasattr(reserva, "clienteinmueble"):
+                        cliente = reserva.clienteinmueble.cliente
+                        crear_notificacion(
+                            usuario=cliente,
+                            mensaje=f"Imprevisto reportado en {objeto} donde tienes una reserva futura: {mensaje}"
+                        )
+
+                return JsonResponse({
+                    "success": True,
+                    "icon": "success",
+                    "title": "¡Listo!",
+                    "text": "Imprevisto notificado correctamente al empleado y a los clientes con reservas a futuro."
+                })
+            else:
+                return JsonResponse({
+                    "success": False,
+                    "icon": "warning",
+                    "title": "Atención",
+                    "text": "No se encontró un empleado asignado a la vivienda o cochera seleccionada."
+                })
+        else:
+            # Errores de validación
+            errores = []
+            for field, error_list in form.errors.items():
+                for error in error_list:
+                    errores.append(error)
+            return JsonResponse({
+                "success": False,
+                "icon": "error",
+                "title": "Error",
+                "text": " ".join(errores)
+            })
     else:
         form = NotificarImprevistoForm()
-    return render(request, "admin/admin_notificar_imprevisto.html", {"form": form})
+    return render(request, "admin/admin_notificar_imprevisto.html", {
+        "form": form,
+        "inmuebles": inmuebles,
+        "cocheras": cocheras,
+    })
 
 ################################################################################################################
 # --- Vistas de Notificaciones ---
@@ -135,4 +211,4 @@ def marcar_todas_leidas(request):
         return JsonResponse({'success': True})
     except Exception as e:
         messages.error(request, f"Error al marcar notificaciones: {e}")
-        return JsonResponse({'success': False, 'error': str(e)}) 
+        return JsonResponse({'success': False, 'error': str(e)})
