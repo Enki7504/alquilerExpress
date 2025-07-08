@@ -1,34 +1,19 @@
-import datetime
-import random
-import json
 import secrets
 import string
-import mercadopago
 
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User, Group
 from django.core.mail import send_mail
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.utils import timezone
-from django.utils.encoding import force_str
-from django.utils.http import urlsafe_base64_decode
-from django.urls import reverse
-from django.views.decorators.http import require_POST
-from django.db import IntegrityError, transaction
 from django.db.models import Q
-from datetime import timedelta
-from django.template.loader import render_to_string
-# mercado pago
-from django.views.decorators.csrf import csrf_exempt
-
 
 # Importaciones de formularios locales
 from ..forms import (
     EmpleadoAdminCreationForm,
+    ClienteAdminCreationForm
 )
 
 # Importaciones de modelos locales
@@ -130,10 +115,6 @@ def admin_alta_cliente(request):
     Permite a administradores y empleados dar de alta un cliente.
     El cliente es agregado al grupo 'cliente' y 'firstlogincliente' para forzar cambio de contraseña.
     """
-    from django.contrib.auth.models import Group
-    from .forms import ClienteAdminCreationForm
-    import secrets, string
-
     if request.method == "POST":
         form = ClienteAdminCreationForm(request.POST)
         if form.is_valid():

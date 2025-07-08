@@ -21,7 +21,9 @@ from ..models import (
     Reserva,
     Cochera,
     Cochera,
+    Ciudad,
     RespuestaComentario,
+    Provincia
 )
 
 # Importaciones de utilidades locales
@@ -416,7 +418,6 @@ def detalle_cochera(request, id_cochera):
     })
 
 def obtener_provincias_y_ciudades(tipo='inmueble', provincia_id=None):
-    from .models import Provincia, Ciudad, Inmueble, Cochera
 
     if tipo == 'inmueble':
         inmuebles_validos = Inmueble.objects.exclude(estado__nombre__in=['Oculto', 'Eliminado'])

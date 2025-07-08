@@ -1,11 +1,11 @@
 from django.http import JsonResponse
 
 from ..models import (
+    Provincia,
     Ciudad,
 )
 
 def obtener_provincias_y_ciudades(tipo='inmueble', provincia_id=None):
-    from .models import Provincia, Ciudad
     if tipo == 'inmueble':
         provincias = Provincia.objects.filter(ciudades__inmueble__isnull=False).distinct()
         if provincia_id:

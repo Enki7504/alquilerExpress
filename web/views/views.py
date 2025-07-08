@@ -21,7 +21,6 @@ from datetime import timedelta
 # mercado pago
 from django.views.decorators.csrf import csrf_exempt
 
-
 # Importaciones de formularios locales
 from ..forms import (
     RegistroUsuarioForm,
@@ -34,6 +33,7 @@ from ..forms import (
     ReseniaForm,
     RespuestaComentarioForm,
     NotificarImprevistoForm,
+    ClienteAdminCreationForm
 )
 
 # Importaciones de modelos locales
@@ -56,7 +56,8 @@ from ..models import (
     Ciudad,
     Cochera,
     RespuestaComentario,
-    Tarjeta
+    Tarjeta,
+    Provincia,
 )
 
 # Importaciones de utilidades locales
@@ -648,7 +649,6 @@ def detalle_cochera(request, id_cochera):
 ################################################################################################################
 
 def obtener_provincias_y_ciudades(tipo='inmueble', provincia_id=None):
-    from .models import Provincia, Ciudad
     if tipo == 'inmueble':
         provincias = Provincia.objects.filter(ciudades__inmueble__isnull=False).distinct()
         if provincia_id:
@@ -807,10 +807,6 @@ def admin_alta_cliente(request):
     Permite a administradores y empleados dar de alta un cliente.
     El cliente es agregado al grupo 'cliente' y 'firstlogincliente' para forzar cambio de contraseña.
     """
-    from django.contrib.auth.models import Group
-    from .forms import ClienteAdminCreationForm
-    import secrets, string
-
     if request.method == "POST":
         form = ClienteAdminCreationForm(request.POST)
         if form.is_valid():
@@ -1897,7 +1893,6 @@ def marcar_todas_leidas(request):
 
 @login_required
 def cambiar_contrasena(request):
-    from django.contrib.auth.models import Group
     if request.method == "POST":
         form = ChangePasswordForm(request.user, request.POST)
         if form.is_valid():

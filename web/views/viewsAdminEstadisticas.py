@@ -15,6 +15,12 @@ from ..models import (
     Cochera,
     Cochera,
     RespuestaComentario,
+    Perfil,
+    User, 
+    Perfil, 
+    Resenia, 
+    Comentario,
+    Inmueble
 )
 
 # Importaciones de utilidades locales
@@ -25,7 +31,6 @@ from ..utils import (
 @login_required
 @user_passes_test(is_admin_or_empleado)
 def admin_estadisticas_usuarios(request):
-    from .models import User, Perfil, Reserva, Resenia, Comentario
     total_usuarios = User.objects.count()
     total_clientes = Perfil.objects.filter(usuario__groups__name="cliente").count()
     total_empleados = Perfil.objects.filter(usuario__groups__name="empleado").count()
@@ -44,7 +49,6 @@ def admin_estadisticas_usuarios(request):
 @login_required
 @user_passes_test(is_admin_or_empleado)
 def admin_estadisticas_empleados(request):
-    from .models import Perfil, Reserva, Inmueble
     empleados = Perfil.objects.filter(usuario__groups__name="empleado")
     empleados_stats = []
     for emp in empleados:
@@ -69,8 +73,6 @@ def admin_estadisticas_empleados(request):
 @login_required
 @user_passes_test(is_admin_or_empleado)
 def admin_estadisticas_inmuebles(request):
-    from .models import Inmueble, Estado, Reserva
-
     total_inmuebles = Inmueble.objects.count()
 
     # Estadísticas por estado
