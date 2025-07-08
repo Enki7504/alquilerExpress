@@ -94,7 +94,22 @@
         </div>
         <div class="col-md-4">
             {{ form.empleado.label_tag }}
-            {{ form.empleado }}
+            <select name="empleado" id="id_empleado" class="form-select">
+                <option value="">---------</option>
+                {% for empleado in empleados %}
+                  <option value="{{ empleado.pk }}"
+                      {% if inmueble.empleado and inmueble.empleado.pk == empleado.pk %}selected{% endif %}>
+                      {{ empleado.usuario.get_full_name }}
+                  </option>
+                {% endfor %}
+                {% for admin in admins %}
+                  <option value="{{ admin.pk }}"
+                      style="color: #F26A1B;"
+                      {% if inmueble.empleado and inmueble.empleado.pk == admin.pk %}selected{% endif %}>
+                      {{ admin.usuario.get_full_name }}
+                  </option>
+                {% endfor %}
+            </select>
             {{ form.empleado.errors }}
         </div>
         <div class="col-md-12">

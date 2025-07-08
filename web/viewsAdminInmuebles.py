@@ -129,26 +129,6 @@ def admin_inmuebles(request):
     })
 
 @login_required
-@user_passes_test(is_admin)
-def cambiar_empleado_inmueble(request, id_inmueble):
-    if request.method == "POST":
-        inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
-        empleado_id = request.POST.get("empleado")
-        if empleado_id:
-            try:
-                empleado_perfil = Perfil.objects.get(usuario__id=empleado_id)
-                inmueble.empleado = empleado_perfil
-                inmueble.save()
-                messages.success(request, "Empleado asignado actualizado.")
-            except Perfil.DoesNotExist:
-                messages.error(request, "El usuario seleccionado no tiene perfil y no puede ser asignado.")
-        else:
-            inmueble.empleado = None
-            inmueble.save()
-            messages.success(request, "Empleado desasignado.")
-    return redirect('admin_inmuebles')
-
-@login_required
 @user_passes_test(is_admin_or_empleado)
 def admin_cocheras(request):
     """
@@ -213,6 +193,25 @@ def admin_cocheras(request):
         'fechas_ocupadas_dict': fechas_ocupadas_dict, # Asegúrate de pasar esta variable
     })
 
+@login_required
+@user_passes_test(is_admin)
+def cambiar_empleado_inmueble(request, id_inmueble):
+    if request.method == "POST":
+        inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
+        empleado_id = request.POST.get("empleado")
+        if empleado_id:
+            try:
+                empleado_perfil = Perfil.objects.get(usuario__id=empleado_id)
+                inmueble.empleado = empleado_perfil
+                inmueble.save()
+                messages.success(request, "Empleado asignado actualizado.")
+            except Perfil.DoesNotExist:
+                messages.error(request, "El usuario seleccionado no tiene perfil y no puede ser asignado.")
+        else:
+            inmueble.empleado = None
+            inmueble.save()
+            messages.success(request, "Empleado desasignado.")
+    return redirect('admin_inmuebles')
 
 @login_required
 @user_passes_test(is_admin)
@@ -275,44 +274,56 @@ def admin_inmuebles_alta(request):
 @user_passes_test(is_admin)
 def admin_inmuebles_editar(request, id_inmueble):
     inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
-    
+
+    empleados = Perfil.objects.filter(usuario__groups__name="empleado").distinct()
+    admins = Perfil.objects.filter(usuario__is_staff=True).distinct()
+    perfiles_posibles = empleados | admins
+
+    # Asegurar que el empleado actual esté en el queryset
+    if inmueble.empleado and inmueble.empleado.pk not in perfiles_posibles.values_list('pk', flat=True):
+        perfiles_posibles = perfiles_posibles | Perfil.objects.filter(pk=inmueble.empleado.pk)
+
     if request.method == "POST":
-        form = InmuebleForm(request.POST, request.FILES, instance=inmueble)
+        form = InmuebleForm(
+            request.POST or None,
+            request.FILES or None,
+            instance=inmueble,
+            perfiles_empleados=perfiles_posibles
+        )
+        form.fields['empleado'].queryset = perfiles_posibles.distinct()
+
         if form.is_valid():
             form.instance.nombre = inmueble.nombre
             inmueble = form.save()
-            # Guardar nuevas imágenes
+
             imagenes = request.FILES.getlist('imagenes')
             for img in imagenes:
                 InmuebleImagen.objects.create(inmueble=inmueble, imagen=img)
-            
-            # Verificar si es una petición AJAX
+
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({
-                    'success': True,
-                    'message': 'Inmueble actualizado correctamente.'
-                })
-                
+                return JsonResponse({'success': True, 'message': 'Inmueble actualizado correctamente.'})
+
             messages.success(request, "Inmueble actualizado correctamente.")
             return redirect('admin_inmuebles_editar', id_inmueble=inmueble.id_inmueble)
         else:
-            # Manejo de errores para AJAX
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({
                     'success': False,
                     'message': 'Corrige los errores en el formulario.',
                     'errors': form.errors.get_json_data()
                 }, status=400)
-                
             messages.error(request, "Corrige los errores en el formulario.")
     else:
         form = InmuebleForm(instance=inmueble)
-    
+        form.fields['empleado'].queryset = perfiles_posibles
+
     imagenes = inmueble.imagenes.all()
     return render(request, 'admin/admin_inmuebles_editar.html', {
         'form': form,
         'inmueble': inmueble,
         'imagenes': imagenes,
+        'empleados': empleados,
+        'admins': admins,
     })
 
 @require_POST
@@ -585,54 +596,53 @@ def admin_cocheras_alta(request):
 @user_passes_test(is_admin)
 def admin_cocheras_editar(request, id_cochera):
     cochera = get_object_or_404(Cochera, id_cochera=id_cochera)
-    
+
+    empleados = Perfil.objects.filter(usuario__groups__name="empleado").distinct()
+    admins = Perfil.objects.filter(usuario__is_staff=True).distinct()
+    perfiles_posibles = empleados | admins  # Asegurate de usar `.distinct()` en ambos
+
+    # Asegurar que el empleado actual esté en el queryset
+    if cochera.empleado and cochera.empleado.pk not in perfiles_posibles.values_list('pk', flat=True):
+        perfiles_posibles = perfiles_posibles | Perfil.objects.filter(pk=cochera.empleado.pk)
+
+
     if request.method == "POST":
         form = CocheraForm(request.POST, request.FILES, instance=cochera)
+        form.fields['empleado'].queryset = perfiles_posibles.distinct()
+
         if form.is_valid():
             form.instance.nombre = cochera.nombre
             cochera = form.save()
-            # Guardar nuevas imágenes
+
             imagenes = request.FILES.getlist('imagenes')
             for img in imagenes:
                 CocheraImagen.objects.create(cochera=cochera, imagen=img)
-            
-            # Verificar si es una petición AJAX
+
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({
-                    'success': True,
-                    'message': 'Cochera actualizada correctamente.'
-                })
+                return JsonResponse({'success': True, 'message': 'Cochera actualizada correctamente.'})
                 
             messages.success(request, "Cochera actualizada correctamente.")
             return redirect('admin_cocheras_editar', id_cochera=cochera.id_cochera)
         else:
-            # Manejo de errores para AJAX
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({
                     'success': False,
                     'message': 'Corrige los errores en el formulario.',
                     'errors': form.errors.get_json_data()
                 }, status=400)
-                
             messages.error(request, "Corrige los errores en el formulario.")
     else:
         form = CocheraForm(instance=cochera)
-    
+        form.fields['empleado'].queryset = perfiles_posibles
+
+    imagenes = cochera.imagenes.all()
     return render(request, 'admin/admin_cocheras_editar.html', {
         'form': form,
         'cochera': cochera,
+        'imagenes': imagenes,
+        'empleados': empleados,
+        'admins': admins,
     })
-
-@require_POST
-@login_required
-@user_passes_test(is_admin)
-def eliminar_imagen_cochera(request, id_imagen):
-    try:
-        imagen = get_object_or_404(CocheraImagen, id_imagen=id_imagen)
-        imagen.delete()
-        return JsonResponse({'success': True})
-    except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)})
 
 @login_required
 @user_passes_test(is_admin)
@@ -740,3 +750,12 @@ def admin_cocheras_reservas(request, id_cochera):
         estado__nombre__in=["Pendiente", "Aprobada", "Pagada", "Confirmada"]
     ).order_by('-fecha_inicio')
     return render(request, 'admin/admin_cocheras_reservas.html', {'cochera': cochera, 'reservas': reservas})
+
+@require_POST
+@login_required
+@user_passes_test(is_admin)
+def eliminar_imagen_cochera(request, imagen_id):
+    imagen = get_object_or_404(CocheraImagen, id_imagen=imagen_id)
+    imagen.imagen.delete()  # Elimina el archivo físico
+    imagen.delete()         # Elimina el registro de la base de datos
+    return JsonResponse({'success': True})

@@ -14,7 +14,6 @@ from .models import ClienteInmueble, Reserva, Notificacion, Perfil, Estado
 #from web.models import Reserva
 #enviar_mail_a_empleados_sobre_reserva(1)
 
-
 def enviar_mail_a_empleados_sobre_reserva(id_reserva):
     try:
         # Obtener la reserva
