@@ -1,83 +1,42 @@
-import datetime
-import random
-import json
-import secrets
-import string
-import mercadopago
-
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.contrib.auth.models import User, Group
 from django.core.mail import send_mail
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
-from django.utils.encoding import force_str
-from django.utils.http import urlsafe_base64_decode
 from django.views.decorators.http import require_POST
-from django.db import IntegrityError, transaction
 from django.db.models import Q
 from datetime import timedelta, date
-from django.template.loader import render_to_string
-# mercado pago
-from django.views.decorators.csrf import csrf_exempt
 
-
-# Importaciones de formularios locales
-from .forms import (
-    RegistroUsuarioForm,
+from ..forms import (
     InmuebleForm,
     CocheraForm,
-    ComentarioForm,
-    LoginForm,
-    ClienteCreationForm,
-    EmpleadoCreationForm,
-    EmpleadoAdminCreationForm,
-    ClienteAdminCreationForm,
-    ChangePasswordForm,
-    ReseniaForm,
-    RespuestaComentarioForm,
-    NotificarImprevistoForm,
 )
 
-# Importaciones de modelos locales
-from .models import (
+from ..models import (
     Inmueble,
     InmuebleImagen,
     InmuebleEstado,
     CocheraEstado,
     CocheraImagen,
-    Notificacion,
-    Resenia,
-    Comentario,
-    LoginOTP,
     Reserva,
     ClienteInmueble,
     Estado,
     Cochera,
     Perfil,
-    ReservaEstado,
-    Ciudad,
-    Provincia,
     Cochera,
-    RespuestaComentario,
-    Huesped,
-    Tarjeta
 )
 
-# Importaciones de utilidades locales
-from .utils import (
-    email_link_token,
+from ..utils import (
     crear_notificacion,
-    cambiar_estado_inmueble,
     is_admin,
     is_admin_or_empleado,
 )
 
-# para enviar correos a empleados sobre reservas
-from .utils import enviar_mail_a_empleados_sobre_reserva
+################################################################################################################
+# --- Vistas de Gestión de Inmuebles ---
+################################################################################################################
 
 @login_required
 @user_passes_test(is_admin_or_empleado)
@@ -193,48 +152,8 @@ def admin_cocheras(request):
         'fechas_ocupadas_dict': fechas_ocupadas_dict, # Asegúrate de pasar esta variable
     })
 
-@login_required
-@user_passes_test(is_admin)
-def cambiar_empleado_inmueble(request, id_inmueble):
-    if request.method == "POST":
-        inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
-        empleado_id = request.POST.get("empleado")
-        if empleado_id:
-            try:
-                empleado_perfil = Perfil.objects.get(usuario__id=empleado_id)
-                inmueble.empleado = empleado_perfil
-                inmueble.save()
-                messages.success(request, "Empleado asignado actualizado.")
-            except Perfil.DoesNotExist:
-                messages.error(request, "El usuario seleccionado no tiene perfil y no puede ser asignado.")
-        else:
-            inmueble.empleado = None
-            inmueble.save()
-            messages.success(request, "Empleado desasignado.")
-    return redirect('admin_inmuebles')
-
-@login_required
-@user_passes_test(is_admin)
-def cambiar_empleado_cochera(request, id_cochera):
-    if request.method == "POST":
-        cochera = get_object_or_404(Cochera, id_cochera=id_cochera)
-        empleado_id = request.POST.get("empleado")
-        if empleado_id:
-            try:
-                perfil = Perfil.objects.get(usuario__id=empleado_id)
-                cochera.empleado = perfil
-                cochera.save()
-                messages.success(request, "Empleado asignado actualizado.")
-            except Perfil.DoesNotExist:
-                messages.error(request, "El usuario seleccionado no tiene perfil y no puede ser asignado.")
-        else:
-            cochera.empleado = None
-            cochera.save()
-            messages.success(request, "Empleado desasignado.")
-    return redirect('admin_cocheras')
-
 ################################################################################################################
-# --- Vistas de Gestión de Inmuebles ---
+# --- Acciones Inmuebles ---
 ################################################################################################################
 
 @login_required
@@ -413,16 +332,6 @@ def admin_inmuebles_eliminar(request, id_inmueble):
 
 @login_required
 @user_passes_test(is_admin_or_empleado)
-def admin_inmuebles_historial(request, id_inmueble):
-    """
-    Muestra el historial de estados y reservas finalizadas/canceladas/rechazadas de un inmueble específico.
-    """
-    inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
-    historial = InmuebleEstado.objects.filter(inmueble=inmueble).order_by('-fecha_inicio')
-    return render(request, 'admin/admin_inmuebles_historial.html', {'inmueble': inmueble, 'historial': historial})
-
-@login_required
-@user_passes_test(is_admin_or_empleado)
 def admin_inmuebles_reservas(request, id_inmueble):
     """
     Muestra el estado actual y las reservas de un inmueble específico.
@@ -508,57 +417,28 @@ def cambiar_estado_inmueble(request, id_inmueble):
     messages.success(request, "Estado actualizado correctamente.")
     return redirect('admin_inmuebles')
 
-@require_POST
 @login_required
 @user_passes_test(is_admin)
-def cambiar_estado_cochera(request, id_cochera):
-    cochera = get_object_or_404(Cochera, id_cochera=id_cochera)
-    nuevo_estado_id = request.POST.get("estado")
-    fecha_estimacion = request.POST.get("fecha_estimacion")
-    razon = request.POST.get("razon")
-
-    if not nuevo_estado_id:
-        return JsonResponse({'success': False, 'message': 'Debe seleccionar un estado.'}, status=400)
-
-    estado = get_object_or_404(Estado, id_estado=nuevo_estado_id)
-    cochera.estado = estado
-    cochera.save()
-
-    # Guardar historial
-    if estado.nombre == "En Mantenimiento":
-        ultimo_disponible = CocheraEstado.objects.filter(
-            cochera=cochera,
-            estado__nombre="Disponible"
-        ).order_by('-fecha_inicio').first()
-        if ultimo_disponible:
-            ultimo_disponible.fecha_fin = timezone.now().date()
-            ultimo_disponible.save()
-        CocheraEstado.objects.create(
-            cochera=cochera,
-            estado=estado,
-            fecha_inicio=timezone.now().date(),
-            fecha_fin=fecha_estimacion if fecha_estimacion else None,
-            descripcion=razon or ""
-        )
-    elif estado.nombre == "Disponible":
-        ultimo_historial = CocheraEstado.objects.filter(
-            cochera=cochera
-        ).exclude(estado__nombre="Disponible").order_by('-fecha_inicio').first()
-        if ultimo_historial:
-            ultimo_historial.fecha_fin = timezone.now().date()
-            ultimo_historial.save()
-        CocheraEstado.objects.create(
-            cochera=cochera,
-            estado=estado,
-            fecha_inicio=timezone.now().date(),
-            fecha_fin=None,
-            descripcion=""
-        )
-
-    return JsonResponse({'success': True, 'message': 'Estado actualizado correctamente.'})
+def cambiar_empleado_inmueble(request, id_inmueble):
+    if request.method == "POST":
+        inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
+        empleado_id = request.POST.get("empleado")
+        if empleado_id:
+            try:
+                empleado_perfil = Perfil.objects.get(usuario__id=empleado_id)
+                inmueble.empleado = empleado_perfil
+                inmueble.save()
+                messages.success(request, "Empleado asignado actualizado.")
+            except Perfil.DoesNotExist:
+                messages.error(request, "El usuario seleccionado no tiene perfil y no puede ser asignado.")
+        else:
+            inmueble.empleado = None
+            inmueble.save()
+            messages.success(request, "Empleado desasignado.")
+    return redirect('admin_inmuebles')
 
 ################################################################################################################
-# --- Vistas de Gestión de Cocheras ---
+# --- Acciones Cocheras ---
 ################################################################################################################
 
 @login_required
@@ -644,6 +524,15 @@ def admin_cocheras_editar(request, id_cochera):
         'admins': admins,
     })
 
+@require_POST
+@login_required
+@user_passes_test(is_admin)
+def eliminar_imagen_cochera(request, imagen_id):
+    imagen = get_object_or_404(CocheraImagen, id_imagen=imagen_id)
+    imagen.imagen.delete()  # Elimina el archivo físico
+    imagen.delete()         # Elimina el registro de la base de datos
+    return JsonResponse({'success': True})
+
 @login_required
 @user_passes_test(is_admin)
 def admin_cocheras_eliminar(request, id_cochera):
@@ -722,6 +611,19 @@ def admin_cocheras_eliminar(request, id_cochera):
 
 @login_required
 @user_passes_test(is_admin_or_empleado)
+def admin_cocheras_reservas(request, id_cochera):
+    """
+    Muestra el estado actual y las reservas de una cochera específica.
+    """
+    cochera = get_object_or_404(Cochera, id_cochera=id_cochera)
+    reservas = Reserva.objects.filter(
+        cochera=cochera,
+        estado__nombre__in=["Pendiente", "Aprobada", "Pagada", "Confirmada"]
+    ).order_by('-fecha_inicio')
+    return render(request, 'admin/admin_cocheras_reservas.html', {'cochera': cochera, 'reservas': reservas})
+
+@login_required
+@user_passes_test(is_admin_or_empleado)
 def admin_cocheras_historial(request, id_cochera):
     """
     Muestra el historial de estados y reservas finalizadas/canceladas/rechazadas de una cochera específica.
@@ -738,24 +640,71 @@ def admin_cocheras_historial(request, id_cochera):
         'reservas': reservas,
     })
 
-@login_required
-@user_passes_test(is_admin_or_empleado)
-def admin_cocheras_reservas(request, id_cochera):
-    """
-    Muestra el estado actual y las reservas de una cochera específica.
-    """
-    cochera = get_object_or_404(Cochera, id_cochera=id_cochera)
-    reservas = Reserva.objects.filter(
-        cochera=cochera,
-        estado__nombre__in=["Pendiente", "Aprobada", "Pagada", "Confirmada"]
-    ).order_by('-fecha_inicio')
-    return render(request, 'admin/admin_cocheras_reservas.html', {'cochera': cochera, 'reservas': reservas})
-
 @require_POST
 @login_required
 @user_passes_test(is_admin)
-def eliminar_imagen_cochera(request, imagen_id):
-    imagen = get_object_or_404(CocheraImagen, id_imagen=imagen_id)
-    imagen.imagen.delete()  # Elimina el archivo físico
-    imagen.delete()         # Elimina el registro de la base de datos
-    return JsonResponse({'success': True})
+def cambiar_estado_cochera(request, id_cochera):
+    cochera = get_object_or_404(Cochera, id_cochera=id_cochera)
+    nuevo_estado_id = request.POST.get("estado")
+    fecha_estimacion = request.POST.get("fecha_estimacion")
+    razon = request.POST.get("razon")
+
+    if not nuevo_estado_id:
+        return JsonResponse({'success': False, 'message': 'Debe seleccionar un estado.'}, status=400)
+
+    estado = get_object_or_404(Estado, id_estado=nuevo_estado_id)
+    cochera.estado = estado
+    cochera.save()
+
+    # Guardar historial
+    if estado.nombre == "En Mantenimiento":
+        ultimo_disponible = CocheraEstado.objects.filter(
+            cochera=cochera,
+            estado__nombre="Disponible"
+        ).order_by('-fecha_inicio').first()
+        if ultimo_disponible:
+            ultimo_disponible.fecha_fin = timezone.now().date()
+            ultimo_disponible.save()
+        CocheraEstado.objects.create(
+            cochera=cochera,
+            estado=estado,
+            fecha_inicio=timezone.now().date(),
+            fecha_fin=fecha_estimacion if fecha_estimacion else None,
+            descripcion=razon or ""
+        )
+    elif estado.nombre == "Disponible":
+        ultimo_historial = CocheraEstado.objects.filter(
+            cochera=cochera
+        ).exclude(estado__nombre="Disponible").order_by('-fecha_inicio').first()
+        if ultimo_historial:
+            ultimo_historial.fecha_fin = timezone.now().date()
+            ultimo_historial.save()
+        CocheraEstado.objects.create(
+            cochera=cochera,
+            estado=estado,
+            fecha_inicio=timezone.now().date(),
+            fecha_fin=None,
+            descripcion=""
+        )
+
+    return JsonResponse({'success': True, 'message': 'Estado actualizado correctamente.'})
+
+@login_required
+@user_passes_test(is_admin)
+def cambiar_empleado_cochera(request, id_cochera):
+    if request.method == "POST":
+        cochera = get_object_or_404(Cochera, id_cochera=id_cochera)
+        empleado_id = request.POST.get("empleado")
+        if empleado_id:
+            try:
+                perfil = Perfil.objects.get(usuario__id=empleado_id)
+                cochera.empleado = perfil
+                cochera.save()
+                messages.success(request, "Empleado asignado actualizado.")
+            except Perfil.DoesNotExist:
+                messages.error(request, "El usuario seleccionado no tiene perfil y no puede ser asignado.")
+        else:
+            cochera.empleado = None
+            cochera.save()
+            messages.success(request, "Empleado desasignado.")
+    return redirect('admin_cocheras')

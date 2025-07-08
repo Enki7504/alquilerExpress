@@ -3,7 +3,6 @@ import random
 import json
 import secrets
 import string
-import mercadopago
 
 from django.conf import settings
 from django.contrib import messages
@@ -17,25 +16,20 @@ from django.utils import timezone
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
 from django.views.decorators.http import require_POST
-from django.db import IntegrityError, transaction
 from django.db.models import Q
 from datetime import timedelta
-from django.template.loader import render_to_string
 # mercado pago
 from django.views.decorators.csrf import csrf_exempt
 
 
 # Importaciones de formularios locales
-from .forms import (
+from ..forms import (
     RegistroUsuarioForm,
     InmuebleForm,
     CocheraForm,
     ComentarioForm,
     LoginForm,
-    ClienteCreationForm,
-    EmpleadoCreationForm,
     EmpleadoAdminCreationForm,
-    ClienteAdminCreationForm,
     ChangePasswordForm,
     ReseniaForm,
     RespuestaComentarioForm,
@@ -43,7 +37,7 @@ from .forms import (
 )
 
 # Importaciones de modelos locales
-from .models import (
+from ..models import (
     Inmueble,
     InmuebleImagen,
     InmuebleEstado,
@@ -60,23 +54,17 @@ from .models import (
     Perfil,
     ReservaEstado,
     Ciudad,
-    Provincia,
     Cochera,
     RespuestaComentario,
-    Huesped,
     Tarjeta
 )
 
 # Importaciones de utilidades locales
-from .utils import (
+from ..utils import (
     email_link_token,
     crear_notificacion,
     cambiar_estado_inmueble
 )
-
-# para enviar correos a empleados sobre reservas
-from .utils import enviar_mail_a_empleados_sobre_reserva
-
 
 ################################################################################################################
 # --- Vistas Públicas Generales ---

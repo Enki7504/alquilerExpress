@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AnonymousUser
 from .models import Notificacion
-from .views import is_client
+from .utils import is_client
+
 
 def notifications(request):
     if request.user.is_authenticated:

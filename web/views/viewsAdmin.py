@@ -27,58 +27,20 @@ from django.views.decorators.csrf import csrf_exempt
 
 
 # Importaciones de formularios locales
-from .forms import (
-    RegistroUsuarioForm,
-    InmuebleForm,
-    CocheraForm,
-    ComentarioForm,
-    LoginForm,
-    ClienteCreationForm,
-    EmpleadoCreationForm,
+from ..forms import (
     EmpleadoAdminCreationForm,
-    ClienteAdminCreationForm,
-    ChangePasswordForm,
-    ReseniaForm,
-    RespuestaComentarioForm,
-    NotificarImprevistoForm,
 )
 
 # Importaciones de modelos locales
-from .models import (
-    Inmueble,
-    InmuebleImagen,
-    InmuebleEstado,
-    CocheraEstado,
-    CocheraImagen,
-    Notificacion,
-    Resenia,
-    Comentario,
-    LoginOTP,
-    Reserva,
-    ClienteInmueble,
-    Estado,
-    Cochera,
+from ..models import (
     Perfil,
-    ReservaEstado,
-    Ciudad,
-    Provincia,
-    Cochera,
-    RespuestaComentario,
-    Huesped,
-    Tarjeta
 )
 
 # Importaciones de utilidades locales
-from .utils import (
-    email_link_token,
-    crear_notificacion,
-    cambiar_estado_inmueble,
+from ..utils import (
     is_admin,
     is_admin_or_empleado,
 )
-
-# para enviar correos a empleados sobre reservas
-from .utils import enviar_mail_a_empleados_sobre_reserva
 
 @login_required
 @user_passes_test(is_admin_or_empleado)
