@@ -82,17 +82,28 @@ from .utils import enviar_mail_a_empleados_sobre_reserva
 @login_required
 @user_passes_test(is_admin_or_empleado)
 def admin_notificar_imprevisto(request):
-    if request.method == "POST":
+    if request.method == 'POST':
         form = NotificarImprevistoForm(request.POST)
         if form.is_valid():
-            usuario = form.cleaned_data["usuario"]
-            mensaje = form.cleaned_data["mensaje"]
-            crear_notificacion(usuario, mensaje)
-            messages.success(request, "Imprevisto notificado correctamente.")
-            return redirect('admin_panel')
+            inmueble = form.cleaned_data['inmueble']
+            mensaje = form.cleaned_data['mensaje']
+
+            # Notificar al empleado asignado
+            if hasattr(inmueble, 'empleado_asignado') and inmueble.empleado_asignado:
+                crear_notificacion(inmueble.empleado_asignado, f"Imprevisto en {inmueble}: {mensaje}")
+
+            # Notificar a todos los clientes con reservas activas
+            reservas_activas = Reserva.objects.filter(inmueble=inmueble, estado='Pagada')
+            for reserva in reservas_activas:
+                crear_notificacion(reserva.cliente, f"Imprevisto en {inmueble}: {mensaje}")
+
+            messages.success(request, "Se notificó al empleado y a los clientes con reservas activas.")
+            return redirect('admin_notificar_imprevisto')
     else:
         form = NotificarImprevistoForm()
-    return render(request, "admin/admin_notificar_imprevisto.html", {"form": form})
+
+    return render(request, 'admin/admin_notificar_imprevisto.html', {'form': form})
+
 
 ################################################################################################################
 # --- Vistas de Notificaciones ---

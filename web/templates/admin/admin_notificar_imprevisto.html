@@ -1,14 +1,15 @@
 {% extends 'admin/admin_base.html' %}
 {% load static %}
+
 {% block admin_content %}
 <div class="container mt-4">
   <h2>Notificar Imprevisto</h2>
   <form method="post">
     {% csrf_token %}
     <div class="mb-3">
-      {{ form.usuario.label_tag }}
-      {{ form.usuario }}
-      {{ form.usuario.errors }}
+      {{ form.inmueble.label_tag }}
+      {{ form.inmueble }}
+      {{ form.inmueble.errors }}
     </div>
     <div class="mb-3">
       {{ form.mensaje.label_tag }}

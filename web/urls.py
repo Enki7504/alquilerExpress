@@ -63,7 +63,7 @@ urlpatterns = [
     path('panel/estadisticas-inmuebles/', viewsAdminEstadisticas.admin_estadisticas_inmuebles, name='admin_estadisticas_inmuebles'),
     path('panel/estadisticas-cocheras/', viewsAdminEstadisticas.admin_estadisticas_cocheras, name='admin_estadisticas_cocheras'),
 
-    # Gestion de Notificaciones
+    # Notificar Imprevisto
     path('panel/notificar-imprevisto/', viewsNotificaciones.admin_notificar_imprevisto, name='admin_notificar_imprevisto'),
     
     # Reservas

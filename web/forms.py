@@ -583,9 +583,9 @@ class RespuestaComentarioForm(forms.ModelForm):
         fields = ['texto']
 
 class NotificarImprevistoForm(forms.Form):
-    usuario = forms.ModelChoiceField(
-        queryset=Perfil.objects.all(),
-        label="Usuario afectado",
+    inmueble = forms.ModelChoiceField(
+        queryset=Inmueble.objects.all(),
+        label="Seleccione una vivienda o cochera",
         widget=forms.Select(attrs={'class': 'form-select'})
     )
     mensaje = forms.CharField(

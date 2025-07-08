@@ -72,6 +72,18 @@
               </a>
             </li>
           </ul>
+          {% comment %} 
+          {% if user.is_staff %}
+          <ul class="nav flex-column">
+            <li class="nav-item">
+              <a class="nav-link {% if request.resolver_match.url_name == 'admin_notificar_imprevisto' %}active{% endif %}" 
+                 href="{% url 'admin_notificar_imprevisto' %}">
+                <i class="bi bi-exclamation-triangle"></i> Notificar Imprevisto
+              </a>
+            </li>
+          </ul>
+          {% endif %} 
+          {% endcomment %}
         </div>
         {% endif %}
 
@@ -108,23 +120,6 @@
             </li>
           </ul>
         </div>
-        {% endif %}
-        {% if user.is_staff %}
-        <!-- Sección de Notificaciones 
-        <div class="sidebar-section">
-          <div class="sidebar-section-title">
-            <i class="bi bi-bell-fill"></i> Notificaciones
-          </div>
-          <ul class="nav flex-column">
-            <li class="nav-item">
-              <a class="nav-link {% if request.resolver_match.url_name == 'admin_notificar_imprevisto' %}active{% endif %}" 
-                 href="{% url 'admin_notificar_imprevisto' %}">
-                <i class="bi bi-exclamation-triangle"></i> Notificar Imprevisto
-              </a>
-            </li>
-          </ul>
-        </div>
-        -->
         {% endif %}
       </div>
     </nav>
