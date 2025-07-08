@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Alquiler Express - Cocheras e Inmuebles{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/index.css' %}">
+{% endblock %}
+
+{% block content %}
+  {% if user.is_authenticated and mostrar_bienvenida %}
+    <h4 class="text-center text-success mt-4 mb-0">
+      Bienvenido, {{ user.first_name|default:user.username }} 👋
+    </h4>
+    <br>
+  {% endif %}
+    
+  {# Hero Carousel #}
+  <section class="hero text-center p-0">
+    <div class="container h-100">
+      <div id="heroCarousel" class="carousel slide h-100" data-bs-ride="carousel" data-bs-interval="3500">
+        <div class="carousel-inner h-100">
+          {% for img in hero_imgs %}
+            <div class="carousel-item h-100 {% if forloop.first %}active{% endif %}">
+              <div class="hero-img-container h-100 mx-auto d-flex align-items-center justify-content-center"
+                   style="background-image: url('{{ img }}');">
+                <div class="container">
+                  <div class="text-white text-shadow-lg">
+                    <h1 class="display-4 fw-bold">Alquiler rápido y seguro</h1>
+                    <p class="lead">Encuentra cocheras e inmuebles disponibles en tu zona</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+        <button class="carousel-control-prev" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev">
+          <span class="carousel-control-prev-icon"></span>
+          <span class="visually-hidden">Anterior</span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#heroCarousel" data-bs-slide="next">
+          <span class="carousel-control-next-icon"></span>
+          <span class="visually-hidden">Siguiente</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  {# Servicios #}
+  <section id="services" class="container my-5">
+    <h2 class="text-center mb-4">Nuestros servicios</h2>
+    <div class="row g-4">
+      <div class="col-md-6">
+        <div class="card shadow-sm">
+            {# Asegúrate de que estas rutas de media sean correctas #}
+            <img src="{% static 'img/default-garage.jpg' %}" class="card-img-top" alt="Cocheras"> {# Usar imagen estática de ejemplo o de la DB #}
+          <div class="card-body">
+            <h5 class="card-title">Alquiler de Cocheras</h5>
+            <p class="card-text">Estaciona seguro y cómodo en cocheras ubicadas en diferentes zonas estratégicas de la ciudad.</p>
+            <a href="{% url 'buscar_cocheras' %}" class="btn btn-outline-primary">Cocheras</a>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-md-6">
+        <div class="card shadow-sm">
+          {# Asegúrate de que estas rutas de media sean correctas #}
+          <img src="{% static 'img/default-property.jpg' %}" class="card-img-top" alt="Viviendas"> {# Usar imagen estática de ejemplo o de la DB #}
+          <div class="card-body">
+            <h5 class="card-title">Alquiler de Viviendas</h5>
+            <p class="card-text">Casas, departamentos y locales comerciales para alquiler, con la mejor relación calidad-precio.</p>
+            <a href="{% url 'buscar_inmuebles' %}" class="btn btn-outline-primary">Viviendas</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {# Testimonios / Carrusel #}
+  <!-- <section class="container my-5">
+    <h2 class="text-center mb-4">Testimonios de clientes</h2>
+    <div id="testimonialCarousel" class="carousel slide" data-bs-ride="carousel">
+      <div class="carousel-inner text-center">
+        <div class="carousel-item active">
+          <blockquote class="blockquote">
+            <p class="mb-4">"Encontré la cochera perfecta cerca de mi trabajo, todo muy fácil y rápido."</p>
+            <footer class="blockquote-footer">María López</footer>
+          </blockquote>
+        </div>
+        <div class="carousel-item">
+          <blockquote class="blockquote">
+            <p class="mb-4">"El departamento que alquilé superó mis expectativas. Muy recomendable."</p>
+            <footer class="blockquote-footer">Juan Pérez</footer>
+          </blockquote>
+        </div>
+        <div class="carousel-item">
+          <blockquote class="blockquote">
+            <p class="mb-4">"Atención personalizada y excelente servicio. Volveré a usar Alquiler Express."</p>
+            <footer class="blockquote-footer">Laura Fernández</footer>
+          </blockquote>
+        </div>
+      </div>
+      <button class="carousel-control-prev" type="button" data-bs-target="#testimonialCarousel" data-bs-slide="prev">
+        <span class="carousel-control-prev-icon"></span>
+        <span class="visually-hidden">Anterior</span>
+      </button>
+      <button class="carousel-control-next" type="button" data-bs-target="#testimonialCarousel" data-bs-slide="next">
+        <span class="carousel-control-next-icon"></span>
+        <span class="visually-hidden">Siguiente</span>
+      </button>
+    </div>
+  </section> -->
+
+  {# Footer #}
+  <footer>
+    <div class="container">
+      <p>© 2025 Alquiler Express - Todos los derechos reservados</p>
+      <p>Contacto: info@alquilerexpress.com | Tel: +54 9 11 1234 5678</p>
+    </div>
+  </footer>
+{% endblock content %}

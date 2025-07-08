@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container" style="margin-top: 100px;">
+  <h2 class="mb-4 fw-bold">Verificación 2FA</h2>
+  <form method="post" class="d-flex flex-column gap-3">
+      {% csrf_token %}
+      <div class="d-flex flex-row gap-2 align-items-center">
+        <input type="text" name="codigo" placeholder="Código enviado por mail" required class="form-control flex-grow-1">
+        <button type="submit" class="btn btn-primary px-4" style="width: 200px">Ingresar</button>
+      </div>
+      <div class="alert alert-info d-flex align-items-center gap-2 mb-0 rounded-pill shadow-sm border-0 py-2 px-3"
+           id="timer-2fa"
+           data-tiempo="{{ tiempo_restante|default:60 }}"
+           style="background: #e3f6fd; font-size: 1rem; width: 100%;">
+        <i class="bi bi-clock-history text-primary" style="font-size: 1.3rem;"></i>
+        <span class="fw-semibold">
+          Tiempo restante para ingresar el código:
+          <span id="timer" class="ms-1 text-dark" style="font-family: monospace; font-size: 1.15rem; font-weight: bold;"></span>
+        </span>
+      </div>
+  </form>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+  // Timer 2FA
+  const timerDiv = document.getElementById('timer-2fa');
+  let tiempo = parseInt(timerDiv.getAttribute('data-tiempo')) || 60;
+  const btn = document.querySelector('button[type="submit"]');
+  const inputCodigo = document.querySelector('input[name="codigo"]');
+  let solicitando = false;
+  let timerTimeout = null;
+  let fin = Date.now() + tiempo * 1000;
+
+  function actualizarTimer() {
+    let restante = Math.max(0, Math.floor((fin - Date.now()) / 1000));
+    if (restante <= 0) {
+      document.getElementById('timer').innerText = "Expirado";
+      btn.disabled = false;
+      btn.innerText = "Solicitar código";
+      btn.type = "button";
+      btn.onclick = solicitarCodigo;
+      inputCodigo.disabled = true;
+      return;
+    }
+    let minutos = Math.floor(restante / 60);
+    let segundos = Math.floor(restante % 60);
+    document.getElementById('timer').innerText =
+      `${minutos.toString().padStart(2, '0')}:${segundos.toString().padStart(2, '0')}`;
+    timerTimeout = setTimeout(actualizarTimer, 1000);
+  }
+  actualizarTimer();
+
+  function solicitarCodigo() {
+    if (solicitando) return;
+    solicitando = true;
+
+    Swal.fire({
+      title: 'Enviando código...',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+
+    fetch("{% url 'loginAdmin_2fa_reenviar' %}", {
+      method: "POST",
+      headers: {
+        "X-CSRFToken": "{{ csrf_token }}",
+        "X-Requested-With": "XMLHttpRequest"
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      Swal.close();
+      if (data.success) {
+        // Reiniciar timer y habilitar campos
+        if (timerTimeout) clearTimeout(timerTimeout);
+        tiempo = data.tiempo_restante || 60;
+        fin = Date.now() + tiempo * 1000;
+        btn.innerText = "Ingresar";
+        btn.type = "submit";
+        btn.disabled = false;
+        btn.onclick = null;
+        inputCodigo.disabled = false;
+        inputCodigo.value = "";
+        actualizarTimer();
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'success',
+          title: 'Nuevo código enviado',
+          showConfirmButton: false,
+          timer: 3000,
+          timerProgressBar: true
+        });
+      } else {
+        btn.innerText = "Solicitar código";
+        btn.disabled = false;
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'error',
+          title: data.error || 'Error al reenviar código',
+          showConfirmButton: false,
+          timer: 4000,
+          timerProgressBar: true
+        });
+      }
+      solicitando = false;
+    })
+    .catch(() => {
+      Swal.close();
+      btn.innerText = "Solicitar código";
+      btn.disabled = false;
+      solicitando = false;
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'error',
+        title: 'Error de red',
+        showConfirmButton: false,
+        timer: 4000,
+        timerProgressBar: true
+      });
+    });
+  }
+
+  // SweetAlert2 para errores iniciales
+  {% if error %}
+  Swal.fire({
+    toast: true,
+    position: 'top-end',
+    icon: 'error',
+    title: '{{ error|escapejs }}',
+    showConfirmButton: false,
+    timer: 4000,
+    timerProgressBar: true
+  });
+  {% endif %}
+</script>
+{% endblock %}

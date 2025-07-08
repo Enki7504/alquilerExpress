@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load form_tags %}
+
+{% block content %}
+<div style="margin-top: 330px; margin-bottom: 10%;" class="d-flex justify-content-center align-items-center vh-100">
+  <div class="card shadow p-4 w-100" style="max-width: 400px">
+    <h4 class="mb-4 text-center">Crear cuenta</h4>
+    {% if form.errors %}
+      <div class="alert alert-danger text-center" role="alert">
+        Por favor revisa los datos ingresados.
+      </div>
+    {% endif %}
+    <form method="post" action="{% url 'register' %}">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label for="id_email" class="form-label">Correo electrónico</label>
+        {{ form.email|add_class:"form-control" }}
+        <div class="form-text">Debe ser un correo válido (ejemplo: usuario@email.com).</div>
+      </div>
+      <div class="mb-3">
+        <label for="id_first_name" class="form-label">Nombre</label>
+        {{ form.first_name|add_class:"form-control" }}
+        <div class="form-text">Tu nombre real.</div>
+      </div>
+      <div class="mb-3">
+        <label for="id_last_name" class="form-label">Apellido</label>
+        {{ form.last_name|add_class:"form-control" }}
+        <div class="form-text">Tu apellido real.</div>
+      </div>
+      <div class="mb-3">
+        <label for="id_fecha_nacimiento" class="form-label">Fecha de nacimiento</label>
+        {{ form.fecha_nacimiento|add_class:"form-control" }}
+        <div class="form-text">Debes ser mayor de 18 años.</div>
+      </div>
+      <div class="mb-3">
+        <label for="id_dni" class="form-label">DNI</label>
+        {{ form.dni|add_class:"form-control" }}
+        <div class="form-text">Solo números, sin puntos ni espacios.</div>
+      </div>
+      <div class="mb-3">
+        <label for="id_password1" class="form-label">Contraseña</label>
+        {{ form.password1|add_class:"form-control" }}
+        <div class="form-text">
+          Debe tener al menos 8 caracteres.
+        </div>
+      </div>
+      <div class="mb-3">
+        <label for="id_password2" class="form-label">Confirmar contraseña</label>
+        {{ form.password2|add_class:"form-control" }}
+        <div class="form-text">Repite la contraseña exactamente igual.</div>
+      </div>
+      <div class="d-grid">
+        <button type="submit" class="btn btn-primary">Registrarse</button>
+      </div>
+    </form>
+    <!-- <p class="mt-3 text-center">
+      ¿Ya tienes cuenta? <a href="{% url 'login' %}">Inicia sesión</a>
+    </p>
+    <p class="text-center"><a href="{% url 'index' %}">Volver al inicio</a></p> -->
+  </div>
+</div>
+{% endblock %}

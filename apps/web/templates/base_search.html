@@ -1,0 +1,38 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/busqueda.css' %}">
+{% endblock %}
+
+{% block navbar_center_content %}
+  {# Sobreescribe el bloque de contenido central de la navbar de base.html #}
+  <form class="navbar__search d-flex flex-grow-1 justify-content-center mx-3"
+        action="{% if 'cochera' in request.path %}{% url 'buscar_cocheras' %}{% else %}{% url 'buscar_inmuebles' %}{% endif %}"
+        method="get" id="searchForm">
+    <div class="search__input input-group w-100">
+      <input type="text" class="form-control" name="q" placeholder="¿Qué estás buscando?..." value="{{ request.GET.q }}">
+      <button class="search__button btn btn-outline-success" type="submit">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </form>
+{% endblock %}
+
+{% block content %}
+  {# Este bloque 'content' contendrá la estructura principal de la buscar_cocheras y buscar_inmuebles #}
+  <main class="container-fluid">
+    <div class="container-wrapper row">
+      {% block search_page_content %}{% endblock search_page_content %}
+    </div>
+  </main>
+{% endblock content %}
+
+{% block extra_js %}
+  {# JS de la busqueda #}
+  <script src="{% static 'js/search_logic.js' %}"></script>
+  {# JS para cargar ciudades #}
+  <script src="{% static 'js/cargar_ciudades.js' %}"></script>
+{% endblock extra_js %}

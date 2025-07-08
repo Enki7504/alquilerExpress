@@ -41,9 +41,20 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'web',
-    "widget_tweaks",
-    "django_celery_beat"
+
+    # Terceros
+    'widget_tweaks',
+    'django_celery_beat',
+
+    # Apps locales
+    'apps.usuarios',
+    # 'apps.adminpanel',
+    # 'apps.inmuebles',
+    # 'apps.cocheras',
+    # 'apps.reservas',
+    # 'apps.pagos',
+    # 'apps.core',
+    # 'apps.web',
 ]
 
 MIDDLEWARE = [
@@ -54,7 +65,6 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'web.middleware.FirstLoginForcePasswordChangeMiddleware',
 ]
 
 ROOT_URLCONF = 'alquilerExpress.urls'
@@ -69,8 +79,6 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'web.context_processors.notifications',
-                'web.context_processors.is_client_context',
             ],
         },
     },
@@ -124,7 +132,9 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATICFILES_DIRS = [BASE_DIR / 'static']
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
