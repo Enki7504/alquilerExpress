@@ -16,6 +16,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
+from django.urls import reverse
 from django.views.decorators.http import require_POST
 from django.db import IntegrityError, transaction
 from django.db.models import Q
@@ -86,6 +87,10 @@ def admin_panel(request):
     Renderiza el panel principal de administración/empleado.
     """
     return render(request, 'admin/admin_base.html')
+
+##################
+# Gestion de Usuarios
+##################
 
 @login_required
 @user_passes_test(is_admin)
@@ -220,6 +225,46 @@ def admin_alta_cliente(request):
     else:
         form = ClienteAdminCreationForm()
     return render(request, 'admin/admin_alta_cliente.html', {'form': form})
+
+from django.contrib import messages
+
+@login_required
+@user_passes_test(is_admin)
+def admin_bloquear_cliente(request):
+    query = request.GET.get('q', '').strip()
+
+    clientes_activos = User.objects.filter(is_active=True, is_staff=False)
+    if query:
+        clientes_activos = clientes_activos.filter(
+            Q(first_name__icontains=query) |
+            Q(last_name__icontains=query) |
+            Q(username__icontains=query)
+        )
+
+    clientes_bloqueados = User.objects.filter(is_active=False, is_staff=False)
+
+    if request.method == 'POST':
+        cliente_id = request.POST.get('cliente_id')
+        accion = request.POST.get('accion')
+
+        cliente = get_object_or_404(User, id=cliente_id)
+
+        if accion == 'bloquear':
+            cliente.is_active = False
+            messages.success(request, 'Cliente bloqueado correctamente.')
+        elif accion == 'desbloquear':
+            cliente.is_active = True
+            messages.success(request, 'Cliente desbloqueado correctamente.')
+
+        cliente.save()
+        return redirect('admin_bloquear_cliente')
+
+    return render(request, 'admin/admin_bloquear_cliente.html', {
+        'clientes_activos': clientes_activos,
+        'clientes_bloqueados': clientes_bloqueados,
+        'query': query
+    })
+
 
 ##################
 # Complementarias

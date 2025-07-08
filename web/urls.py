@@ -26,14 +26,19 @@ urlpatterns = [
     #########################################################################################################
     # URLs del Panel de Administración                                                                       
     #########################################################################################################
+
+    # URL Base del Panel de Administración
     path('panel/', viewsAdmin.admin_panel, name='admin_panel'),
+
     # Gestión de usuarios
     path('panel/alta-empleados/', viewsAdmin.admin_alta_empleados, name='admin_alta_empleados'),
     path('panel/alta-cliente/', viewsAdmin.admin_alta_cliente, name='admin_alta_cliente'),
+    path('panel/bloquear-cliente/', viewsAdmin.admin_bloquear_cliente, name='admin_bloquear_cliente'),
     
     # Gestión de inmuebles
     path('panel/inmuebles/', viewsAdminInmuebles.admin_inmuebles, name='admin_inmuebles'),
-    path('panel/inmuebles/<int:id_inmueble>/cambiar-empleado/', viewsAdminInmuebles.cambiar_empleado_inmueble, name='cambiar_empleado_inmueble'),    path('panel/inmuebles/alta/', views.admin_inmuebles_alta, name='admin_inmuebles_alta'), # Mantener la alta separada o como parte del CRUD
+    path('panel/inmuebles/<int:id_inmueble>/cambiar-empleado/', viewsAdminInmuebles.cambiar_empleado_inmueble, name='cambiar_empleado_inmueble'),    
+    path('panel/inmuebles/alta/', views.admin_inmuebles_alta, name='admin_inmuebles_alta'), # Mantener la alta separada o como parte del CRUD
     path('panel/inmuebles/editar/<int:id_inmueble>/', viewsAdminInmuebles.admin_inmuebles_editar, name='admin_inmuebles_editar'),
     path('panel/inmuebles/eliminar/<int:id_inmueble>/', viewsAdminInmuebles.admin_inmuebles_eliminar, name='admin_inmuebles_eliminar'),
     path('panel/inmuebles/reservas/<int:id_inmueble>/', viewsAdminInmuebles.admin_inmuebles_reservas, name='admin_inmuebles_reservas'),

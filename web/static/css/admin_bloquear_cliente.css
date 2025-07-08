@@ -1,0 +1,40 @@
+/* Estilo para tablas con ancho fijo y proporciones */
+.table-cliente {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.table-cliente th,
+.table-cliente td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+  text-align: left;
+}
+
+/* Porcentajes por columna */
+.table-cliente th:nth-child(1),
+.table-cliente td:nth-child(1) {
+  width: 20%; /* Nombre */
+}
+
+.table-cliente th:nth-child(2),
+.table-cliente td:nth-child(2) {
+  width: 20%; /* Apellido */
+}
+
+.table-cliente th:nth-child(3),
+.table-cliente td:nth-child(3) {
+  width: 25%; /* Correo */
+}
+
+.table-cliente th:nth-child(4),
+.table-cliente td:nth-child(4) {
+  width: 20%; /* Username */
+}
+
+.table-cliente th:nth-child(5),
+.table-cliente td:nth-child(5) {
+  width: 15%; /* Botón */
+}
