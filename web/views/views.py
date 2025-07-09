@@ -411,13 +411,6 @@ def buscar_cocheras(request):
         'ciudades': ciudades,
     })
 
-def lista_inmuebles(request):
-    """
-    Muestra una lista completa de todos los inmuebles disponibles.
-    """
-    inmuebles = Inmueble.objects.all()
-    return render(request, 'lista_inmuebles.html', {'inmuebles': inmuebles})
-
 def detalle_inmueble(request, id_inmueble):
     inmueble = get_object_or_404(
         Inmueble.objects.select_related('estado'),
@@ -641,8 +634,6 @@ def detalle_cochera(request, id_cochera):
         'is_admin': is_admin_var,
         'puede_reseñar': puede_reseñar,
     })
-
-
 
 ################################################################################################################
 # --- Funciones para filtrar ---
@@ -1912,32 +1903,6 @@ def cambiar_contrasena(request):
     else:
         form = ChangePasswordForm(request.user)
     return render(request, "cambiar_contrasena.html", {"form": form})
-
-@login_required
-def eliminar_comentario(request, id_comentario):
-    if request.method == "POST" and is_admin_or_empleado(request.user):
-        comentario = get_object_or_404(Comentario, id_comentario=id_comentario)
-        comentario.delete()
-        messages.success(request, "Comentario eliminado correctamente.")
-    return redirect(request.META.get('HTTP_REFERER', 'index'))
-
-@require_POST
-@login_required
-@user_passes_test(is_admin_or_empleado)
-def eliminar_resenia(request, id_resenia):
-    resenia = get_object_or_404(Resenia, id_resenia=id_resenia)
-    
-    # Verificar si la reseña pertenece a un inmueble o cochera que el empleado administra
-    if (resenia.inmueble and resenia.inmueble.empleado != request.user.perfil) or \
-       (resenia.cochera and resenia.cochera.empleado != request.user.perfil):
-        if not request.user.is_staff:  # Solo el admin puede eliminar cualquier reseña
-            messages.error(request, "No tienes permiso para eliminar esta reseña.")
-            return redirect(request.META.get('HTTP_REFERER', 'index'))
-    
-    # Eliminar la reseña
-    resenia.delete()
-    messages.success(request, "Reseña eliminada correctamente.")
-    return redirect(request.META.get('HTTP_REFERER', 'index'))
 
 def simulador_mercadopago(request):
     saldo = request.GET.get('saldo', '0.00')
