@@ -149,11 +149,11 @@
             <form method="post" action="{% url 'crear_reserva_cochera' id_cochera=cochera.id_cochera %}">
               {% csrf_token %}
               <div class="mb-3">
-                <label for="fecha_inicio" class="form-label">Fecha de llegada</label>
+                <label for="fecha_inicio" class="form-label">Fecha y hora de llegada</label>
                 <input type="text" class="form-control" id="fecha_inicio" name="fecha_inicio" required autocomplete="off">
               </div>
               <div class="mb-3">
-                <label for="fecha_fin" class="form-label">Fecha de salida</label>
+                <label for="fecha_fin" class="form-label">Fecha y hora de salida</label>
                 <input type="text" class="form-control" id="fecha_fin" name="fecha_fin" required autocomplete="off">
               </div>
               <button type="submit" class="btn btn-primary btn-azul w-100 py-2">
@@ -265,17 +265,26 @@
       }
 
       flatpickr("#fecha_inicio", {
-        disable: fechasOcupadas,
-        dateFormat: "Y-m-d",
+        enableTime: true,
+        time_24hr: true,
+        dateFormat: "Y-m-d H:00",
         minDate: "today",
+        locale: "es",
+        disable: fechasOcupadas,
+        minuteIncrement: 60,
         onDayCreate: function(dObj, dStr, fp, dayElem) {
           marcarPropias(dayElem.dateObj, dayElem);
         }
       });
+
       flatpickr("#fecha_fin", {
-        disable: fechasOcupadas,
-        dateFormat: "Y-m-d",
+        enableTime: true,
+        time_24hr: true,
+        dateFormat: "Y-m-d H:00",
         minDate: "today",
+        locale: "es",
+        disable: fechasOcupadas,
+        minuteIncrement: 60,
         onDayCreate: function(dObj, dStr, fp, dayElem) {
           marcarPropias(dayElem.dateObj, dayElem);
         }

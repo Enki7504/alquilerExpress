@@ -93,8 +93,8 @@ class Inmueble(models.Model):
 
 class Reserva(models.Model):
     id_reserva = models.AutoField(primary_key=True)
-    fecha_inicio = models.DateField()
-    fecha_fin = models.DateField()
+    fecha_inicio = models.DateTimeField(default=timezone.now)
+    fecha_fin = models.DateTimeField()
     precio_total = models.DecimalField(max_digits=10, decimal_places=2)
     estado = models.ForeignKey(Estado, on_delete=models.SET_NULL, null=True)  # Aquí está el estado FK
     inmueble = models.ForeignKey(Inmueble, null=True, blank=True, on_delete=models.SET_NULL)
