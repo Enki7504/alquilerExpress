@@ -66,16 +66,21 @@
                     <div class="d-flex align-items-center gap-2 acciones-comentario" id="acciones-{{ comentario.id_comentario }}">
                       {% with respuesta=respuestas|dictkey:comentario.id_comentario %}
                         {% if not respuesta %}
-                          <button type="button" class="btn btn-sm btn-outline-primary btn-responder-comentario" data-comentario="{{ comentario.id_comentario }}" id="btn-responder-{{ comentario.id_comentario }}">
+                          <button type="button" 
+                                  class="btn btn-sm btn-outline-primary btn-responder-comentario" 
+                                  data-comentario="{{ comentario.id_comentario }}" 
+                                  id="btn-responder-{{ comentario.id_comentario }}">
                             <i class="bi bi-reply"></i> Responder
                           </button>
                         {% endif %}
                       {% endwith %}
-                      <button type="button" class="btn btn-sm btn-outline-danger btn-eliminar-comentario" data-comentario="{{ comentario.id_comentario }}">
-                        <i class="bi bi-trash"></i> Eliminar
-                      </button>
-                      <form method="post" action="{% url 'eliminar_comentario' comentario.id_comentario %}" class="form-eliminar-comentario" id="form-eliminar-{{ comentario.id_comentario }}" style="display: none;">
+                      <form method="post" action="{% url 'eliminar_comentario' comentario.id_comentario %}" class="form-eliminar-comentario" id="form-eliminar-{{ comentario.id_comentario }}" style="display: inline;">
                         {% csrf_token %}
+                        <button type="submit" 
+                                class="btn btn-sm btn-outline-danger btn-eliminar-comentario" 
+                                data-comentario="{{ comentario.id_comentario }}">
+                            <i class="bi bi-trash"></i> Eliminar
+                        </button>
                       </form>
                     </div>
                   {% endif %}

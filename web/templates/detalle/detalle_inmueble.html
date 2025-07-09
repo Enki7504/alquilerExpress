@@ -1,0 +1,261 @@
+{% extends 'base/base.html' %}
+{% load static %}
+{% load user_groups %}
+{% load dict_extras %}
+
+{% block title %}Detalle del Inmueble - {{ inmueble.nombre }}{% endblock %}
+
+{% block extra_css %}
+  <!-- Nuestro CSS -->
+  <link rel="stylesheet" href="{% static 'css/detalle.css' %}">
+  <!-- Flatpickr -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+{% endblock %}
+
+{% block content %}
+  <!-- Contenido principal -->
+  <main class="container mt-5 pt-5">
+    <div id="detalle-inmueble" class="row">
+      <!-- Info del inmueble -->
+      <div class="col-lg-8">
+        <!-- Carrusel de imágenes -->
+        <div id="inmuebleCarousel" class="carousel slide mb-4 shadow-sm rounded" data-bs-ride="carousel">
+          <div class="carousel-inner rounded">
+            {% for imagen in inmueble.imagenes.all %}
+              <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                <img src="{{ imagen.imagen.url }}" class="d-block w-100 img-carrusel-inmueble" alt="{{ inmueble.nombre }}">
+              </div>
+            {% empty %}
+              <div class="carousel-item active">
+                <img src="{% static 'img/default-property-large.jpg' %}" class="d-block w-100 img-carrusel-inmueble" alt="Imagen por defecto">
+              </div>
+            {% endfor %}
+          </div>
+          {% if inmueble.imagenes.count > 1 %}
+            <button class="carousel-control-prev" type="button" data-bs-target="#inmuebleCarousel" data-bs-slide="prev">
+              <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+              <span class="visually-hidden">Previous</span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#inmuebleCarousel" data-bs-slide="next">
+              <span class="carousel-control-next-icon" aria-hidden="true"></span>
+              <span class="visually-hidden">Next</span>
+            </button>
+          {% endif %}
+        </div>
+        <!-- Información detallada -->
+        <div class="card mb-4 shadow-sm">
+          <div class="card-body">
+            <h1 class="h2 mb-3">{{ inmueble.nombre }}</h1>
+            <div class="d-flex align-items-center mb-3">
+              <i class="bi bi-geo-alt-fill text-primary me-2"></i>
+              <span class="text-muted">
+                {{ inmueble.provincia.nombre }}, {{ inmueble.ciudad.nombre }}, {{ inmueble.direccion }}
+              </span>
+            </div>
+            <div class="d-flex flex-wrap gap-3 mb-4">
+              <div class="d-flex align-items-center">
+                <i class="bi bi-door-open text-primary me-2"></i>
+                <span>{{ inmueble.cantidad_ambientes }} ambientes</span>
+              </div>
+              <div class="d-flex align-items-center">
+                <i class="bi bi-bootstrap text-primary me-2"></i>
+                <span>{{ inmueble.cantidad_banios }} baño{{ inmueble.cantidad_banios|pluralize }}</span>
+              </div>
+              <div class="d-flex align-items-center">
+                <i class="bi bi-c-square text-primary me-2"></i>
+                <span>{{ inmueble.cantidad_camas }} cama{{ inmueble.cantidad_camas|pluralize }}</span>
+              </div>
+              <div class="d-flex align-items-center">
+                <i class="bi bi-people text-primary me-2"></i>
+                <span>{{ inmueble.cantidad_huespedes }} huesped{{ inmueble.cantidad_huespedes|pluralize:"es" }}</span>
+              </div>
+              <div class="d-flex align-items-center">
+                <i class="bi bi-calendar-range text-primary me-2"></i>
+                <span>Mínimo {{ inmueble.minimo_dias_alquiler }} noche{{ inmueble.minimo_dias_alquiler|pluralize }}</span>
+              </div>
+              <p class="text-muted small mt-2">
+                <i class="bi bi-calendar-date text-primary me-1"></i>
+                Publicado el {{ inmueble.fecha_publicacion|date:"d/m/Y" }}
+              </p>
+              {% if inmueble.inmueble %}
+              <div class="d-flex align-items-center">
+                <i class="bi bi-car-front text-primary me-2"></i>
+                <span>inmueble</span>
+              </div>
+              {% endif %}
+              {% if inmueble.estado %}
+              <span class="badge bg-{% if inmueble.estado.nombre == 'Disponible' %}success{% else %}warning{% endif %}">
+                {{ inmueble.estado.nombre }}
+              </span>
+              {% endif %}
+            </div>
+            <h3 class="h4 mb-3">Descripción</h3>
+            <p class="mb-4">{{ inmueble.descripcion }}</p>
+            <h3 class="h4 mb-3">Política de cancelación</h3>
+            <p>{{ inmueble.politica_cancelacion }}</p>
+          </div>
+        </div>
+      </div>
+      <!-- Sidebar - Panel administrativo o reserva -->
+      <div class="col-lg-4">
+        <div class="card shadow-sm sticky-top" style="top: 20px;">
+          <div class="card-body">
+            {% if is_admin_or_empleado %}
+              <h3 class="h4 mb-3">Gestión del Inmueble</h3>
+              <div class="d-flex align-items-end mb-3">
+                <span class="h3 text-primary">${{ inmueble.precio_por_dia|floatformat:"0" }}</span>
+                <span class="text-muted ms-1">/ noche</span>
+              </div>
+              <!-- <div class="d-grid gap-2">
+                <a href="{% url 'admin_inmuebles_reservas' id_inmueble=inmueble.id_inmueble %}" class="btn btn-primary">
+                  <i class="bi bi-calendar-check me-2"></i> Ver Reservas
+                </a>
+                <a href="{% url 'admin_inmuebles_historial' id_inmueble=inmueble.id_inmueble %}" class="btn btn-secondary">
+                  <i class="bi bi-clock-history me-2"></i> Ver Historial
+                </a>
+                {% if is_admin %}
+                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">
+                  <i class="bi bi-trash me-2"></i> Eliminar inmueble
+                </button>
+                <a href="{% url 'admin_inmuebles_editar' id_inmueble=inmueble.id_inmueble %}" class="btn btn-warning">
+                  <i class="bi bi-pencil-square me-2"></i> Editar inmueble
+                </a>
+              </div> -->
+              {% endif %}
+            {% else %}
+              <h3 class="h4 mb-3">Reservar</h3>
+              <div class="d-flex align-items-end mb-3">
+                <span class="h3 text-primary">${{ inmueble.precio_por_dia|floatformat:"0" }}</span>
+                <span class="text-muted ms-1">/ noche</span>
+              </div>
+              
+              <form method="post" action="{% url 'crear_reserva' id_inmueble=inmueble.id_inmueble %}">
+                {% csrf_token %}
+                <div class="mb-3">
+                  <label for="fecha_inicio" class="form-label">Fecha de llegada</label>
+                  <input type="text" class="form-control" id="fecha_inicio" name="fecha_inicio" required autocomplete="off">
+                </div>
+                <div class="mb-3">
+                  <label for="fecha_fin" class="form-label">Fecha de salida</label>
+                  <input type="text" class="form-control" id="fecha_fin" name="fecha_fin" required autocomplete="off">
+                </div>
+                <!-- aca se pide la cantidad de adultos y niños -->
+                <div class="mb-3">
+                  <label for="cantidad_adultos" class="form-label">Cantidad de adultos</label>
+                  <input type="number" class="form-control" id="cantidad_adultos" name="cantidad_adultos" min="1" max="{{ inmueble.cantidad_huespedes }}" required>
+                </div>
+                <div class="mb-3">
+                  <label for="cantidad_ninos" class="form-label">Cantidad de niños</label>
+                  <input type="number" class="form-control" id="cantidad_ninos" name="cantidad_ninos" min="0" max="{{ inmueble.cantidad_huespedes }}" required>
+                </div>
+                <!-- Formulario oculto para agregar huésped
+                <div class="mb-3">
+                  <ul id="lista-huespedes" class="list-group mb-2" data-max-huespedes="{{ inmueble.cantidad_huespedes }}"></ul>
+                  <button type="button" class="btn btn-outline-primary btn-sm w-100" id="btn-agregar-huesped">
+                    <i class="bi bi-person-plus"></i> Agregar huésped
+                  </button>
+                </div>
+                <div id="form-huesped" class="card card-body mb-3" style="display:none; max-width: 500px;">
+                  <div class="mb-3">
+                    <label for="huesped-nombre" class="form-label">Nombre</label>
+                    <input type="text" class="form-control" id="huesped-nombre" placeholder="Nombre">
+                  </div>
+                  <div class="mb-3">
+                    <label for="huesped-apellido" class="form-label">Apellido</label>
+                    <input type="text" class="form-control" id="huesped-apellido" placeholder="Apellido">
+                  </div>
+                  <div class="mb-3">
+                    <label for="huesped-dni" class="form-label">DNI</label>
+                    <input type="text" class="form-control" id="huesped-dni" placeholder="DNI">
+                  </div>
+                  <div class="mb-3">
+                    <label for="huesped-fecha-nac" class="form-label">Fecha de nacimiento</label>
+                    <input type="date" class="form-control" id="huesped-fecha-nac" placeholder="Fecha de nacimiento">
+                  </div>
+                  <div class="mt-2 text-end">
+                    <button type="button" class="btn btn-naranja btn-sm" id="btn-aceptar-huesped">Aceptar</button>
+                    <button type="button" class="btn btn-azul btn-secondary btn-sm" id="btn-cancelar-huesped">Cancelar</button>
+                  </div>
+                </div>
+                <!-- Campo oculto para enviar los huéspedes como JSON 
+                <input type="hidden" name="huespedes_json" id="huespedes-json">
+                -->
+
+                <button type="submit" class="btn btn-primary btn-azul w-100 py-2">
+                  <i class="bi bi-calendar-check me-2"></i> Reservar ahora
+                </button>
+                <div id="django-messages" style="display: none;">
+                  {% if messages %}
+                    {% for message in messages %}
+                      <div class="django-message" data-tags="{{ message.tags }}" data-message="{{ message }}"></div>
+                    {% endfor %}
+                  {% endif %}
+                </div>
+              </form>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de confirmación para eliminar -->
+    <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="confirmDeleteModalLabel">Confirmar Eliminación</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            ¿Estás seguro de que quieres eliminar el inmueble "{{ inmueble.nombre }}"? Esta acción no se puede deshacer.
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <form method="post" action="{% url 'admin_inmuebles_eliminar' id_inmueble=inmueble.id_inmueble %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-danger">Eliminar</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Cartelito para autenticarte -->
+  {% if not user.is_authenticated %}
+    <section class="container mt-5">
+      <div class="card shadow-sm border-0 text-center py-4 mb-5">
+        <div class="card-body">
+          <i class="bi bi-lock-fill display-4 text-muted mb-3"></i>
+          <h3 class="h4 mb-3">Iniciá sesión para dejar tu reseña o comentario</h3>
+          <p class="mb-4">Compartí tu experiencia con este alojamiento</p>
+          <div class="d-flex justify-content-center gap-3">
+            <a href="{% url 'login' %}" class="btn btn-primary btn-azul">
+              Iniciar sesión
+            </a>
+            <a href="{% url 'register' %}" class="btn btn-outline-primary">
+              Registrarse
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>>
+  {% endif %}
+
+  <!-- Secciones de Comentarios y Reseñas -->
+  {% include 'detalle/_comentarios.html' %}
+  {% include 'detalle/_resenias.html' %}
+{% endblock %}
+
+{% block extra_js %}
+  {{ block.super }}
+  {{ fechas_ocupadas|json_script:"fechasOcupadasJSON" }}
+  {{ fechas_ocupadas_propias|json_script:"fechasOcupadasPropiasJSON" }}
+  {{ fecha_fin_mantenimiento|json_script:"fechaFinMantenimientoJSON" }}
+
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  
+  <script src="{% static 'js/detalle.js' %}"></script>
+  <script src="{% static 'js/comentarios.js' %}"></script>
+  <script src="{% static 'js/resenias.js' %}"></script>
+{% endblock extra_js %}
