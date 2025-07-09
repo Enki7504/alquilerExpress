@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
+from django.utils import timezone
 
 # Importaciones de formularios locales
 from ..forms import (
@@ -12,7 +13,9 @@ from ..forms import (
 # Importaciones de modelos locales
 from ..models import (
     Notificacion,
-    Reserva
+    Reserva,
+    Inmueble,
+    Cochera
 )
 
 # Importaciones de utilidades locales
@@ -24,7 +27,6 @@ from ..utils import (
 @login_required
 @user_passes_test(is_admin_or_empleado)
 def admin_notificar_imprevisto(request):
-<<<<<<< HEAD:web/viewsNotificaciones.py
     inmuebles = Inmueble.objects.all()
     cocheras = Cochera.objects.all()
     if request.method == "POST" and request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -112,30 +114,6 @@ def admin_notificar_imprevisto(request):
         "inmuebles": inmuebles,
         "cocheras": cocheras,
     })
-=======
-    if request.method == 'POST':
-        form = NotificarImprevistoForm(request.POST)
-        if form.is_valid():
-            inmueble = form.cleaned_data['inmueble']
-            mensaje = form.cleaned_data['mensaje']
-
-            # Notificar al empleado asignado
-            if hasattr(inmueble, 'empleado_asignado') and inmueble.empleado_asignado:
-                crear_notificacion(inmueble.empleado_asignado, f"Imprevisto en {inmueble}: {mensaje}")
-
-            # Notificar a todos los clientes con reservas activas
-            reservas_activas = Reserva.objects.filter(inmueble=inmueble, estado='Pagada')
-            for reserva in reservas_activas:
-                crear_notificacion(reserva.cliente, f"Imprevisto en {inmueble}: {mensaje}")
-
-            messages.success(request, "Se notificó al empleado y a los clientes con reservas activas.")
-            return redirect('admin_notificar_imprevisto')
-    else:
-        form = NotificarImprevistoForm()
-
-    return render(request, 'admin/admin_notificar_imprevisto.html', {'form': form})
-
->>>>>>> 8587b242383f39ff38e11fd6019fca443f9429c8:web/views/viewsNotificaciones.py
 
 ################################################################################################################
 # --- Vistas de Notificaciones ---
