@@ -1,7 +1,7 @@
 .carousel-inner,
 .carousel-item {
   width: 100%;
-  height: 500px; /* Altura fija para el carrusel */
+  height: 500px;
   border-radius: 1rem !important;
   overflow: hidden !important;
   background: #eee !important;
@@ -22,7 +22,7 @@
 }
 
 .flatpickr-day.flatpickr-day-propia:hover {
-  background: #F0D5BB !important; /* Un tono ligeramente más oscuro del durazno */
-  color: #CD6E1B !important; /* Un naranja ligeramente más oscuro para el texto en hover */
-  cursor: pointer; /* Cambia el cursor a una mano para indicar que es interactivo */
+  background: #F0D5BB !important;
+  color: #CD6E1B !important;
+  cursor: pointer;
 }

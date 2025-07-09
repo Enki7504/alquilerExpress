@@ -236,8 +236,8 @@ def detalle_cochera(request, id_cochera):
                 fecha += timedelta(days=1)
 
     usuario_resenia = None
-    if request.user.is_authenticated:
-        perfil = getattr(request.user, "perfil", None)
+    perfil = getattr(request.user, "perfil", None) if request.user.is_authenticated else None
+    if perfil:
         usuario_resenia = Resenia.objects.filter(cochera=cochera, usuario=perfil).first()
 
     # Formularios
@@ -245,7 +245,50 @@ def detalle_cochera(request, id_cochera):
     respuesta_form = RespuestaComentarioForm()
     resenia_form = ReseniaForm()
 
-    # Procesamiento de formularios POST (sin cambios...)
+    # Procesamiento de formularios POST
+    if request.method == 'POST':
+        if 'crear_resenia' in request.POST and es_usuario:
+            resenia_form = ReseniaForm(request.POST)
+            if resenia_form.is_valid():
+                resenia = resenia_form.save(commit=False)
+                resenia.usuario = perfil
+                resenia.cochera = cochera
+                resenia.save()
+                messages.success(request, "¡Reseña publicada!")
+                return redirect('detalle_cochera', id_cochera=id_cochera)
+
+        elif 'responder_comentario_id' in request.POST and is_admin_or_empleado_var:
+            respuesta_form = RespuestaComentarioForm(request.POST)
+            comentario_id = request.POST.get('responder_comentario_id')
+            comentario = get_object_or_404(Comentario, id_comentario=comentario_id)
+            if respuesta_form.is_valid():
+                respuesta = respuesta_form.save(commit=False)
+                respuesta.comentario = comentario
+                respuesta.usuario = perfil
+                respuesta.save()
+                # Notificación interna al cliente
+                crear_notificacion(
+                    usuario=comentario.usuario,
+                    mensaje=f"Tu comentario en '{cochera.nombre}' fue respondido: \"{respuesta.texto}\""
+                )
+                messages.success(request, "Respuesta publicada.")
+                return redirect('detalle_cochera', id_cochera=id_cochera)
+
+        elif request.user.is_authenticated:
+            comentario_form = ComentarioForm(request.POST)
+            if comentario_form.is_valid():
+                comentario = comentario_form.save(commit=False)
+                comentario.usuario = perfil
+                comentario.cochera = cochera
+                comentario.save()
+                # Notificar al empleado asignado a la cochera si existe
+                if cochera.empleado:
+                    crear_notificacion(
+                        usuario=cochera.empleado,
+                        mensaje=f"Nuevo comentario en '{cochera.nombre}': \"{comentario.descripcion}\""
+                    )
+                messages.success(request, "Comentario añadido exitosamente.")
+                return redirect('detalle_cochera', id_cochera=id_cochera)
 
     # Diccionario de respuestas
     respuestas_dict = {
@@ -253,7 +296,7 @@ def detalle_cochera(request, id_cochera):
     }
 
     puede_reseñar = False
-    if request.user.is_authenticated and es_usuario:
+    if request.user.is_authenticated and es_usuario and perfil:
         tiene_reserva_finalizada = reservas.filter(
             clienteinmueble__cliente=perfil,
             cochera=cochera,
@@ -272,7 +315,7 @@ def detalle_cochera(request, id_cochera):
         'historial': historial,
         'usuario_resenia': usuario_resenia,
         'fechas_ocupadas': fechas_ocupadas,
-        'fechas_ocupadas_propias': fechas_ocupadas_propias,  # <-- AGREGADO
+        'fechas_ocupadas_propias': fechas_ocupadas_propias,
         'respuestas': respuestas_dict,
         'es_usuario': es_usuario,
         'is_admin_or_empleado': is_admin_or_empleado_var,

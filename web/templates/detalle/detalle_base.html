@@ -1,0 +1,117 @@
+{% extends 'base/base.html' %}
+{% load static %}
+{% load user_groups %}
+{% load dict_extras %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/detalle.css' %}">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  {% block detalle_extra_css %}{% endblock %}
+{% endblock %}
+
+{% block content %}
+<!-- Contenido Principal -->
+<main class="container mt-5 pt-5">
+  <div id="detalle-{{ tipo }}" class="row">
+    <!-- Info principal -->
+    <div class="col-lg-8">
+      <!-- Carrusel de imágenes -->
+      <div id="{{ tipo }}Carousel" class="carousel slide mb-4 shadow-sm rounded" data-bs-ride="carousel">
+        <div class="carousel-inner rounded">
+          {% for imagen in objeto.imagenes.all %}
+            <div class="carousel-item {% if forloop.first %}active{% endif %}">
+              <img src="{{ imagen.imagen.url }}" class="d-block w-100 img-carrusel-{{ tipo }}" alt="{{ objeto.nombre }}">
+            </div>
+          {% empty %}
+            <div class="carousel-item active">
+              <img src="{% static imagen_default %}" class="d-block w-100 img-carrusel-{{ tipo }}" alt="Imagen por defecto">
+            </div>
+          {% endfor %}
+        </div>
+        {% if objeto.imagenes.count > 1 %}
+          <button class="carousel-control-prev" type="button" data-bs-target="#{{ tipo }}Carousel" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Previous</span>
+          </button>
+          <button class="carousel-control-next" type="button" data-bs-target="#{{ tipo }}Carousel" data-bs-slide="next">
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Next</span>
+          </button>
+        {% endif %}
+      </div>
+      
+      <!-- Información detallada -->
+      <div class="card mb-4 shadow-sm">
+        <div class="card-body">
+          <h1 class="h2 mb-3">{{ objeto.nombre }}</h1>
+          <div class="d-flex align-items-center mb-3">
+            <i class="bi bi-geo-alt-fill text-primary me-2"></i>
+            <span class="text-muted">
+              {{ objeto.provincia.nombre }}, {{ objeto.ciudad.nombre }}, {{ objeto.direccion }}
+            </span>
+          </div>
+          
+          <div class="d-flex flex-wrap gap-3 mb-4">
+            {% block detalles_especificos %}{% endblock %}
+            
+            <p class="text-muted small mt-2">
+              <i class="bi bi-calendar-date me-1"></i>
+              Publicado el {{ objeto.fecha_publicacion|date:"d/m/Y" }}
+            </p>
+            
+            {% if objeto.estado %}
+            <span class="badge bg-{% if objeto.estado.nombre == 'Disponible' %}success{% else %}warning{% endif %}">
+              {{ objeto.estado.nombre }}
+            </span>
+            {% endif %}
+          </div>
+          
+          <h3 class="h4 mb-3">Descripción</h3>
+          <p class="mb-4">{{ objeto.descripcion }}</p>
+          
+          <h3 class="h4 mb-3">Política de cancelación</h3>
+          <p>{{ objeto.politica_cancelacion }}</p>
+        </div>
+      </div>
+    </div>
+    <!-- Sidebar - Panel administrativo o reserva -->
+    <div class="col-lg-4">
+      <div class="card shadow-sm sticky-top" style="top: 20px;">
+        <div class="card-body">
+          {% if is_admin_or_empleado %}
+            <h3 class="h4 mb-3">Gestión del {{ tipo|title }}</h3>
+            <div class="d-flex align-items-end mb-3">
+              <span class="h3 text-primary">${{ objeto.precio_por_dia|floatformat:"0" }}</span>
+              <span class="text-muted ms-1">/ {% block precio_por %}{% endblock %}</span>
+            </div>
+          {% else %}
+            <h3 class="h4 mb-3">Reservar</h3>
+            <div class="d-flex align-items-end mb-3">
+              <span class="h3 text-primary">${{ objeto.precio_por_dia|floatformat:"0" }}</span>
+              <span class="text-muted ms-1">/ noche</span>
+            </div>
+            {% block formulario_reserva %}{% endblock %}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+{% include 'detalle/_cartelAutenticarse.html' %}
+{% include 'detalle/_comentarios.html' %}
+{% include 'detalle/_resenias.html' %}
+
+{% block extra_js %}
+  {{ block.super }}
+  {{ fechas_ocupadas|json_script:"fechasOcupadasJSON" }}
+  {{ fechas_ocupadas_propias|json_script:"fechasOcupadasPropiasJSON" }}
+  {{ fecha_fin_mantenimiento|json_script:"fechaFinMantenimientoJSON" }}
+
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  
+  <script src="{% static 'js/detalle.js' %}"></script>
+  <script src="{% static 'js/comentarios.js' %}"></script>
+  <script src="{% static 'js/resenias.js' %}"></script>
+{% endblock %}
+{% endblock %}
