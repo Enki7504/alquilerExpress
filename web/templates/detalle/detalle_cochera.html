@@ -9,6 +9,67 @@
       height: 500px;
       object-fit: cover;
     }
+    
+    /* Selector de horas visual */
+    .hora-selector {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+      gap: 5px;
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      padding: 10px;
+      border-radius: 5px;
+      background-color: #f9f9f9;
+    }
+    
+    .hora-btn {
+      padding: 8px 12px;
+      border: 1px solid #ccc;
+      background-color: white;
+      color: #333;
+      text-align: center;
+      cursor: pointer;
+      border-radius: 4px;
+      font-size: 0.9em;
+      transition: all 0.2s;
+    }
+    
+    .hora-btn:hover {
+      background-color: #e9ecef;
+      border-color: #adb5bd;
+    }
+    
+    .hora-btn.selected {
+      background-color: #007bff !important;
+      color: white !important;
+      border-color: #007bff !important;
+    }
+    
+    .hora-btn.ocupada {
+      background-color: #f8d7da;
+      color: #721c24;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+    
+    /* Agrega esta nueva regla para evitar hover en ocupadas */
+    .hora-btn.ocupada:hover {
+      background-color: #f8d7da !important;
+      border-color: #f5c6cb !important;
+    }
+    
+    .hora-btn.propia {
+      background-color: #fff3cd;
+      color: #856404;
+      border-color: #ffeaa7;
+    }
+    
+    .flatpickr-time input:disabled {
+      background-color: #f8d7da !important;
+      color: #721c24 !important;
+      opacity: 0.7;
+    }
   </style>
 {% endblock %}
 
@@ -43,27 +104,44 @@
   <form method="post" action="{% url 'crear_reserva_cochera' id_cochera=cochera.id_cochera %}">
     {% csrf_token %}
     <div class="mb-3">
-      <label for="fecha_inicio" class="form-label">Fecha y hora de llegada</label>
-      <input type="text" class="form-control" id="fecha_inicio" name="fecha_inicio" required autocomplete="off">
+      <label for="fecha_inicio_date" class="form-label">Fecha de llegada</label>
+      <input type="text" class="form-control" id="fecha_inicio_date" name="fecha_inicio_date" required autocomplete="off">
     </div>
+    
+    <!-- Selector visual de hora de llegada -->
     <div class="mb-3">
-      <label for="fecha_fin" class="form-label">Fecha y hora de salida</label>
-      <input type="text" class="form-control" id="fecha_fin" name="fecha_fin" required autocomplete="off">
+      <label class="form-label">Hora de llegada</label>
+      <div id="hora-inicio-selector" class="hora-selector">
+        <!-- Se genera dinámicamente con JS -->
+      </div>
+      <input type="hidden" id="fecha_inicio_time" name="fecha_inicio_time" required>
     </div>
+    
+    <div class="mb-3">
+      <label for="fecha_fin_date" class="form-label">Fecha de salida</label>
+      <input type="text" class="form-control" id="fecha_fin_date" name="fecha_fin_date" required autocomplete="off">
+    </div>
+    
+    <!-- Selector visual de hora de salida -->
+    <div class="mb-3">
+      <label class="form-label">Hora de salida</label>
+      <div id="hora-fin-selector" class="hora-selector">
+        <!-- Se genera dinámicamente con JS -->
+      </div>
+      <input type="hidden" id="fecha_fin_time" name="fecha_fin_time" required>
+    </div>
+    
     <button type="submit" class="btn btn-primary btn-azul w-100 py-2">
       <i class="bi bi-calendar-check me-2"></i> Reservar ahora
     </button>
-    <div id="django-messages" style="display: none;">
-      {% if messages %}
-        {% for message in messages %}
-          <div class="django-message" data-tags="{{ message.tags }}" data-message="{{ message }}"></div>
-        {% endfor %}
-      {% endif %}
-    </div>
+    <!-- campos ocultos para enviar la fecha completa -->
+    <input type="hidden" name="fecha_inicio" id="fecha_inicio_hidden">
+    <input type="hidden" name="fecha_fin" id="fecha_fin_hidden">
   </form>
 {% endblock %}
 
 {% block extra_js %}
+  {{ horarios_ocupados|json_script:"horariosOcupadosJSON" }}
   {{ fechas_ocupadas|json_script:"fechasOcupadasJSON" }}
   {{ fechas_ocupadas_propias|json_script:"fechasOcupadasPropiasJSON" }}
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
@@ -71,6 +149,8 @@
   <script>
     // Convertir los mensajes de Django a SweetAlert
     const messageElements = document.querySelectorAll('.django-message');
+    var fechasOcupadas = JSON.parse(document.getElementById('fechasOcupadasJSON').textContent);
+    var fechasOcupadasPropias = JSON.parse(document.getElementById('fechasOcupadasPropiasJSON').textContent);
 
     messageElements.forEach(element => {
         const tags = element.getAttribute('data-tags');
@@ -94,6 +174,118 @@
         });
     });
 
+    // Generar horas del día (6:00 AM a 11:00 PM)
+    function generarHoras() {
+      const horas = [];
+      for (let i = 6; i <= 23; i++) {
+        horas.push(`${i.toString().padStart(2, '0')}:00`);
+      }
+      return horas;
+    }
+
+    // Crear selector de horas visual
+    function crearSelectorHoras(containerId, inputId) {
+      const container = document.getElementById(containerId);
+      const input = document.getElementById(inputId);
+      const horas = generarHoras();
+      
+      container.innerHTML = '';
+      
+      horas.forEach(hora => {
+        const btn = document.createElement('div');
+        btn.className = 'hora-btn';
+        btn.textContent = hora;
+        btn.dataset.hora = hora;
+        
+        btn.addEventListener('click', function() {
+          console.log(`Click en hora: ${hora}`);
+          console.log(`Clases actuales:`, this.classList.toString());
+          console.log(`¿Está ocupada?`, this.classList.contains('ocupada'));
+          
+          if (this.classList.contains('ocupada')) {
+            console.log(`❌ Hora ${hora} está ocupada, no se puede seleccionar`);
+            return;
+          }
+          
+          console.log(`✅ Seleccionando hora: ${hora}`);
+          
+          // Remover selección anterior EN TODO EL CONTENEDOR
+          container.querySelectorAll('.hora-btn').forEach(b => {
+            b.classList.remove('selected');
+          });
+          
+          // Seleccionar esta hora (solo con clase CSS)
+          this.classList.add('selected');
+          input.value = hora;
+          
+          console.log(`Valor guardado en input: ${input.value}`);
+          console.log(`Clases después de seleccionar:`, this.classList.toString());
+        });
+        
+        container.appendChild(btn);
+      });
+    }
+
+    // Actualizar estado de las horas según disponibilidad (con fetch)
+    async function actualizarHorasDisponibles(containerId, fecha) {
+      const container = document.getElementById(containerId);
+      
+      if (!fecha) {
+        container.querySelectorAll('.hora-btn').forEach(btn => {
+          btn.classList.remove('ocupada', 'propia');
+          // NO remover 'selected' aquí
+        });
+        return;
+      }
+      
+      try {
+        console.log(`Obteniendo horarios para fecha: ${fecha}`);
+        const url = `{% url 'obtener_horarios_ocupados' id_cochera=cochera.id_cochera %}?fecha=${fecha}`;
+        
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        if (data.error) {
+          console.error('Error obteniendo horarios:', data.error);
+          return;
+        }
+        
+        const horasOcupadas = data.horarios_ocupados || [];
+        let esFechaPropia = false;
+        if (typeof fechasOcupadasPropias !== 'undefined') {
+          esFechaPropia = fechasOcupadasPropias.includes(fecha);
+        }
+        
+        container.querySelectorAll('.hora-btn').forEach(btn => {
+          const hora = btn.dataset.hora;
+          
+          // SOLO limpiar clases de estado, NO 'selected'
+          btn.classList.remove('ocupada', 'propia');
+          
+          // Marcar horas ocupadas
+          if (horasOcupadas.includes(hora)) {
+            btn.classList.add('ocupada');
+            // Si estaba seleccionada una hora ocupada, deseleccionarla
+            if (btn.classList.contains('selected')) {
+              btn.classList.remove('selected');
+              const input = document.getElementById(containerId.replace('-selector', '_time'));
+              if (input && input.value === hora) {
+                input.value = '';
+              }
+            }
+          }
+          
+          // Marcar si es fecha propia
+          if (esFechaPropia) {
+            btn.classList.add('propia');
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error en fetch de horarios:', error);
+      }
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
       var fechasOcupadas = JSON.parse(document.getElementById('fechasOcupadasJSON').textContent);
       var fechasOcupadasPropias = JSON.parse(document.getElementById('fechasOcupadasPropiasJSON').textContent);
@@ -105,31 +297,57 @@
         }
       }
 
-      flatpickr("#fecha_inicio", {
-        enableTime: true,
-        time_24hr: true,
-        dateFormat: "Y-m-d H:00",
+      // Flatpickr para fechas
+      const fechaInicioPicker = flatpickr("#fecha_inicio_date", {
+        dateFormat: "Y-m-d",
         minDate: "today",
         locale: "es",
         disable: fechasOcupadas,
-        minuteIncrement: 60,
         onDayCreate: function(dObj, dStr, fp, dayElem) {
           marcarPropias(dayElem.dateObj, dayElem);
+        },
+        onChange: function(selectedDates, dateStr) {
+          actualizarHorasDisponibles('hora-inicio-selector', dateStr);
         }
       });
 
-      flatpickr("#fecha_fin", {
-        enableTime: true,
-        time_24hr: true,
-        dateFormat: "Y-m-d H:00",
+      const fechaFinPicker = flatpickr("#fecha_fin_date", {
+        dateFormat: "Y-m-d",
         minDate: "today",
         locale: "es",
         disable: fechasOcupadas,
-        minuteIncrement: 60,
         onDayCreate: function(dObj, dStr, fp, dayElem) {
           marcarPropias(dayElem.dateObj, dayElem);
+        },
+        onChange: function(selectedDates, dateStr) {
+          actualizarHorasDisponibles('hora-fin-selector', dateStr);
         }
       });
+
+      // Crear selectores de horas
+      crearSelectorHoras('hora-inicio-selector', 'fecha_inicio_time');
+      crearSelectorHoras('hora-fin-selector', 'fecha_fin_time');
+
+      // Combinar fecha y hora antes de enviar el formulario
+      document.querySelector('form').addEventListener('submit', function(e) {
+        const fechaInicio = document.getElementById('fecha_inicio_date').value;
+        const horaInicio = document.getElementById('fecha_inicio_time').value;
+        const fechaFin = document.getElementById('fecha_fin_date').value;
+        const horaFin = document.getElementById('fecha_fin_time').value;
+
+        if (!horaInicio || !horaFin) {
+          e.preventDefault();
+          Swal.fire('Error', 'Debes seleccionar las horas de llegada y salida', 'error');
+          return;
+        }
+
+        if (fechaInicio && horaInicio) {
+          document.getElementById('fecha_inicio_hidden').value = `${fechaInicio} ${horaInicio}`;
+        }
+        if (fechaFin && horaFin) {
+          document.getElementById('fecha_fin_hidden').value = `${fechaFin} ${horaFin}`;
+        }
+      });      
     });
 
      document.addEventListener('DOMContentLoaded', function() {

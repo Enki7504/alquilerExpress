@@ -1,4 +1,3 @@
-import datetime
 import json
 
 from django.contrib import messages
@@ -137,10 +136,32 @@ def crear_reserva_cochera(request, id_cochera):
     if request.method == 'POST':
         # Validar fechas
         try:
-            fecha_inicio = datetime.strptime(request.POST["fecha_inicio"], "%Y-%m-%d %H:%M")
-            fecha_fin = datetime.strptime(request.POST["fecha_fin"], "%Y-%m-%d %H:%M")
-        except (TypeError, ValueError):
-            messages.error(request, 'Fechas inválidas.')
+            fecha_inicio_date = request.POST.get("fecha_inicio_date")
+            fecha_inicio_time = request.POST.get("fecha_inicio_time")
+            fecha_fin_date = request.POST.get("fecha_fin_date")
+            fecha_fin_time = request.POST.get("fecha_fin_time")
+            
+            # También verificar si vienen los campos combinados (fallback)
+            fecha_inicio_combined = request.POST.get("fecha_inicio")
+            fecha_fin_combined = request.POST.get("fecha_fin")
+            
+            if fecha_inicio_combined and fecha_fin_combined:
+                # Si vienen combinados, usarlos
+                fecha_inicio = datetime.strptime(fecha_inicio_combined, "%Y-%m-%d %H:%M")
+                fecha_fin = datetime.strptime(fecha_fin_combined, "%Y-%m-%d %H:%M")
+            elif fecha_inicio_date and fecha_inicio_time and fecha_fin_date and fecha_fin_time:
+                # Si vienen separados, combinarlos
+                fecha_inicio_str = f"{fecha_inicio_date} {fecha_inicio_time}"
+                fecha_fin_str = f"{fecha_fin_date} {fecha_fin_time}"
+                fecha_inicio = datetime.strptime(fecha_inicio_str, "%Y-%m-%d %H:%M")
+                fecha_fin = datetime.strptime(fecha_fin_str, "%Y-%m-%d %H:%M")
+            else:
+                raise ValueError("Faltan datos de fecha u hora")
+                
+        except (TypeError, ValueError) as e:
+            print(f"Error parseando fechas: {e}")
+            print(f"POST data: {request.POST}")
+            messages.error(request, 'Fechas inválidas. Verifique que haya seleccionado fecha y hora.')
             return redirect('detalle_cochera', id_cochera=id_cochera)
 
         if fecha_inicio >= fecha_fin:
@@ -697,3 +718,101 @@ def guardar_patente(request, id_reserva):
         return redirect('ver_detalle_reserva', id_reserva=id_reserva)
     
     return redirect('ver_detalle_reserva', id_reserva=id_reserva)
+
+@login_required
+def obtener_horarios_ocupados(request, id_cochera):
+    """Obtiene los horarios ocupados para una fecha específica"""
+    if request.method == 'GET':
+        fecha = request.GET.get('fecha')
+        print(f"DEBUG: Fecha recibida: {fecha}")
+        
+        if not fecha:
+            return JsonResponse({'error': 'Fecha requerida'}, status=400)
+        
+        try:
+            fecha_obj = datetime.strptime(fecha, '%Y-%m-%d').date()
+            print(f"DEBUG: Fecha parseada: {fecha_obj}")
+        except ValueError as e:
+            print(f"DEBUG: Error parseando fecha: {e}")
+            return JsonResponse({'error': 'Formato de fecha inválido'}, status=400)
+        
+        try:
+            cochera = get_object_or_404(Cochera, id_cochera=id_cochera)
+            print(f"DEBUG: Cochera encontrada: {cochera.nombre}")
+            
+            # Obtener TODAS las reservas de la cochera primero
+            todas_reservas = Reserva.objects.filter(cochera=cochera)
+            print(f"DEBUG: Total de reservas en la cochera: {todas_reservas.count()}")
+            
+            # Filtrar por estados válidos
+            reservas_validas = todas_reservas.filter(
+                estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada']
+            )
+            print(f"DEBUG: Reservas con estados válidos: {reservas_validas.count()}")
+            
+            # Mostrar todas las reservas para debugging
+            for reserva in reservas_validas:
+                print(f"DEBUG: Reserva {reserva.id_reserva} - Estado: {reserva.estado.nombre}")
+                print(f"  Fecha inicio: {reserva.fecha_inicio}")
+                print(f"  Fecha fin: {reserva.fecha_fin}")
+            
+            horarios_ocupados = set()
+            
+            # Procesar cada reserva
+            for reserva in reservas_validas:
+                fecha_inicio_reserva = reserva.fecha_inicio.date()
+                fecha_fin_reserva = reserva.fecha_fin.date()
+                
+                print(f"DEBUG: Verificando reserva {reserva.id_reserva}")
+                print(f"  Fecha inicio reserva: {fecha_inicio_reserva}")
+                print(f"  Fecha fin reserva: {fecha_fin_reserva}")
+                print(f"  Fecha consultada: {fecha_obj}")
+                
+                # Verificar si esta reserva afecta la fecha consultada
+                if fecha_inicio_reserva <= fecha_obj <= fecha_fin_reserva:
+                    print(f"DEBUG: ✓ Reserva {reserva.id_reserva} SÍ afecta la fecha {fecha_obj}")
+                    
+                    # Determinar las horas para este día específico
+                    if fecha_inicio_reserva == fecha_obj:
+                        # La reserva empieza este día
+                        hora_inicio_dia = reserva.fecha_inicio.hour
+                        print(f"  Hora inicio en este día: {hora_inicio_dia}")
+                    else:
+                        # La reserva empezó antes, desde las 6:00 AM
+                        hora_inicio_dia = 6
+                        print(f"  Reserva empezó antes, hora inicio: {hora_inicio_dia}")
+                    
+                    if fecha_fin_reserva == fecha_obj:
+                        # La reserva termina este día
+                        hora_fin_dia = reserva.fecha_fin.hour
+                        if reserva.fecha_fin.minute > 0:
+                            hora_fin_dia += 1  # Si hay minutos, ocupar la hora completa
+                        print(f"  Hora fin en este día: {hora_fin_dia}")
+                    else:
+                        # La reserva termina después, hasta las 11:00 PM
+                        hora_fin_dia = 24
+                        print(f"  Reserva termina después, hora fin: {hora_fin_dia}")
+                    
+                    # Agregar las horas ocupadas (dentro del horario de trabajo 6-24)
+                    for hora in range(max(6, hora_inicio_dia), min(24, hora_fin_dia)):
+                        hora_str = f"{hora:02d}:00"
+                        horarios_ocupados.add(hora_str)
+                        print(f"  → Agregando hora ocupada: {hora_str}")
+                else:
+                    print(f"DEBUG: ✗ Reserva {reserva.id_reserva} NO afecta la fecha {fecha_obj}")
+            
+            horarios_lista = sorted(list(horarios_ocupados))
+            print(f"DEBUG: Horarios ocupados finales: {horarios_lista}")
+            
+            return JsonResponse({
+                'horarios_ocupados': horarios_lista,
+                'fecha': fecha
+            })
+            
+        except Exception as e:
+            print(f"ERROR en obtener_horarios_ocupados: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return JsonResponse({'error': f'Error interno: {str(e)}'}, status=500)
+    
+    return JsonResponse({'error': 'Método no permitido'}, status=405)

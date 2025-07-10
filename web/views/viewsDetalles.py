@@ -1,10 +1,11 @@
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
-from datetime import timedelta
+from datetime import timedelta, datetime  # ← Solo agrega datetime al final
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse
+
 
 from ..forms import (
     ComentarioForm,
@@ -213,13 +214,62 @@ def detalle_cochera(request, id_cochera):
     is_admin_or_empleado_var = is_admin_or_empleado(request.user)
     is_admin_var = is_admin(request.user)
 
-    # Fechas ocupadas (para todos)
-    fechas_ocupadas = []
+    # --- NUEVA LÓGICA PARA FECHAS OCUPADAS ---
+    from collections import defaultdict
+    
+    # Horarios de trabajo (6:00 AM a 11:00 PM = 18 horas)
+    HORARIOS_TRABAJO = [f"{i:02d}:00" for i in range(6, 24)]
+    TOTAL_HORARIOS = len(HORARIOS_TRABAJO)
+    
+    # Contar horarios ocupados por fecha
+    horarios_ocupados_por_fecha = defaultdict(set)
+    
     for reserva in reservas:
-        current = reserva.fecha_inicio
-        while current <= reserva.fecha_fin:
-            fechas_ocupadas.append(current.strftime('%Y-%m-%d'))
-            current += timedelta(days=1)
+        fecha_actual = reserva.fecha_inicio.date()
+        fecha_fin = reserva.fecha_fin.date()
+        
+        while fecha_actual <= fecha_fin:
+            # Para cada día de la reserva
+            if reserva.fecha_inicio.date() == fecha_actual:
+                hora_inicio = reserva.fecha_inicio
+            else:
+                # Si la reserva empezó antes, desde las 6:00 AM
+                hora_inicio = datetime.combine(fecha_actual, datetime.min.time().replace(hour=6))
+            
+            if reserva.fecha_fin.date() == fecha_actual:
+                hora_fin = reserva.fecha_fin
+            else:
+                # Si la reserva termina después, hasta las 11:00 PM  
+                hora_fin = datetime.combine(fecha_actual, datetime.min.time().replace(hour=23, minute=59))
+            
+            # Convertir a naive datetime para hacer comparaciones
+            if hasattr(hora_inicio, 'replace'):
+                hora_inicio_naive = hora_inicio.replace(tzinfo=None)
+            else:
+                hora_inicio_naive = hora_inicio
+
+            if hasattr(hora_fin, 'replace'):
+                hora_fin_naive = hora_fin.replace(tzinfo=None)
+            else:
+                hora_fin_naive = hora_fin
+
+            # Agregar horas ocupadas para este día
+            hora_actual = hora_inicio_naive
+            while hora_actual < hora_fin_naive:
+                if 6 <= hora_actual.hour <= 23:  # Solo horarios de trabajo
+                    hora_str = f"{hora_actual.hour:02d}:00"
+                    horarios_ocupados_por_fecha[fecha_actual.strftime('%Y-%m-%d')].add(hora_str)
+                hora_actual += timedelta(hours=1)
+            
+            fecha_actual += timedelta(days=1)
+    
+    # Determinar fechas completamente ocupadas
+    fechas_ocupadas = []
+    for fecha_str, horas_ocupadas in horarios_ocupados_por_fecha.items():
+        if len(horas_ocupadas) >= TOTAL_HORARIOS:
+            fechas_ocupadas.append(fecha_str)
+    
+    # --- FIN NUEVA LÓGICA ---
 
     # Fechas ocupadas por el usuario actual (para marcar en naranja)
     fechas_ocupadas_propias = []
@@ -230,8 +280,8 @@ def detalle_cochera(request, id_cochera):
             estado__nombre__in=['Pendiente', 'Aprobada', 'Confirmada', 'Pagada']
         )
         for reserva in reservas_propias:
-            fecha = reserva.fecha_inicio
-            while fecha <= reserva.fecha_fin:
+            fecha = reserva.fecha_inicio.date()
+            while fecha <= reserva.fecha_fin.date():
                 fechas_ocupadas_propias.append(fecha.strftime('%Y-%m-%d'))
                 fecha += timedelta(days=1)
 
@@ -314,7 +364,7 @@ def detalle_cochera(request, id_cochera):
         'reservas': reservas,
         'historial': historial,
         'usuario_resenia': usuario_resenia,
-        'fechas_ocupadas': fechas_ocupadas,
+        'fechas_ocupadas': fechas_ocupadas,  # Solo fechas completamente ocupadas
         'fechas_ocupadas_propias': fechas_ocupadas_propias,
         'respuestas': respuestas_dict,
         'es_usuario': es_usuario,

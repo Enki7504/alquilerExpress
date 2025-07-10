@@ -94,6 +94,7 @@ urlpatterns = [
     path('reservas/<int:id_reserva>/completar-huespedes/', viewsReservas.completar_huespedes, name='completar_huespedes'),
     # guardar_patente
     path('reservas/<int:id_reserva>/guardar-patente/', viewsReservas.guardar_patente, name='guardar_patente'),
+    path('cochera/<int:id_cochera>/horarios/', viewsReservas.obtener_horarios_ocupados, name='obtener_horarios_ocupados'),
 
     # URL para cargar ciudades cuando se selecciona una provincia
     path('ajax/cargar-ciudades/', views.cargar_ciudades, name='ajax_cargar_ciudades'),
