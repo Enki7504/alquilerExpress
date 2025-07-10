@@ -7,7 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Alquiler Express{% endblock %}</title>
   {# Normalize CSS #}
-  <link rel="stylesheet" href="{% static 'css/normalize' %}">
+  <link rel="stylesheet" href="{% static 'css/normalize.css' %}">
   {# Favicon #}
   <link rel="icon" type="image/x-icon" href="{% static 'img/favicon1.ico' %}">
   {# Bootstrap CSS #}
@@ -132,14 +132,31 @@
     </div>
   </nav>
 
+  {# Este div oculto guarda los django-messages para el JavaScript #}
+  <div id="django-messages-container" aria-live="polite" aria-atomic="true" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0);">
+    {% if messages %}
+      {% for message in messages %}
+        <div class="django-message" 
+            data-tag="{{ message.tags|default:'info' }}" 
+            data-message="{{ message|escape }}"
+            {% if message.extra_tags %}data-extra="{{ message.extra_tags }}"{% endif %}>
+        </div>
+      {% endfor %}
+    {% endif %}
+  </div>
+
   {# Bloque para el contenido específico de cada página #}
   {% block content %}{% endblock content %}
+
   {# Bootstrap JS #}
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   {# SweetAlert #}
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   {# Notificaciones #}
   <script src="{% static 'js/notificaciones.js' %}"></script>
+  {# Alertas de SweetAlert #}
+  <script type="module" src="{% static 'js/alertasDjangoMessages.js' %}"></script>
+  <script type="module" src="{% static 'js/alertasReutilizables.js' %}"></script>
   {# Bloque para JavaScript adicional #}
   {% block extra_js %}{% endblock %} 
 </body>

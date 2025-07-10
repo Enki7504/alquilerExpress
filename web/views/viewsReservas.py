@@ -8,6 +8,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 from datetime import timedelta, date
+from datetime import datetime
+import datetime
 
 # Importaciones de modelos locales
 from ..models import (
@@ -34,7 +36,7 @@ from ..utils import (
 ################################################################################################################
 
 @login_required
-def crear_reserva(request, id_inmueble):
+def crear_reserva_inmueble(request, id_inmueble):
     """
     Permite a un cliente crear una reserva para un inmueble, validando que no existan reservas superpuestas
     del mismo cliente para el mismo inmueble.
@@ -135,25 +137,25 @@ def crear_reserva_cochera(request, id_cochera):
     perfil = request.user.perfil
 
     if request.method == 'POST':
-        fecha_inicio_str = request.POST.get('fecha_inicio')
-        fecha_fin_str = request.POST.get('fecha_fin')
-
         # Validar fechas
         try:
-            fecha_inicio = datetime.datetime.strptime(fecha_inicio_str, '%Y-%m-%d').date()
-            fecha_fin = datetime.datetime.strptime(fecha_fin_str, '%Y-%m-%d').date()
+            fecha_inicio = datetime.strptime(request.POST["fecha_inicio"], "%Y-%m-%d %H:%M")
+            fecha_fin = datetime.strptime(request.POST["fecha_fin"], "%Y-%m-%d %H:%M")
         except (TypeError, ValueError):
             messages.error(request, 'Fechas inválidas.')
             return redirect('detalle_cochera', id_cochera=id_cochera)
 
         if fecha_inicio >= fecha_fin:
-            messages.error(request, 'La fecha de salida debe ser posterior a la de llegada.')
+            messages.error(request, 'La fecha y hora de salida debe ser posterior a la de llegada.')
             return redirect('detalle_cochera', id_cochera=id_cochera)
 
         # Validar mínimo de noches
-        dias = (fecha_fin - fecha_inicio).days
-        if dias < cochera.minimo_dias_alquiler:
-            messages.error(request, f"El mínimo de noches de alquiler para esta cochera es {cochera.minimo_dias_alquiler}.")
+        delta = fecha_fin - fecha_inicio
+        horas = delta.total_seconds() / 60 / 60
+        print(horas)
+        print(cochera.minimo_dias_alquiler)
+        if horas < cochera.minimo_dias_alquiler :
+            messages.error(request, f"El mínimo de horas de alquiler para esta cochera es {cochera.minimo_dias_alquiler}.")
             return redirect('detalle_cochera', id_cochera=id_cochera)
 
         # Validar que el cliente no tenga reservas superpuestas para la misma cochera
@@ -180,7 +182,7 @@ def crear_reserva_cochera(request, id_cochera):
             return redirect('detalle_cochera', id_cochera=id_cochera)
 
         # Calcular precio total
-        precio_total = cochera.precio_por_dia * dias
+        precio_total = cochera.precio_por_dia * int(horas)
 
         # Crear la reserva
         reserva = Reserva.objects.create(

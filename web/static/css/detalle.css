@@ -1,0 +1,28 @@
+.carousel-inner,
+.carousel-item {
+  width: 100%;
+  height: 500px;
+  border-radius: 1rem !important;
+  overflow: hidden !important;
+  background: #eee !important;
+}
+.img-carrusel-inmueble {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  border-radius: 0 !important;
+  display: block !important;
+  background: #eee !important;
+}
+
+.flatpickr-day.flatpickr-day-propia {
+  background: #FFEFD5 !important;
+  color: #E67E22 !important;
+  border-radius: 50% !important;
+}
+
+.flatpickr-day.flatpickr-day-propia:hover {
+  background: #F0D5BB !important;
+  color: #CD6E1B !important;
+  cursor: pointer;
+}

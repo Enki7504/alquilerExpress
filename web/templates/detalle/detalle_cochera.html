@@ -1,0 +1,57 @@
+{% extends 'detalle/detalle_base.html' %}
+
+{% block title %}Detalle de la Cochera - {{ cochera.nombre }}{% endblock %}
+
+{% block detalle_extra_css %}
+  <!-- CSS específico para cocheras -->
+  <style>
+    .img-carrusel-cochera {
+      height: 500px;
+      object-fit: cover;
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+  {% with objeto=cochera tipo="cochera" imagen_default="img/default-garage-large.jpg" %}
+    {{ block.super }}
+  {% endwith %}
+{% endblock %}
+
+{% block detalles_especificos %}
+  <div class="d-flex align-items-center">
+    <i class="bi bi-car-front text-primary me-2"></i>
+    <span>{{ objeto.cantidad_vehiculos }} vehículo{{ objeto.cantidad_vehiculos|pluralize }}</span>
+  </div>
+  <div class="d-flex align-items-center">
+    <i class="bi bi-arrows-angle-expand text-primary me-2"></i>
+    <span>{{ objeto.ancho }}m × {{ objeto.largo }}m × {{ objeto.alto }}m</span>
+  </div>
+  <div class="d-flex align-items-center">
+    <i class="bi bi-building text-primary me-2"></i>
+    <span>Techo: {{ objeto.con_techo|yesno:"Sí,No" }}</span>
+  </div>
+  <div class="d-flex align-items-center">
+    <i class="bi bi-calendar-range text-primary me-2"></i>
+    <span>Mínimo {{ objeto.minimo_dias_alquiler }} noche{{ objeto.minimo_dias_alquiler|pluralize }}</span>
+  </div>
+{% endblock %}
+
+{% block precio_por %}día{% endblock %}
+
+{% block formulario_reserva %}
+  <form method="post" action="{% url 'crear_reserva_cochera' id_cochera=objeto.id_cochera %}">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label for="fecha_inicio" class="form-label">Fecha y hora de llegada</label>
+      <input type="text" class="form-control" id="fecha_inicio" name="fecha_inicio" required autocomplete="off">
+    </div>
+    <div class="mb-3">
+      <label for="fecha_fin" class="form-label">Fecha y hora de salida</label>
+      <input type="text" class="form-control" id="fecha_fin" name="fecha_fin" required autocomplete="off">
+    </div>
+    <button type="submit" class="btn btn-primary btn-azul w-100 py-2">
+      <i class="bi bi-calendar-check me-2"></i> Reservar ahora
+    </button>
+  </form>
+{% endblock %}

@@ -3,8 +3,8 @@ from .views import (
   views, 
   viewsAdminPropiedades, 
   viewsLogin, 
-  viewsBusquedas, 
-  viewsFiltros, 
+  viewsBusquedas,
+  viewsDetalles,
   viewsAdmin, 
   viewsAdminEstadisticas,
   viewsNotificaciones, 
@@ -26,9 +26,13 @@ urlpatterns = [
 
     # Busquedas
     path('buscar-inmuebles/', viewsBusquedas.buscar_inmuebles, name='buscar_inmuebles'),
-    path('buscar-inmuebles/<int:id_inmueble>/', viewsBusquedas.detalle_inmueble, name='detalle_inmueble'),
     path('buscar-cocheras/', viewsBusquedas.buscar_cocheras, name='buscar_cocheras'),
-    path('buscar-cocheras/<int:id_cochera>/', viewsBusquedas.detalle_cochera, name='detalle_cochera'),
+
+    # Detalles, Comentarios y Reseñas
+    path('buscar-inmuebles/<int:id_inmueble>/', viewsDetalles.detalle_inmueble, name='detalle_inmueble'),
+    path('buscar-cocheras/<int:id_cochera>/', viewsDetalles.detalle_cochera, name='detalle_cochera'),
+    path('comentario/eliminar/<int:id_comentario>/', viewsDetalles.eliminar_comentario, name='eliminar_comentario'),
+    path('resenias/eliminar/<int:id_resenia>/', viewsDetalles.eliminar_resenia, name='eliminar_resenia'),
 
     # Filtros de busqueda
     path('ajax/cargar-ciudades-filtro/', views.cargar_ciudades_filtro, name='ajax_cargar_ciudades_filtro'),
@@ -77,7 +81,7 @@ urlpatterns = [
     path('panel/notificar-imprevisto/', viewsNotificaciones.admin_notificar_imprevisto, name='admin_notificar_imprevisto'),
     
     # Reservas
-    path('crear-reserva/<int:id_inmueble>/', viewsReservas.crear_reserva, name='crear_reserva'),
+    path('crear-reserva/<int:id_inmueble>/', viewsReservas.crear_reserva_inmueble, name='crear_reserva_inmueble'),
     path('crear-reserva-cochera/<int:id_cochera>/', viewsReservas.crear_reserva_cochera, name='crear_reserva_cochera'),
     path('panel/reserva-inmueble/<int:id_reserva>/cambiar-estado/', viewsReservas.cambiar_estado_reserva, name='cambiar_estado_reserva_inmueble'),
     path('panel/reserva-cochera/<int:id_reserva>/cambiar-estado/', viewsReservas.cambiar_estado_reserva, name='cambiar_estado_reserva'),
@@ -99,10 +103,6 @@ urlpatterns = [
 
     # Cambiar contraseña
     path('cambiar-contrasena/', views.cambiar_contrasena, name='cambiar_contrasena'),
-
-    # Reseñas y comentarios
-    path('comentario/eliminar/<int:id_comentario>/', views.eliminar_comentario, name='eliminar_comentario'),
-    path('resenias/eliminar/<int:id_resenia>/', views.eliminar_resenia, name='eliminar_resenia'),
 
     # Mercado Pago
     path('simulador-mercadopago/', views.simulador_mercadopago, name='simulador_mercadopago'),

@@ -35,3 +35,41 @@ document.querySelectorAll('.btn-eliminar-resenia').forEach(btn => {
     }
   });
 });
+
+// Configurar botones de eliminar reseñas
+function configurarBotonesEliminarResenias() {
+  document.querySelectorAll('.btn-eliminar-resenia').forEach(boton => {
+    boton.addEventListener('click', async function(evento) {
+      evento.preventDefault();
+      const confirmado = await mostrarConfirmacion(
+        'Eliminar reseña',
+        '¿Estás seguro de que deseas eliminar esta reseña?'
+      );
+      
+      if (confirmado) {
+        this.closest('form').submit();
+      }
+    });
+  });
+}
+
+// Función de confirmación reusable
+async function mostrarConfirmacion(titulo, texto) {
+  const resultado = await Swal.fire({
+    title: titulo,
+    text: texto,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonColor: '#3085d6',
+    cancelButtonColor: '#d33',
+    confirmButtonText: 'Confirmar',
+    cancelButtonText: 'Cancelar'
+  });
+  
+  return resultado.isConfirmed;
+}
+
+// Inicialización
+document.addEventListener('DOMContentLoaded', function() {
+  configurarBotonesEliminarResenias();
+});
