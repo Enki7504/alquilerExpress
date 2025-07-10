@@ -458,16 +458,14 @@ def ver_detalle_reserva(request, id_reserva):
     reserva = get_object_or_404(Reserva, id_reserva=id_reserva)
     huespedes = Huesped.objects.filter(reserva=reserva)
 
-    # Procesamos los datos de la sesión para precargar los formularios
-    huespedes_data = request.session.get('huespedes_data', [])
+    # Mapear datos para precargar inputs (según cantidad de adultos y niños)
     huespedes_precargados = {}
-    
-    for i, data in enumerate(huespedes_data):
-        huespedes_precargados[f'nombre_{i}'] = data.get('nombre', '')
-        huespedes_precargados[f'apellido_{i}'] = data.get('apellido', '')
-        huespedes_precargados[f'dni_{i}'] = data.get('dni', '')
-        huespedes_precargados[f'fecha_nacimiento_{i}'] = data.get('fecha_nacimiento', '')
-    
+    for i, huesped in enumerate(huespedes):
+        huespedes_precargados[f'nombre_{i}'] = huesped.nombre
+        huespedes_precargados[f'apellido_{i}'] = huesped.apellido
+        huespedes_precargados[f'dni_{i}'] = huesped.dni
+        huespedes_precargados[f'fecha_nacimiento_{i}'] = huesped.fecha_nacimiento.strftime('%Y-%m-%d') if huesped.fecha_nacimiento else ''
+
     context = {
         'reserva': reserva,
         'huespedes': huespedes,
@@ -623,11 +621,19 @@ def completar_huespedes(request, id_reserva):
         dni = request.POST.get(f'dni_{i}', '').strip()
         fecha_nacimiento = request.POST.get(f'fecha_nacimiento_{i}', '').strip()
 
+        # Validar fecha nacimiento
+        try:
+            fecha_obj = datetime.strptime(fecha_nacimiento, '%Y-%m-%d').date()
+        except ValueError:
+            errores_dict[f'fecha_nacimiento_{i}'] = "Fecha de nacimiento inválida."
+            fecha_obj = None
+
         huespedes_data.append({
             'nombre': nombre,
             'apellido': apellido,
             'dni': dni,
-            'fecha_nacimiento': fecha_nacimiento
+            'fecha_nacimiento': fecha_nacimiento,
+            'fecha_obj': fecha_obj
         })
 
         # Validaciones DNI
@@ -637,10 +643,9 @@ def completar_huespedes(request, id_reserva):
             errores_dict[f'dni_{i}'] = "El DNI debe tener 7 u 8 dígitos."
         elif dni in dnis:
             errores_dict[f'dni_{i}'] = "Este DNI está repetido."
+        elif Huesped.objects.filter(reserva=reserva, dni=dni).exists():
+            errores_dict[f'dni_{i}'] = "Este DNI ya está registrado para esta reserva."
         else:
-            # Validar que el DNI no exista en la BD para esta reserva
-            if Huesped.objects.filter(reserva=reserva, dni=dni).exists():
-                errores_dict[f'dni_{i}'] = "Este DNI ya está registrado para esta reserva."
             dnis.add(dni)
 
         # Validaciones nombre y apellido
@@ -649,12 +654,6 @@ def completar_huespedes(request, id_reserva):
         if any(char.isdigit() for char in apellido):
             errores_dict[f'apellido_{i}'] = "El apellido no puede contener números."
 
-        # Validar fecha nacimiento (formato y lógica)
-        try:
-            fecha_obj = datetime.strptime(fecha_nacimiento, '%Y-%m-%d').date()
-        except ValueError:
-            errores_dict[f'fecha_nacimiento_{i}'] = "Fecha de nacimiento inválida."
-
     if errores_dict:
         return JsonResponse({
             'success': False,
@@ -662,7 +661,7 @@ def completar_huespedes(request, id_reserva):
             'huespedes_data': huespedes_data
         })
 
-    # Borrar huéspedes previos para evitar duplicados
+    # Borrar huéspedes previos
     Huesped.objects.filter(reserva=reserva).delete()
 
     # Guardar nuevos huéspedes
@@ -672,10 +671,10 @@ def completar_huespedes(request, id_reserva):
             nombre=data['nombre'],
             apellido=data['apellido'],
             dni=data['dni'],
-            fecha_nacimiento=data['fecha_nacimiento']
+            fecha_nacimiento=data['fecha_obj']
         )
 
-    # Limpiar sesión si usás huespedes_data ahí (opcional)
+    # Limpiar sesión (si aplica)
     request.session.pop('huespedes_data', None)
 
     return JsonResponse({'success': True, 'message': 'Huéspedes cargados correctamente.'})

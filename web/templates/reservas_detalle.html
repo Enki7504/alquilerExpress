@@ -124,7 +124,7 @@
       {% if reserva.inmueble and reserva.estado.nombre == "Aprobada" %}
         {% with total_huespedes=huespedes|length|add:1 %}
           {% if total_huespedes < reserva.cantidad_adultos|add:reserva.cantidad_ninos %}
-            <form id="form-huespedes" method="post" action="{% url 'completar_huespedes' reserva.id_reserva %}">
+            <form id="form-huespedes" method="POST" action="{% url 'completar_huespedes' id_reserva=reserva.id_reserva %}">
               {% csrf_token %}
 
               <!-- Adultos adicionales -->
@@ -371,7 +371,6 @@
         });
       });
     }
-
 
     // Datepickers para fechas de nacimiento
     const hoy = new Date();
