@@ -173,9 +173,9 @@ def detalle_inmueble(request, id_inmueble):
         .order_by('-fecha_fin')
         .first()
     )
-    fecha_fin_mantenimiento = None
+    fecha_fin_mantenimiento_var = None
     if mantenimiento_activo and mantenimiento_activo.fecha_fin:
-        fecha_fin_mantenimiento = mantenimiento_activo.fecha_fin.strftime('%Y-%m-%d')
+        fecha_fin_mantenimiento_var = mantenimiento_activo.fecha_fin
 
     return render(request, 'detalle/detalle_inmueble.html', {
         'inmueble': inmueble,
@@ -195,7 +195,7 @@ def detalle_inmueble(request, id_inmueble):
         'is_cliente': is_cliente_var,
         'puede_reseñar': puede_reseñar,
         'datos_cliente': datos_cliente, 
-        'fecha_fin_mantenimiento': fecha_fin_mantenimiento,
+        'fecha_fin_mantenimiento': fecha_fin_mantenimiento_var,
     })
 
 def detalle_cochera(request, id_cochera):

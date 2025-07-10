@@ -172,6 +172,8 @@ document.addEventListener('DOMContentLoaded', function() {
     select.addEventListener('change', toggleExtra);
     toggleExtra();
   });
+
+  // Cambiar el estado Disponible/En Mantenimiento
   document.querySelectorAll('.cambiar-estado-btn').forEach(function(btn) {
     btn.addEventListener('click', async function() {
       const inmuebleId = btn.getAttribute('data-inmueble');
@@ -271,6 +273,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   });
+  
 });
 </script>
 {% endblock %}

@@ -39,7 +39,6 @@
           </button>
         {% endif %}
       </div>
-      
       <!-- Información detallada -->
       <div class="card mb-4 shadow-sm">
         <div class="card-body">
@@ -84,7 +83,7 @@
               <span class="h3 text-primary">${{ objeto.precio_por_dia|floatformat:"0" }}</span>
               <span class="text-muted ms-1">/ {% block precio_por %}{% endblock %}</span>
             </div>
-            {% if en_mantenimiento %}
+            {% if objeto.estado.nombre == 'En Mantenimiento' %}
             <div class="alert alert-warning mt-3">
               <i class="bi bi-exclamation-triangle-fill me-2"></i>
               Actualmente en mantenimiento hasta el {{ fecha_fin_mantenimiento|date:"d/m/Y" }}
@@ -96,8 +95,7 @@
               <span class="h3 text-primary">${{ objeto.precio_por_dia|floatformat:"0" }}</span>
               <span class="text-muted ms-1">/ noche</span>
             </div>
-            
-            {% if en_mantenimiento %}
+            {% if objeto.estado.nombre == 'En Mantenimiento' %}
               <div class="alert alert-warning">
                 <i class="bi bi-exclamation-triangle-fill me-2"></i>
                 <strong>No disponible temporalmente</strong>
