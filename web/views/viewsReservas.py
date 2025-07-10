@@ -1,4 +1,3 @@
-import datetime
 import json
 
 from django.contrib import messages
@@ -7,9 +6,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
-from datetime import timedelta, date
-from datetime import datetime
-import datetime
+from datetime import timedelta, datetime
 
 # Importaciones de modelos locales
 from ..models import (
@@ -29,6 +26,7 @@ from ..utils import (
     crear_notificacion,
     cambiar_estado_inmueble,
     is_admin_or_empleado,
+    is_client
 )
 
 ################################################################################################################
@@ -458,32 +456,26 @@ def reservas_usuario(request):
 @login_required
 def ver_detalle_reserva(request, id_reserva):
     reserva = get_object_or_404(Reserva, id_reserva=id_reserva)
-    huespedes = reserva.huespedes.all()
-    huespedes = reserva.huespedes.all()  # <-- Relación con Huesped
-    #huespedes = get_object_or_404(Huesped, reserva=id_reserva)
-    rango_adultos = range(reserva.cantidad_adultos)
-    rango_ninos = range(reserva.cantidad_ninos)
-    today = date.today()
-    fecha_max_adulto = today.replace(year=today.year - 18)
-    tiempo_restante = None
+    huespedes = Huesped.objects.filter(reserva=reserva)
 
-    if reserva.estado.nombre == "Aprobada" and reserva.aprobada_en:
-        limite = reserva.aprobada_en + timedelta(hours=24)
-        ahora = timezone.now()
-        tiempo_restante = (limite - ahora).total_seconds()
-        if tiempo_restante < 0:
-            tiempo_restante = 0
-    es_admin_o_empleado = is_admin_or_empleado(request.user)
-
-    return render(request, 'reservas_detalle.html', {
+    # Procesamos los datos de la sesión para precargar los formularios
+    huespedes_data = request.session.get('huespedes_data', [])
+    huespedes_precargados = {}
+    
+    for i, data in enumerate(huespedes_data):
+        huespedes_precargados[f'nombre_{i}'] = data.get('nombre', '')
+        huespedes_precargados[f'apellido_{i}'] = data.get('apellido', '')
+        huespedes_precargados[f'dni_{i}'] = data.get('dni', '')
+        huespedes_precargados[f'fecha_nacimiento_{i}'] = data.get('fecha_nacimiento', '')
+    
+    context = {
         'reserva': reserva,
         'huespedes': huespedes,
-        'rango_adultos': rango_adultos,
-        'rango_ninos': rango_ninos,
-        'tiempo_restante': tiempo_restante,
-        'is_admin_or_empleado': es_admin_o_empleado,
-        'fecha_max_adulto': fecha_max_adulto.strftime("%Y-%m-%d"),
-    })
+        'rango_adultos': range(reserva.cantidad_adultos),
+        'rango_ninos': range(reserva.cantidad_ninos),
+        'huespedes_precargados': huespedes_precargados,
+    }
+    return render(request, 'reservas_detalle.html', context)
 
 @require_POST
 @login_required
@@ -616,49 +608,74 @@ def cancelar_reservas_vencidas(request):
 #################################################################################################################
 
 @login_required
+@require_POST
 def completar_huespedes(request, id_reserva):
     reserva = get_object_or_404(Reserva, id_reserva=id_reserva)
     total = reserva.cantidad_adultos + reserva.cantidad_ninos
-    if request.method == "POST":
-        dnis = set()
-        errores = []
-        for i in range(total):
-            nombre = request.POST.get(f'nombre_{i}', '').strip()
-            apellido = request.POST.get(f'apellido_{i}', '').strip()
-            dni = request.POST.get(f'dni_{i}', '').strip()
-            fecha_nacimiento = request.POST.get(f'fecha_nacimiento_{i}', '').strip()
 
-            if dni in dnis:
-                errores.append(f"El DNI '{dni}' está repetido en los huéspedes.")
+    huespedes_data = []
+    errores_dict = {}
+    dnis = set()
+
+    for i in range(total):
+        nombre = request.POST.get(f'nombre_{i}', '').strip()
+        apellido = request.POST.get(f'apellido_{i}', '').strip()
+        dni = request.POST.get(f'dni_{i}', '').strip()
+        fecha_nacimiento = request.POST.get(f'fecha_nacimiento_{i}', '').strip()
+
+        huespedes_data.append({
+            'nombre': nombre,
+            'apellido': apellido,
+            'dni': dni,
+            'fecha_nacimiento': fecha_nacimiento
+        })
+
+        # Validaciones DNI
+        if not dni.isdigit():
+            errores_dict[f'dni_{i}'] = "El DNI debe contener solo números."
+        elif len(dni) not in [7, 8]:
+            errores_dict[f'dni_{i}'] = "El DNI debe tener 7 u 8 dígitos."
+        elif dni in dnis:
+            errores_dict[f'dni_{i}'] = "Este DNI está repetido."
+        else:
+            # Validar que el DNI no exista en la BD para esta reserva
+            if Huesped.objects.filter(reserva=reserva, dni=dni).exists():
+                errores_dict[f'dni_{i}'] = "Este DNI ya está registrado para esta reserva."
             dnis.add(dni)
-            if any(char.isdigit() for char in nombre):
-                errores.append(f"El nombre '{nombre}' no puede contener números.")
-            if any(char.isdigit() for char in apellido):
-                errores.append(f"El apellido '{apellido}' no puede contener números.")
-            if not dni.isdigit():
-                errores.append(f"El DNI '{dni}' debe contener solo números.")
 
-        if errores:
-            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                return JsonResponse({'success': False, 'errors': errores})
-            for error in errores:
-                messages.error(request, error)
-            return redirect('ver_detalle_reserva', id_reserva=id_reserva)
+        # Validaciones nombre y apellido
+        if any(char.isdigit() for char in nombre):
+            errores_dict[f'nombre_{i}'] = "El nombre no puede contener números."
+        if any(char.isdigit() for char in apellido):
+            errores_dict[f'apellido_{i}'] = "El apellido no puede contener números."
 
-        # Guardar huéspedes...
-        for i in range(total):
-            nombre = request.POST.get(f'nombre_{i}', '').strip()
-            apellido = request.POST.get(f'apellido_{i}', '').strip()
-            dni = request.POST.get(f'dni_{i}', '').strip()
-            fecha_nacimiento = request.POST.get(f'fecha_nacimiento_{i}', '').strip()
-            Huesped.objects.create(
-                reserva=reserva,
-                nombre=nombre,
-                apellido=apellido,
-                dni=dni,
-                fecha_nacimiento=fecha_nacimiento
-            )
-        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return JsonResponse({'success': True, 'message': 'Huéspedes cargados correctamente.'})
-        messages.success(request, "Huéspedes cargados correctamente.")
-        return redirect('ver_detalle_reserva', id_reserva=id_reserva)
+        # Validar fecha nacimiento (formato y lógica)
+        try:
+            fecha_obj = datetime.strptime(fecha_nacimiento, '%Y-%m-%d').date()
+        except ValueError:
+            errores_dict[f'fecha_nacimiento_{i}'] = "Fecha de nacimiento inválida."
+
+    if errores_dict:
+        return JsonResponse({
+            'success': False,
+            'errors': errores_dict,
+            'huespedes_data': huespedes_data
+        })
+
+    # Borrar huéspedes previos para evitar duplicados
+    Huesped.objects.filter(reserva=reserva).delete()
+
+    # Guardar nuevos huéspedes
+    for data in huespedes_data:
+        Huesped.objects.create(
+            reserva=reserva,
+            nombre=data['nombre'],
+            apellido=data['apellido'],
+            dni=data['dni'],
+            fecha_nacimiento=data['fecha_nacimiento']
+        )
+
+    # Limpiar sesión si usás huespedes_data ahí (opcional)
+    request.session.pop('huespedes_data', None)
+
+    return JsonResponse({'success': True, 'message': 'Huéspedes cargados correctamente.'})
