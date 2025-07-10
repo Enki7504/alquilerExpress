@@ -602,3 +602,78 @@
   </script>
   
 {% endblock %}
+
+
+@login_required
+@require_POST
+def completar_huespedes(request, id_reserva):
+    reserva = get_object_or_404(Reserva, id_reserva=id_reserva)
+    total = reserva.cantidad_adultos + reserva.cantidad_ninos
+
+    huespedes_data = []
+    errores_dict = {}
+    dnis = set()
+
+    for i in range(total):
+        nombre = request.POST.get(f'nombre_{i}', '').strip()
+        apellido = request.POST.get(f'apellido_{i}', '').strip()
+        dni = request.POST.get(f'dni_{i}', '').strip()
+        fecha_nacimiento = request.POST.get(f'fecha_nacimiento_{i}', '').strip()
+
+        # Validar fecha nacimiento
+        try:
+            fecha_obj = datetime.strptime(fecha_nacimiento, '%Y-%m-%d').date()
+        except ValueError:
+            errores_dict[f'fecha_nacimiento_{i}'] = "Fecha de nacimiento inválida."
+            fecha_obj = None
+
+        huespedes_data.append({
+            'nombre': nombre,
+            'apellido': apellido,
+            'dni': dni,
+            'fecha_nacimiento': fecha_nacimiento,
+            'fecha_obj': fecha_obj
+        })
+
+        # Validaciones DNI
+        if not dni.isdigit():
+            errores_dict[f'dni_{i}'] = "El DNI debe contener solo números."
+        elif len(dni) not in [7, 8]:
+            errores_dict[f'dni_{i}'] = "El DNI debe tener 7 u 8 dígitos."
+        elif dni in dnis:
+            errores_dict[f'dni_{i}'] = "Este DNI está repetido."
+        elif Huesped.objects.filter(reserva=reserva, dni=dni).exists():
+            errores_dict[f'dni_{i}'] = "Este DNI ya está registrado para esta reserva."
+        else:
+            dnis.add(dni)
+            if any(char.isdigit() for char in nombre):
+                errores.append(f"El nombre '{nombre}' no puede contener números.")
+            if any(char.isdigit() for char in apellido):
+                errores.append(f"El apellido '{apellido}' no puede contener números.")
+            if not dni.isdigit():
+                errores.append(f"El DNI '{dni}' debe contener solo números.")
+
+        if errores:
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'errors': errores})
+            for error in errores:
+                messages.error(request, error)
+            return redirect('ver_detalle_reserva', id_reserva=id_reserva)
+
+        # Guardar huéspedes...
+        for i in range(total):
+            nombre = request.POST.get(f'nombre_{i}', '').strip()
+            apellido = request.POST.get(f'apellido_{i}', '').strip()
+            dni = request.POST.get(f'dni_{i}', '').strip()
+            fecha_nacimiento = request.POST.get(f'fecha_nacimiento_{i}', '').strip()
+            Huesped.objects.create(
+                reserva=reserva,
+                nombre=nombre,
+                apellido=apellido,
+                dni=dni,
+                fecha_nacimiento=fecha_nacimiento
+            )
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'success': True, 'message': 'Huéspedes cargados correctamente.'})
+        messages.success(request, "Huéspedes cargados correctamente.")
+        return redirect('ver_detalle_reserva', id_reserva=id_reserva)

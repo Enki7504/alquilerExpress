@@ -354,6 +354,24 @@ def detalle_cochera(request, id_cochera):
         ).exists()
         puede_reseñar = tiene_reserva_finalizada
 
+    # Buscar el último estado "En Mantenimiento" con fecha_fin futura o sin fecha_fin
+    hoy = timezone.now().date()
+    mantenimiento_activo = (
+        CocheraEstado.objects
+        .filter(
+            cochera=cochera,
+            estado__nombre="En Mantenimiento",
+            fecha_inicio__lte=hoy,
+            fecha_fin__gte=hoy
+        )
+        .order_by('-fecha_fin')
+        .first()
+    )
+
+    fecha_fin_mantenimiento_var = None
+    if mantenimiento_activo and mantenimiento_activo.fecha_fin:
+        fecha_fin_mantenimiento_var = mantenimiento_activo.fecha_fin
+
     return render(request, 'detalle/detalle_cochera.html', {
         'cochera': cochera,
         'resenias': resenias,
@@ -372,6 +390,7 @@ def detalle_cochera(request, id_cochera):
         'is_admin': is_admin_var,
         'is_cliente': is_cliente_var,
         'puede_reseñar': puede_reseñar,
+        'fecha_fin_mantenimiento': fecha_fin_mantenimiento_var,
     })
 
 ################################################################################################################
