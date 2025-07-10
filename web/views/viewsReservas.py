@@ -763,7 +763,7 @@ def obtener_horarios_ocupados(request, id_cochera):
             
             # Filtrar por estados válidos
             reservas_validas = todas_reservas.filter(
-                estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada']
+                estado__nombre__in=['Pendiente','Confirmada', 'Pagada', 'Aprobada']
             )
             print(f"DEBUG: Reservas con estados válidos: {reservas_validas.count()}")
             
@@ -774,6 +774,7 @@ def obtener_horarios_ocupados(request, id_cochera):
                 print(f"  Fecha fin: {reserva.fecha_fin}")
             
             horarios_ocupados = set()
+            horas_propias = set()
             
             # Procesar cada reserva
             for reserva in reservas_validas:
@@ -814,7 +815,9 @@ def obtener_horarios_ocupados(request, id_cochera):
                     for hora in range(max(6, hora_inicio_dia), min(24, hora_fin_dia)):
                         hora_str = f"{hora:02d}:00"
                         horarios_ocupados.add(hora_str)
+                        horas_propias.add(hora_str)
                         print(f"  → Agregando hora ocupada: {hora_str}")
+                            
                 else:
                     print(f"DEBUG: ✗ Reserva {reserva.id_reserva} NO afecta la fecha {fecha_obj}")
             
@@ -823,6 +826,7 @@ def obtener_horarios_ocupados(request, id_cochera):
             
             return JsonResponse({
                 'horarios_ocupados': horarios_lista,
+                'horarios_propios': sorted(horas_propias),
                 'fecha': fecha
             })
             
