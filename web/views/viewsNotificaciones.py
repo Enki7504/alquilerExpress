@@ -15,7 +15,8 @@ from ..models import (
     Notificacion,
     Reserva,
     Inmueble,
-    Cochera
+    Cochera,
+    ClienteInmueble
 )
 
 # Importaciones de utilidades locales
@@ -29,6 +30,8 @@ from ..utils import (
 def admin_notificar_imprevisto(request):
     inmuebles = Inmueble.objects.all()
     cocheras = Cochera.objects.all()
+    estados_activos = ["Pendiente", "Pagada", "Confirmada", "Aceptada"]
+
     if request.method == "POST" and request.headers.get('x-requested-with') == 'XMLHttpRequest':
         form = NotificarImprevistoForm(request.POST)
         if form.is_valid():
@@ -52,10 +55,8 @@ def admin_notificar_imprevisto(request):
                     empleado = None
 
             if empleado:
-                crear_notificacion(
-                    usuario=empleado,
-                    mensaje=f"Imprevisto reportado en {objeto}: {mensaje}"
-                )
+
+                nombre_objeto = ""
 
                 # Notificar a todos los clientes con reservas a futuro
                 hoy = timezone.now().date()
@@ -63,25 +64,34 @@ def admin_notificar_imprevisto(request):
                     reservas_futuras = Reserva.objects.filter(
                         inmueble=inmueble,
                         fecha_inicio__gte=hoy,
-                        estado__nombre__in=["Pendiente", "Confirmada","Aceptada"]
+                        estado__nombre__in=estados_activos
                     )
+                    nombre_objeto = inmueble.nombre
                 elif objeto.startswith("Cochera #"):
                     reservas_futuras = Reserva.objects.filter(
                         cochera=cochera,
                         fecha_inicio__gte=hoy,
-                        estado__nombre__in=["Pendiente", "Confirmada","Aceptada"]
+                        estado__nombre__in=estados_activos
                     )
+                    nombre_objeto = cochera.nombre
                 else:
                     reservas_futuras = Reserva.objects.none()
 
                 for reserva in reservas_futuras:
-                    if hasattr(reserva, "clienteinmueble"):
-                        cliente = reserva.clienteinmueble.cliente
+                    rel = ClienteInmueble.objects.filter(reserva=reserva).first()
+                    if rel:
+                        cliente = rel.cliente
                         crear_notificacion(
                             usuario=cliente,
-                            mensaje=f"Imprevisto reportado en {objeto} donde tienes una reserva futura: {mensaje}"
+                            mensaje=f"Imprevisto reportado en {nombre_objeto} donde tienes una reserva: '{mensaje}'"
                         )
 
+                # Notificar al empleado asignado
+                crear_notificacion(
+                    usuario=empleado,
+                    mensaje=f"Imprevisto reportado en {nombre_objeto}: '{mensaje}'"
+                )
+                        
                 return JsonResponse({
                     "success": True,
                     "icon": "success",
