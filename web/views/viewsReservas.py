@@ -7,9 +7,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
-from datetime import timedelta, date
-from datetime import datetime
-import datetime
+from datetime import datetime, timedelta, date
 
 # Importaciones de modelos locales
 from ..models import (
