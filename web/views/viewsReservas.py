@@ -36,7 +36,7 @@ from ..utils import (
 ################################################################################################################
 
 @login_required
-def crear_reserva(request, id_inmueble):
+def crear_reserva_inmueble(request, id_inmueble):
     """
     Permite a un cliente crear una reserva para un inmueble, validando que no existan reservas superpuestas
     del mismo cliente para el mismo inmueble.

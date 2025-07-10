@@ -1,4 +1,5 @@
 {% extends 'detalle/detalle_base.html' %}
+{% load static %}
 
 {% block title %}Detalle del Inmueble - {{ inmueble.nombre }}{% endblock %}
 
@@ -50,15 +51,19 @@
 {% block precio_por %}noche{% endblock %}
 
 {% block formulario_reserva %}
-  <form method="post" action="{% url 'crear_reserva' id_inmueble=objeto.id_inmueble %}">
+  <form method="post" action="{% url 'crear_reserva_inmueble' id_inmueble=objeto.id_inmueble %}">
     {% csrf_token %}
     <div class="mb-3">
       <label for="fecha_inicio" class="form-label">Fecha de llegada</label>
-      <input type="text" class="form-control" id="fecha_inicio" name="fecha_inicio" required autocomplete="off">
+      <input type="text" class="form-control" id="fecha_inicio" name="fecha_inicio"
+       value="{{ request.POST.fecha_inicio }}"
+       required autocomplete="off">
     </div>
     <div class="mb-3">
       <label for="fecha_fin" class="form-label">Fecha de salida</label>
-      <input type="text" class="form-control" id="fecha_fin" name="fecha_fin" required autocomplete="off">
+      <input type="text" class="form-control" id="fecha_fin" name="fecha_fin"
+       value="{{ request.POST.fecha_fin }}"
+       required autocomplete="off">
     </div>
     <div class="mb-3">
       <label for="cantidad_adultos" class="form-label">Cantidad de adultos</label>

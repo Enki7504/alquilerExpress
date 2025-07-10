@@ -1,29 +1,19 @@
 // Variables globales
 let fechaFinMantenimiento = null;
+let fechasOcupadas = [];
+let fechasOcupadasPropias = [];
 
-// Obtener datos iniciales del DOM
-function obtenerDatosIniciales() {
+// Función para obtener datos JSON embebidos en el DOM
+function obtenerJSONDesdeElemento(id) {
   try {
-    const fechaFin = document.getElementById('fechaFinMantenimientoJSON');
-    if (fechaFin && fechaFin.textContent) {
-      fechaFinMantenimiento = JSON.parse(fechaFin.textContent);
+    const elemento = document.getElementById(id);
+    if (elemento && elemento.textContent) {
+      return JSON.parse(elemento.textContent);
     }
-  } catch (e) {
-    console.error("Error al parsear datos iniciales:", e);
+  } catch (error) {
+    console.error(`Error al parsear el contenido de ${id}:`, error);
   }
-}
-
-// Mostrar notificación tipo toast
-function mostrarNotificacion(mensaje, tipo = 'info') {
-  Swal.fire({
-    position: 'top-end',
-    icon: tipo,
-    title: mensaje,
-    showConfirmButton: false,
-    timer: 3000,
-    toast: true,
-    timerProgressBar: true
-  });
+  return null;
 }
 
 // Obtener fecha mínima para reserva
@@ -37,22 +27,22 @@ function obtenerFechaMinima() {
 }
 
 // Configurar datepickers
-function configurarDatePickers(fechasOcupadas, fechasOcupadasPropias) {
+function configurarDatePickers() {
   const opcionesDatepicker = {
     disable: fechasOcupadas,
     dateFormat: "Y-m-d",
     minDate: obtenerFechaMinima(),
     onDayCreate: function(dObj, dStr, fp, diaElem) {
-      marcarFechasPropias(diaElem, fechasOcupadasPropias);
+      marcarFechasPropias(diaElem);
     }
   };
-  
+
   flatpickr("#fecha_inicio", opcionesDatepicker);
   flatpickr("#fecha_fin", opcionesDatepicker);
 }
 
 // Marcar fechas propias en el calendario
-function marcarFechasPropias(diaElem, fechasOcupadasPropias) {
+function marcarFechasPropias(diaElem) {
   const fechaStr = diaElem.dateObj.toISOString().slice(0, 10);
   if (fechasOcupadasPropias.includes(fechaStr)) {
     diaElem.classList.add('flatpickr-day-propia');
@@ -61,24 +51,9 @@ function marcarFechasPropias(diaElem, fechasOcupadasPropias) {
 
 // Inicialización
 document.addEventListener('DOMContentLoaded', function() {
-  // Obtener datos iniciales
-  obtenerDatosIniciales();
-  
-  // Mostrar mensajes de Django
-  document.querySelectorAll('.django-message').forEach(elemento => {
-    const etiquetas = elemento.getAttribute('data-tags');
-    const mensaje = elemento.getAttribute('data-message');
-    
-    let tipo = 'info';
-    if (etiquetas.includes('success')) tipo = 'success';
-    if (etiquetas.includes('error') || etiquetas.includes('danger')) tipo = 'error';
-    if (etiquetas.includes('warning')) tipo = 'warning';
-    
-    mostrarNotificacion(mensaje, tipo);
-  });
-  
-  // Configurar datepickers
-  const fechasOcupadas = JSON.parse(document.getElementById('fechasOcupadasJSON').textContent);
-  const fechasOcupadasPropias = JSON.parse(document.getElementById('fechasOcupadasPropiasJSON').textContent);
-  configurarDatePickers(fechasOcupadas, fechasOcupadasPropias);
+  fechaFinMantenimiento = obtenerJSONDesdeElemento('fechaFinMantenimientoJSON');
+  fechasOcupadas = obtenerJSONDesdeElemento('fechasOcupadasJSON') || [];
+  fechasOcupadasPropias = obtenerJSONDesdeElemento('fechasOcupadasPropiasJSON') || [];
+
+  configurarDatePickers();
 });
