@@ -19,7 +19,12 @@
         <div class="col-md-9">
           <div class="mb-2">
             <strong>Inmueble:</strong>
-            <span class="ms-1">{{ reserva.inmueble }}</span>
+            <span class="ms-1">{% if reserva.inmueble %}
+                                  {{ reserva.inmueble }}
+                                {% elif reserva.cochera %}
+                                  {{ reserva.cochera }}
+                                {% endif %}
+            </span>
           </div>
           <div class="mb-2">
             <strong>Cliente:</strong>
@@ -99,7 +104,7 @@
                   <span id="timer" class="ms-1 text-dark" style="font-family: monospace; font-size: 1.1rem;"></span>
                 </span>
               </div>
-              {% if not is_admin_or_empleado and huespedes|length == reserva.cantidad_adultos|add:reserva.cantidad_ninos %}
+              {% if not is_admin_or_empleado and huespedes|length == reserva.cantidad_adultos|add:reserva.cantidad_ninos or reserva.patente %}
                 <button class="btn btn-success d-flex align-items-center h-100" id="pagar-btn">
                   <i class="bi bi-cash-coin me-1"></i> Pagar
                 </button>
@@ -175,6 +180,28 @@
             </form>
           {% endif %}
         {% endwith %}
+      {% endif %}
+
+      {% if reserva.cochera %}
+        <div class="mb-3">
+          {% if reserva.patente %}
+            <div class="mt-2">
+              <strong>Patente registrada:</strong> {{ reserva.patente }}
+            </div>
+          {% else %}
+            <form method="post" action="{% url 'guardar_patente' reserva.id_reserva %}" class="row g-2 align-items-end" id="form-patente">
+              {% csrf_token %}
+              <div class="col-auto">
+                <label for="patente" class="form-label mb-0">Patente del vehículo</label>
+                <input type="text" class="form-control" id="patente" name="patente" required maxlength="10" placeholder="ABC123 o AA123BB"
+                      value="{{ reserva.patente|default_if_none:'' }}">
+              </div>
+              <div class="col-auto">
+                <button type="submit" class="btn btn-primary">Guardar patente</button>
+              </div>
+            </form>
+          {% endif %}
+        </div>
       {% endif %}
     </div>
   </div>
@@ -361,6 +388,64 @@
         maxDate: fechaMaxNinoStr,
         locale: "es"
       });
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('Cargando script de formulario de patente');
+      const form_patente = document.getElementById('form-patente');
+      if (form_patente) {
+        form_patente.addEventListener('submit', function(e) {
+          e.preventDefault();
+          const formData = new FormData(form_patente);
+          fetch(form_patente.action, {
+            method: 'POST',
+            headers: {
+              'X-CSRFToken': form_patente.querySelector('[name=csrfmiddlewaretoken]').value,
+              'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+          })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              Swal.fire({
+                icon: 'success',
+                title: data.message || 'Patente guardada correctamente.',
+                toast: true,
+                position: 'top-end',
+                timer: 2000,
+                timerProgressBar: true,
+                showConfirmButton: false
+              }).then(() => {
+                window.location.reload();
+              });
+            } else {
+              Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: data.error || 'Ocurrió un error al guardar la patente.',
+                toast: true,
+                position: 'top-end',
+                timer: 4000,
+                timerProgressBar: true,
+                showConfirmButton: false
+              });
+            }
+          })
+          .catch(err => {
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: 'Ocurrió un error al procesar la solicitud.',
+              toast: true,
+              position: 'top-end',
+              timer: 3000,
+              timerProgressBar: true,
+              showConfirmButton: false
+            });
+          });
+        });
+      }
     });
   </script>
   

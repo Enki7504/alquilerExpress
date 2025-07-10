@@ -662,3 +662,40 @@ def completar_huespedes(request, id_reserva):
             return JsonResponse({'success': True, 'message': 'Huéspedes cargados correctamente.'})
         messages.success(request, "Huéspedes cargados correctamente.")
         return redirect('ver_detalle_reserva', id_reserva=id_reserva)
+
+#################################################################################################################
+# --- Huespedes ---
+#################################################################################################################
+
+@login_required
+def guardar_patente(request, id_reserva):
+    if request.method == 'POST':
+        reserva = get_object_or_404(Reserva, id_reserva=id_reserva)
+        
+        patente = request.POST.get('patente', '').strip().upper()
+        
+        if not patente:
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': 'Debes ingresar una patente válida.'})
+            messages.error(request, "Debes ingresar una patente válida.")
+            return redirect('ver_detalle_reserva', id_reserva=id_reserva)
+        
+        # Validar formato básico de patente (opcional)
+        import re
+        if not re.match(r'^[A-Z0-9]{6,8}$', patente):
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': 'El formato de la patente no es válido.'})
+            messages.error(request, "El formato de la patente no es válido.")
+            return redirect('ver_detalle_reserva', id_reserva=id_reserva)
+        
+        # Guardar la patente
+        reserva.patente = patente
+        reserva.save()
+        
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'success': True, 'message': 'Patente guardada correctamente.'})
+        
+        messages.success(request, "Patente guardada correctamente.")
+        return redirect('ver_detalle_reserva', id_reserva=id_reserva)
+    
+    return redirect('ver_detalle_reserva', id_reserva=id_reserva)
