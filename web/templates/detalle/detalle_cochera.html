@@ -53,12 +53,5 @@
     <button type="submit" class="btn btn-primary btn-azul w-100 py-2">
       <i class="bi bi-calendar-check me-2"></i> Reservar ahora
     </button>
-    <div id="django-messages" style="display: none;">
-      {% if messages %}
-        {% for message in messages %}
-          <div class="django-message" data-tags="{{ message.tags }}" data-message="{{ message }}"></div>
-        {% endfor %}
-      {% endif %}
-    </div>
   </form>
 {% endblock %}
