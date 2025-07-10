@@ -6,7 +6,9 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
-from datetime import timedelta, datetime
+from datetime import timedelta, date
+from datetime import datetime
+import datetime
 
 # Importaciones de modelos locales
 from ..models import (
@@ -647,34 +649,34 @@ def completar_huespedes(request, id_reserva):
             errores_dict[f'dni_{i}'] = "Este DNI ya está registrado para esta reserva."
         else:
             dnis.add(dni)
+            if any(char.isdigit() for char in nombre):
+                errores.append(f"El nombre '{nombre}' no puede contener números.")
+            if any(char.isdigit() for char in apellido):
+                errores.append(f"El apellido '{apellido}' no puede contener números.")
+            if not dni.isdigit():
+                errores.append(f"El DNI '{dni}' debe contener solo números.")
 
-        # Validaciones nombre y apellido
-        if any(char.isdigit() for char in nombre):
-            errores_dict[f'nombre_{i}'] = "El nombre no puede contener números."
-        if any(char.isdigit() for char in apellido):
-            errores_dict[f'apellido_{i}'] = "El apellido no puede contener números."
+        if errores:
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'errors': errores})
+            for error in errores:
+                messages.error(request, error)
+            return redirect('ver_detalle_reserva', id_reserva=id_reserva)
 
-    if errores_dict:
-        return JsonResponse({
-            'success': False,
-            'errors': errores_dict,
-            'huespedes_data': huespedes_data
-        })
-
-    # Borrar huéspedes previos
-    Huesped.objects.filter(reserva=reserva).delete()
-
-    # Guardar nuevos huéspedes
-    for data in huespedes_data:
-        Huesped.objects.create(
-            reserva=reserva,
-            nombre=data['nombre'],
-            apellido=data['apellido'],
-            dni=data['dni'],
-            fecha_nacimiento=data['fecha_obj']
-        )
-
-    # Limpiar sesión (si aplica)
-    request.session.pop('huespedes_data', None)
-
-    return JsonResponse({'success': True, 'message': 'Huéspedes cargados correctamente.'})
+        # Guardar huéspedes...
+        for i in range(total):
+            nombre = request.POST.get(f'nombre_{i}', '').strip()
+            apellido = request.POST.get(f'apellido_{i}', '').strip()
+            dni = request.POST.get(f'dni_{i}', '').strip()
+            fecha_nacimiento = request.POST.get(f'fecha_nacimiento_{i}', '').strip()
+            Huesped.objects.create(
+                reserva=reserva,
+                nombre=nombre,
+                apellido=apellido,
+                dni=dni,
+                fecha_nacimiento=fecha_nacimiento
+            )
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'success': True, 'message': 'Huéspedes cargados correctamente.'})
+        messages.success(request, "Huéspedes cargados correctamente.")
+        return redirect('ver_detalle_reserva', id_reserva=id_reserva)

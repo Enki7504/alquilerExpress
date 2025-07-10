@@ -92,6 +92,8 @@ urlpatterns = [
     path('reservas/<int:id_reserva>/cancelar/', viewsReservas.cancelar_reserva, name='cancelar_reserva'),
     path('reservas/<int:id_reserva>/pagar/', viewsReservas.pagar_reserva, name='pagar_reserva'),
     path('reservas/<int:id_reserva>/completar-huespedes/', viewsReservas.completar_huespedes, name='completar_huespedes'),
+    # guardar_patente
+    path('reservas/<int:id_reserva>/guardar-patente/', viewsReservas.guardar_patente, name='guardar_patente'),
 
     # URL para cargar ciudades cuando se selecciona una provincia
     path('ajax/cargar-ciudades/', views.cargar_ciudades, name='ajax_cargar_ciudades'),
