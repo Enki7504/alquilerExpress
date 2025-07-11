@@ -143,21 +143,23 @@
                 <h5>Completa los datos de los huéspedes antes de pagar</h5>
                 <h6> Adultos </h6>
                 {% for i in rango_adultos %}
-                  <div class="row mb-2">
-                    <div class="col">
-                      <input type="text" name="nombre_{{ forloop.counter0 }}" class="form-control" placeholder="Nombre" required>
+                  {% if not forloop.first %}
+                    <div class="row mb-2">
+                      <div class="col">
+                        <input type="text" name="nombre_{{ forloop.counter0 }}" class="form-control" placeholder="Nombre" required>
+                      </div>
+                      <div class="col">
+                        <input type="text" name="apellido_{{ forloop.counter0 }}" class="form-control" placeholder="Apellido" required>
+                      </div>
+                      <div class="col">
+                        <input type="number" name="dni_{{ forloop.counter0 }}" class="form-control" placeholder="DNI" required>
+                      </div>
+                      <div class="col">
+                        <input type="date" name="fecha_nacimiento_{{ forloop.counter0 }}" class="form-control fecha-adulto" required>
+                        <small class="text-muted">Debe ser mayor de 18 años</small>
+                      </div>
                     </div>
-                    <div class="col">
-                      <input type="text" name="apellido_{{ forloop.counter0 }}" class="form-control" placeholder="Apellido" required>
-                    </div>
-                    <div class="col">
-                      <input type="number" name="dni_{{ forloop.counter0 }}" class="form-control" placeholder="DNI" required>
-                    </div>
-                    <div class="col">
-                      <input type="date" name="fecha_nacimiento_{{ forloop.counter0 }}" class="form-control fecha-adulto" required>
-                      <small class="text-muted">Debe ser mayor de 18 años</small>
-                    </div>
-                  </div>
+                  {% endif %}
                 {% endfor %}
                 {% if reserva.cantidad_ninos > 0 %}
                   <h6> Niños </h6>
