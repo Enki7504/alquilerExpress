@@ -92,96 +92,99 @@
           </ul>
         </div>
       {% endif %}
-      <!-- Botones de acción -->
-      <div class="mt-4 d-flex flex-wrap gap-2 align-items-center">
-        {% if reserva.estado.nombre != "Cancelada" and reserva.estado.nombre != "Finalizada" %}
-          {% if reserva.estado.nombre == "Aprobada" %}
-            {% if tiempo_restante and tiempo_restante > 0 %}
-              <div class="alert alert-info d-flex align-items-center gap-2 mb-0 rounded-pill shadow-sm border-0 py-2 px-3" id="timer-pago" style="background: #e3f6fd; font-size: 1rem;">
-                <i class="bi bi-clock-history text-primary" style="font-size: 1.2rem;"></i>
-                <span class="fw-semibold">
-                  <span class="d-none d-md-inline">Tiempo restante para pagar:</span>
-                  <span id="timer" class="ms-1 text-dark" style="font-family: monospace; font-size: 1.1rem;"></span>
-                </span>
-              </div>
-              {% if not is_admin_or_empleado and huespedes|length == reserva.cantidad_adultos|add:reserva.cantidad_ninos or reserva.patente %}
-                <button class="btn btn-success d-flex align-items-center h-100" id="pagar-btn">
-                  <i class="bi bi-cash-coin me-1"></i> Pagar
-                </button>
-              {% else %}
-                <button class="btn btn-secondary d-flex align-items-center h-100" disabled>
-                  <i class="bi bi-cash-coin me-1"></i> Pagar
-                </button>
-              {% endif %}
-            {% else %}
-              <div class="alert alert-danger d-flex align-items-center gap-2 mb-3">
-                <i class="bi bi-clock-history fs-5"></i>
-                <span>El tiempo para pagar la reserva ha expirado.</span>
-              </div>
-            {% endif %}
-          {% endif %}
-          {% if not is_admin_or_empleado %}
-            {% if tiempo_restante and tiempo_restante > 0 %}
-              <form id="cancelarReservaForm" method="post" action="{% url 'cancelar_reserva' reserva.id_reserva %}" class="m-0">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-danger d-flex align-items-center h-100">
-                  <i class="bi bi-x-circle me-1"></i> Cancelar reserva
-                </button>
-              </form>
-            {% endif %}
-          {% endif %}
-        {% endif %}
-      </div>
-      <br>
-      {% if reserva.inmueble %}
-        {% with total_huespedes=huespedes|length %}
-          {% if total_huespedes < reserva.cantidad_adultos|add:reserva.cantidad_ninos %}
-            <form id="form-huespedes" method="post" action="{% url 'completar_huespedes' reserva.id_reserva %}">
-              {% csrf_token %}
-              <h5>Completa los datos de los huéspedes antes de pagar</h5>
-              <h6> Adultos </h6>
-              {% for i in rango_adultos %}
-                <div class="row mb-2">
-                  <div class="col">
-                    <input type="text" name="nombre_{{ forloop.counter0 }}" class="form-control" placeholder="Nombre" required>
-                  </div>
-                  <div class="col">
-                    <input type="text" name="apellido_{{ forloop.counter0 }}" class="form-control" placeholder="Apellido" required>
-                  </div>
-                  <div class="col">
-                    <input type="number" name="dni_{{ forloop.counter0 }}" class="form-control" placeholder="DNI" required>
-                  </div>
-                  <div class="col">
-                    <input type="date" name="fecha_nacimiento_{{ forloop.counter0 }}" class="form-control fecha-adulto" required>
-                    <small class="text-muted">Debe ser mayor de 18 años</small>
-                  </div>
+      {% if not is_admin_or_empleado %}
+        <!-- Botones de acción -->
+        <div class="mt-4 d-flex flex-wrap gap-2 align-items-center">
+          {% if reserva.estado.nombre != "Cancelada" and reserva.estado.nombre != "Finalizada" %}
+            {% if reserva.estado.nombre == "Aprobada" %}
+              {% if tiempo_restante and tiempo_restante > 0 %}
+                <div class="alert alert-info d-flex align-items-center gap-2 mb-0 rounded-pill shadow-sm border-0 py-2 px-3" id="timer-pago" style="background: #e3f6fd; font-size: 1rem;">
+                  <i class="bi bi-clock-history text-primary" style="font-size: 1.2rem;"></i>
+                  <span class="fw-semibold">
+                    <span class="d-none d-md-inline">Tiempo restante para pagar:</span>
+                    <span id="timer" class="ms-1 text-dark" style="font-family: monospace; font-size: 1.1rem;"></span>
+                  </span>
                 </div>
-              {% endfor %}
-              {% if reserva.cantidad_ninos > 0 %}
-                <h6> Niños </h6>
-                {% for i in rango_ninos %}
+                {% if not is_admin_or_empleado and huespedes|length == reserva.cantidad_adultos|add:reserva.cantidad_ninos or reserva.patente %}
+                  <button class="btn btn-success d-flex align-items-center h-100" id="pagar-btn">
+                    <i class="bi bi-cash-coin me-1"></i> Pagar
+                  </button>
+                {% else %}
+                  <button class="btn btn-secondary d-flex align-items-center h-100" disabled>
+                    <i class="bi bi-cash-coin me-1"></i> Pagar
+                  </button>
+                {% endif %}
+              {% else %}
+                <div class="alert alert-danger d-flex align-items-center gap-2 mb-3">
+                  <i class="bi bi-clock-history fs-5"></i>
+                  <span>El tiempo para pagar la reserva ha expirado.</span>
+                </div>
+              {% endif %}
+            {% endif %}
+            {% if not is_admin_or_empleado %}
+              {% if tiempo_restante and tiempo_restante > 0 %}
+                <form id="cancelarReservaForm" method="post" action="{% url 'cancelar_reserva' reserva.id_reserva %}" class="m-0">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-danger d-flex align-items-center h-100">
+                    <i class="bi bi-x-circle me-1"></i> Cancelar reserva
+                  </button>
+                </form>
+              {% endif %}
+            {% endif %}
+          {% endif %}
+        </div>
+        <br>
+        {% if not is_admin_or_empleado %}
+        {% if reserva.inmueble %}
+          {% with total_huespedes=huespedes|length%}
+            {% if total_huespedes < reserva.cantidad_adultos|add:reserva.cantidad_ninos %}
+              <form id="form-huespedes" method="post" action="{% url 'completar_huespedes' reserva.id_reserva %}">
+                {% csrf_token %}
+                <h5>Completa los datos de los huéspedes antes de pagar</h5>
+                <h6> Adultos </h6>
+                {% for i in rango_adultos %}
                   <div class="row mb-2">
                     <div class="col">
-                      <input type="text" name="nombre_{{ forloop.counter0|add:reserva.cantidad_adultos }}" class="form-control" placeholder="Nombre" required>
+                      <input type="text" name="nombre_{{ forloop.counter0 }}" class="form-control" placeholder="Nombre" required>
                     </div>
                     <div class="col">
-                      <input type="text" name="apellido_{{ forloop.counter0|add:reserva.cantidad_adultos }}" class="form-control" placeholder="Apellido" required>
+                      <input type="text" name="apellido_{{ forloop.counter0 }}" class="form-control" placeholder="Apellido" required>
                     </div>
                     <div class="col">
-                      <input type="number" name="dni_{{ forloop.counter0|add:reserva.cantidad_adultos }}" class="form-control" placeholder="DNI" required>
+                      <input type="number" name="dni_{{ forloop.counter0 }}" class="form-control" placeholder="DNI" required>
                     </div>
                     <div class="col">
-                      <input type="date" name="fecha_nacimiento_{{ forloop.counter0|add:reserva.cantidad_adultos }}" class="form-control fecha-nino" required>
+                      <input type="date" name="fecha_nacimiento_{{ forloop.counter0 }}" class="form-control fecha-adulto" required>
+                      <small class="text-muted">Debe ser mayor de 18 años</small>
                     </div>
                   </div>
                 {% endfor %}
-              {% endif %}
-              <button type="submit" class="btn btn-primary">Guardar huéspedes</button>
-            </form>
-          {% endif %}
-        {% endwith %}
+                {% if reserva.cantidad_ninos > 0 %}
+                  <h6> Niños </h6>
+                  {% for i in rango_ninos %}
+                    <div class="row mb-2">
+                      <div class="col">
+                        <input type="text" name="nombre_{{ forloop.counter0|add:reserva.cantidad_adultos }}" class="form-control" placeholder="Nombre" required>
+                      </div>
+                      <div class="col">
+                        <input type="text" name="apellido_{{ forloop.counter0|add:reserva.cantidad_adultos }}" class="form-control" placeholder="Apellido" required>
+                      </div>
+                      <div class="col">
+                        <input type="number" name="dni_{{ forloop.counter0|add:reserva.cantidad_adultos }}" class="form-control" placeholder="DNI" required>
+                      </div>
+                      <div class="col">
+                        <input type="date" name="fecha_nacimiento_{{ forloop.counter0|add:reserva.cantidad_adultos }}" class="form-control fecha-nino" required>
+                      </div>
+                    </div>
+                  {% endfor %}
+                {% endif %}
+                <button type="submit" class="btn btn-primary">Guardar huéspedes</button>
+              </form>
+            {% endif %}
+          {% endwith %}
+        {% endif %}
       {% endif %}
-
+    {% endif %}
       {% if reserva.cochera %}
         <div class="mb-3">
           {% if reserva.patente %}
@@ -189,17 +192,23 @@
               <strong>Patente registrada:</strong> {{ reserva.patente }}
             </div>
           {% else %}
-            <form method="post" action="{% url 'guardar_patente' reserva.id_reserva %}" class="row g-2 align-items-end" id="form-patente">
-              {% csrf_token %}
-              <div class="col-auto">
-                <label for="patente" class="form-label mb-0">Patente del vehículo</label>
-                <input type="text" class="form-control" id="patente" name="patente" required maxlength="10" placeholder="ABC123 o AA123BB"
-                      value="{{ reserva.patente|default_if_none:'' }}">
+            {% if not is_admin_or_empleado %}
+              <form method="post" action="{% url 'guardar_patente' reserva.id_reserva %}" class="row g-2 align-items-end" id="form-patente">
+                {% csrf_token %}
+                <div class="col-auto">
+                  <label for="patente" class="form-label mb-0">Patente del vehículo</label>
+                  <input type="text" class="form-control" id="patente" name="patente" required maxlength="10" placeholder="ABC123 o AA123BB"
+                        value="{{ reserva.patente|default_if_none:'' }}">
+                </div>
+                <div class="col-auto">
+                  <button type="submit" class="btn btn-primary">Guardar patente</button>
+                </div>
+              </form>
+            {% else %}
+              <div class="mt-2">
+                <strong>Patente:</strong> <em>No registrada</em>
               </div>
-              <div class="col-auto">
-                <button type="submit" class="btn btn-primary">Guardar patente</button>
-              </div>
-            </form>
+            {% endif %}
           {% endif %}
         </div>
       {% endif %}

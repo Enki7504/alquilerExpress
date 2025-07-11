@@ -508,6 +508,7 @@ def ver_detalle_reserva(request, id_reserva):
         'rango_adultos': range(reserva.cantidad_adultos),
         'rango_ninos': range(reserva.cantidad_ninos),
         'huespedes_precargados': huespedes_precargados,
+        'is_admin_or_empleado': is_admin_or_empleado(request.user),
     }
     return render(request, 'reservas_detalle.html', context)
 
