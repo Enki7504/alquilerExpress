@@ -34,7 +34,11 @@
                 Cliente no disponible
               {% endif %}
             </td>
-            <td>{{ reserva.fecha_inicio|date:"d/m/Y" }} - {{ reserva.fecha_fin|date:"d/m/Y" }}</td>
+            <td>
+              {{ reserva.fecha_inicio|date:"d/m/Y" }} {{ reserva.fecha_inicio|time:"H:i" }}
+              <br>
+              {{ reserva.fecha_fin|date:"d/m/Y" }} {{ reserva.fecha_fin|time:"H:i" }}
+            </td>
             <td>
               <span class="badge 
                 {% if reserva.estado.nombre == 'Confirmada' %}bg-success
