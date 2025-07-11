@@ -170,36 +170,36 @@ def crear_reserva_cochera(request, id_cochera):
             messages.error(request, 'La fecha y hora de salida debe ser posterior a la de llegada.')
             return redirect('detalle_cochera', id_cochera=id_cochera)
 
-        # Validar mínimo de noches
+        # Validar mínimo de horas
         delta = fecha_fin - fecha_inicio
         horas = delta.total_seconds() / 60 / 60
-        print(horas)
-        print(cochera.minimo_dias_alquiler)
-        if horas < cochera.minimo_dias_alquiler :
+        if horas < cochera.minimo_dias_alquiler:
             messages.error(request, f"El mínimo de horas de alquiler para esta cochera es {cochera.minimo_dias_alquiler}.")
             return redirect('detalle_cochera', id_cochera=id_cochera)
 
         # Validar que el cliente no tenga reservas superpuestas para la misma cochera
+        # CORREGIDO: Comparar datetime completo, no solo fechas
         reserva_superpuesta_usuario = Reserva.objects.filter(
             clienteinmueble__cliente=perfil,
             cochera=cochera,
             estado__nombre__in=['Pendiente', 'Confirmada', 'Pagada', 'Aprobada'],
-            fecha_inicio__lte=fecha_fin,
-            fecha_fin__gte=fecha_inicio
+            fecha_inicio__lt=fecha_fin,      # Cambio: __lt en lugar de __lte
+            fecha_fin__gt=fecha_inicio       # Cambio: __gt en lugar de __gte
         ).exists()
         if reserva_superpuesta_usuario:
-            messages.error(request, "Ya tenés una reserva activa para esta cochera en esas fechas.")
+            messages.error(request, "Ya tenés una reserva activa para esta cochera en esas fechas y horarios.")
             return redirect('detalle_cochera', id_cochera=id_cochera)
 
-        # Validar que la cochera esté disponible en esas fechas
+        # Validar que la cochera esté disponible en esas fechas y horarios
+        # CORREGIDO: Comparar datetime completo, no solo fechas
         reserva_superpuesta_cochera = Reserva.objects.filter(
             cochera=cochera,
             estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada'],
-            fecha_inicio__lte=fecha_fin,
-            fecha_fin__gte=fecha_inicio
+            fecha_inicio__lt=fecha_fin,      # Cambio: __lt en lugar de __lte
+            fecha_fin__gt=fecha_inicio       # Cambio: __gt en lugar de __gte
         ).exists()
         if reserva_superpuesta_cochera:
-            messages.error(request, "La cochera no está disponible en esas fechas.")
+            messages.error(request, "La cochera no está disponible en esas fechas y horarios.")
             return redirect('detalle_cochera', id_cochera=id_cochera)
 
         # Calcular precio total
@@ -770,7 +770,7 @@ def guardar_patente(request, id_reserva):
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({'success': True, 'message': 'Patente guardada correctamente.'})
         
-        messages.success(request, "Patente guardada correctamente.")
+        messages.success(request, "Patente guar dada correctamente.")
         return redirect('ver_detalle_reserva', id_reserva=id_reserva)
     
     return redirect('ver_detalle_reserva', id_reserva=id_reserva)
@@ -834,8 +834,8 @@ def obtener_horarios_ocupados(request, id_cochera):
                         hora_inicio_dia = reserva.fecha_inicio.hour
                         print(f"  Hora inicio en este día: {hora_inicio_dia}")
                     else:
-                        # La reserva empezó antes, desde las 6:00 AM
-                        hora_inicio_dia = 6
+                        # La reserva empezó antes, desde las 00:00
+                        hora_inicio_dia = 0
                         print(f"  Reserva empezó antes, hora inicio: {hora_inicio_dia}")
                     
                     if fecha_fin_reserva == fecha_obj:
@@ -845,12 +845,12 @@ def obtener_horarios_ocupados(request, id_cochera):
                             hora_fin_dia += 1  # Si hay minutos, ocupar la hora completa
                         print(f"  Hora fin en este día: {hora_fin_dia}")
                     else:
-                        # La reserva termina después, hasta las 11:00 PM
+                        # La reserva termina después, hasta las 23:59 (24 horas)
                         hora_fin_dia = 24
                         print(f"  Reserva termina después, hora fin: {hora_fin_dia}")
                     
-                    # Agregar las horas ocupadas (dentro del horario de trabajo 6-24)
-                    for hora in range(max(6, hora_inicio_dia), min(24, hora_fin_dia)):
+                    # Agregar las horas ocupadas (de 0 a 23)
+                    for hora in range(max(0, hora_inicio_dia), min(24, hora_fin_dia)):
                         hora_str = f"{hora:02d}:00"
                         horarios_ocupados.add(hora_str)
                         horas_propias.add(hora_str)

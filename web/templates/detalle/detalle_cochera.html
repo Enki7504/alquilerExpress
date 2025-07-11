@@ -136,7 +136,7 @@
       <div id="hora-fin-selector" class="hora-selector">
         <!-- Se genera dinámicamente con JS -->
       </div>
-      <input type="hidden" id="fecha_fin_time" name="fecha_fin_time" required>
+      <input type="hidden" id="fecha
     </div>
     
     <button type="submit" class="btn btn-primary btn-azul w-100 py-2">
@@ -182,10 +182,10 @@
         });
     });
 
-    // Generar horas del día (6:00 AM a 11:00 PM)
+    // Generar horas del día (00:00 AM a 23:00 PM)
     function generarHoras() {
       const horas = [];
-      for (let i = 6; i <= 23; i++) {
+      for (let i = 0; i <= 23; i++) {
         horas.push(`${i.toString().padStart(2, '0')}:00`);
       }
       return horas;

@@ -16,7 +16,7 @@
       <table class="table table-hover">
         <thead>
           <tr>
-            <th>Nro</th>
+            <!--<th>Nro</th>-->
             <th>Cliente</th>
             <th>Fechas</th>
             <th>Estado</th>
@@ -26,7 +26,7 @@
         <tbody>
           {% for reserva in reservas %}
           <tr>
-            <td>{{ reserva.id_reserva }}</td>
+            <!--<td>{{ reserva.id_reserva }}</td>-->
             <td>
               {% if reserva.cliente %}
                 {{ reserva.cliente.usuario.get_full_name|default:reserva.cliente.usuario.username }}
