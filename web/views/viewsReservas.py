@@ -736,7 +736,6 @@ def guardar_patente(request, id_reserva):
     
     return redirect('ver_detalle_reserva', id_reserva=id_reserva)
 
-@login_required
 def obtener_horarios_ocupados(request, id_cochera):
     """Obtiene los horarios ocupados para una fecha específica"""
     if request.method == 'GET':

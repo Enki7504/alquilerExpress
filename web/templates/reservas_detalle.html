@@ -1,22 +1,14 @@
 {% extends 'base/base.html' %}
 {% load static %}
-{% load custom_filters %}
 
 {% block title %}Detalle de Reserva #{{ reserva.id_reserva }}{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <style>
   .bg-azul-alquiler {
     background-color: #005A87 !important;
   }
-  .error-message {
-    font-size: 0.875rem;
-    color: #dc3545;
-    margin-top: 0.25rem;
-  }
 </style>
-
 <div class="container mt-4" style="padding-top: 100px;">
   <div class="card shadow-sm">
     <div class="card-header bg-azul-alquiler text-white">
@@ -70,53 +62,29 @@
           </div>
         </div>
         <div class="col-md-3 d-flex align-items-center justify-content-md-end justify-content-start mt-3 mt-md-0">
+
         </div>
       </div>
-
-      <!-- Sección de Huéspedes -->
       {% if reserva.inmueble %}
         <div class="mb-3">
           <strong>Huéspedes:</strong>
           <ul class="list-group mt-2">
-            <!-- Mostramos primero al cliente como huésped principal -->
-            {% with cliente=reserva.clienteinmueble_set.first.cliente %}
-              <li class="list-group-item">
-                <div class="d-flex align-items-center flex-wrap gap-3">
-                  <span class="me-2">
-                    <i class="bi bi-person-fill text-primary fs-4"></i>
-                  </span>
-                  <span class="fw-semibold">{{ cliente.usuario.first_name }} {{ cliente.usuario.last_name }}</span>
-                  <span class="badge bg-light text-dark border fw-normal">
-                    DNI: <span class="fw-semibold">{{ cliente.dni }}</span>
-                  </span>
-                  <span class="badge bg-light text-dark border fw-normal">
-                    Nacimiento: <span class="fw-semibold">{{ cliente.fecha_nacimiento|date:"d/m/Y" }}</span>
-                  </span>
-                  <span class="badge bg-primary text-white">
-                    Titular
-                  </span>
-                </div>
-            {% endwith %}
-
-            {% if reserva.estado.nombre == "Pendiente" %}
-              <li class="list-group-item text-muted p-3">
-                Al confirmarse la reserva se le pedirá cargar los datos de los demás husepedes
-              </li>
-            {% endif %}
-
-            <!-- Mostramos el resto de huéspedes adicionales -->
             {% for h in huespedes %}
               <li class="list-group-item">
                 <div class="d-flex align-items-center flex-wrap gap-3">
+                  <!-- Icono -->
                   <span class="me-2">
                     <i class="bi bi-person-fill text-primary fs-4"></i>
                   </span>
+                  <!-- Nombre y apellido -->
                   <span class="fw-semibold">{{ h.nombre }} {{ h.apellido }}</span>
+                  <!-- DNI -->
                   <span class="badge bg-light text-dark border fw-normal">
                     DNI: <span class="fw-semibold">{{ h.dni }}</span>
                   </span>
+                  <!-- Fecha de nacimiento -->
                   <span class="badge bg-light text-dark border fw-normal">
-                    Nacimiento: <span class="fw-semibold">{{ h.fecha_nacimiento|date:"d/m/Y" }}</span>
+                    Nac: <span class="fw-semibold">{{ h.fecha_nacimiento|date:"d/m/Y" }}</span>
                   </span>
                 </div>
               </li>
@@ -124,107 +92,10 @@
           </ul>
         </div>
       {% endif %}
-
-      <!-- Formulario de Reservas -->
-      {% if reserva.inmueble and reserva.estado.nombre == "Aprobada" %}
-        {% with total_huespedes=huespedes|length|add:1 %}
-          {% if total_huespedes < reserva.cantidad_adultos|add:reserva.cantidad_ninos %}
-            <form id="form-huespedes" method="POST" action="{% url 'completar_huespedes' id_reserva=reserva.id_reserva %}">
-              {% csrf_token %}
-
-              <!-- Adultos adicionales -->
-              {% with adultos_restantes=reserva.cantidad_adultos|add:-1 %}
-                {% if adultos_restantes > 0 %}
-                  <h6>Adultos adicionales ({{ adultos_restantes }})</h6>
-                  {% for i in rango_adultos %}
-                    {% if forloop.counter0 < adultos_restantes %}
-                      <div class="row mb-2">
-                        <div class="col-md-3">
-                          {% with clave='nombre_'|add:forloop.counter0 %}
-                            <input type="text" name="nombre_{{ forloop.counter0 }}" class="form-control"
-                                  placeholder="Nombre" required
-                                  value="{{ huespedes_precargados|get_item:clave }}">
-                          {% endwith %}
-                        </div>
-                        <div class="col-md-3">
-                          {% with clave='apellido_'|add:forloop.counter0 %}
-                            <input type="text" name="apellido_{{ forloop.counter0 }}" class="form-control"
-                                  placeholder="Apellido" required
-                                  value="{{ huespedes_precargados|get_item:clave }}">
-                          {% endwith %}
-                        </div>
-                        <div class="col-md-3">
-                          {% with clave='dni_'|add:forloop.counter0 %}
-                            <input type="number" name="dni_{{ forloop.counter0 }}" class="form-control"
-                                  placeholder="DNI" required
-                                  value="{{ huespedes_precargados|get_item:clave }}">
-                          {% endwith %}
-                        </div>
-                        <div class="col-md-3">
-                          {% with clave='fecha_nacimiento_'|add:forloop.counter0 %}
-                            <input type="date" name="fecha_nacimiento_{{ forloop.counter0 }}"
-                                  class="form-control fecha-adulto" required
-                                  value="{{ huespedes_precargados|get_item:clave }}">
-                            <small class="text-muted">Debe ser mayor de 18 años</small>
-                          {% endwith %}
-                        </div>
-                      </div>
-                    {% endif %}
-                  {% endfor %}
-                {% endif %}
-              {% endwith %}
-
-              <!-- Niños -->
-              {% if reserva.cantidad_ninos > 0 %}
-                <h6>Niños ({{ reserva.cantidad_ninos }})</h6>
-                {% for i in rango_ninos %}
-                  {% with index=forloop.counter0|add:reserva.cantidad_adultos %}
-                    <div class="row mb-2">
-                      <div class="col-md-3">
-                        {% with clave='nombre_'|add:index %}
-                          <input type="text" name="nombre_{{ index }}" class="form-control"
-                                placeholder="Nombre" required
-                                value="{{ huespedes_precargados|get_item:clave }}">
-                        {% endwith %}
-                      </div>
-                      <div class="col-md-3">
-                        {% with clave='apellido_'|add:index %}
-                          <input type="text" name="apellido_{{ index }}" class="form-control"
-                                placeholder="Apellido" required
-                                value="{{ huespedes_precargados|get_item:clave }}">
-                        {% endwith %}
-                      </div>
-                      <div class="col-md-3">
-                        {% with clave='dni_'|add:index %}
-                          <input type="number" name="dni_{{ index }}" class="form-control"
-                                placeholder="DNI" required
-                                value="{{ huespedes_precargados|get_item:clave }}">
-                        {% endwith %}
-                      </div>
-                      <div class="col-md-3">
-                        {% with clave='fecha_nacimiento_'|add:index %}
-                          <input type="date" name="fecha_nacimiento_{{ index }}" class="form-control fecha-nino" required
-                                value="{{ huespedes_precargados|get_item:clave }}">
-                        {% endwith %}
-                      </div>
-                    </div>
-                  {% endwith %}
-                {% endfor %}
-              {% endif %}
-
-              <button type="submit" class="btn btn-primary mt-3">
-                <i class="bi bi-save me-1"></i> Guardar huéspedes
-              </button>
-            </form>
-          {% endif %}
-        {% endwith %}
-      {% endif %}
-
-
       <!-- Botones de acción -->
       <div class="mt-4 d-flex flex-wrap gap-2 align-items-center">
         {% if reserva.estado.nombre != "Cancelada" and reserva.estado.nombre != "Finalizada" %}
-          {% if reserva.estado.nombre == "Confirmada" %}
+          {% if reserva.estado.nombre == "Aprobada" %}
             {% if tiempo_restante and tiempo_restante > 0 %}
               <div class="alert alert-info d-flex align-items-center gap-2 mb-0 rounded-pill shadow-sm border-0 py-2 px-3" id="timer-pago" style="background: #e3f6fd; font-size: 1rem;">
                 <i class="bi bi-clock-history text-primary" style="font-size: 1.2rem;"></i>
@@ -233,20 +104,14 @@
                   <span id="timer" class="ms-1 text-dark" style="font-family: monospace; font-size: 1.1rem;"></span>
                 </span>
               </div>
-              
-              {% if is_client %}
-                {% if huespedes|length == reserva.cantidad_adultos|add:reserva.cantidad_ninos %}
-                  <button class="btn btn-success d-flex align-items-center h-100" id="pagar-btn">
-                    <i class="bi bi-cash-coin me-1"></i> Pagar
-                  </button>
-                {% else %}
-                  <button class="btn btn-secondary d-flex align-items-center h-100" disabled>
-                    <i class="bi bi-cash-coin me-1"></i> Pagar
-                  </button>
-                  <div class="text-danger small ms-2">
-                    Complete los datos de todos los huéspedes para habilitar el pago
-                  </div>
-                {% endif %}
+              {% if not is_admin_or_empleado and huespedes|length == reserva.cantidad_adultos|add:reserva.cantidad_ninos or reserva.patente %}
+                <button class="btn btn-success d-flex align-items-center h-100" id="pagar-btn">
+                  <i class="bi bi-cash-coin me-1"></i> Pagar
+                </button>
+              {% else %}
+                <button class="btn btn-secondary d-flex align-items-center h-100" disabled>
+                  <i class="bi bi-cash-coin me-1"></i> Pagar
+                </button>
               {% endif %}
             {% else %}
               <div class="alert alert-danger d-flex align-items-center gap-2 mb-3">
@@ -255,14 +120,15 @@
               </div>
             {% endif %}
           {% endif %}
-          
-          {% if not is_admin_or_empleado and tiempo_restante and tiempo_restante > 0 %}
-            <form id="cancelarReservaForm" method="post" action="{% url 'cancelar_reserva' reserva.id_reserva %}" class="m-0">
-              {% csrf_token %}
-              <button type="submit" class="btn btn-danger d-flex align-items-center h-100">
-                <i class="bi bi-x-circle me-1"></i> Cancelar reserva
-              </button>
-            </form>
+          {% if not is_admin_or_empleado %}
+            {% if tiempo_restante and tiempo_restante > 0 %}
+              <form id="cancelarReservaForm" method="post" action="{% url 'cancelar_reserva' reserva.id_reserva %}" class="m-0">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger d-flex align-items-center h-100">
+                  <i class="bi bi-x-circle me-1"></i> Cancelar reserva
+                </button>
+              </form>
+            {% endif %}
           {% endif %}
         {% endif %}
       </div>
@@ -341,207 +207,189 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-<script>
-  // Timer de pago
   {% if tiempo_restante and tiempo_restante > 0 %}
-    console.log('Tiempo restante:', "{{ tiempo_restante|floatformat:0 }}");
-    let tiempo = Number("{{ tiempo_restante|floatformat:0 }}");
-    function actualizarTimer() {
-      if (tiempo <= 0) {
-        document.getElementById('timer').innerText = "Tiempo agotado";
-        const btn = document.getElementById('pagar-btn');
-        if (btn) {
-          btn.classList.add('disabled');
-          btn.setAttribute('aria-disabled', 'true');
-          btn.onclick = function(e){ e.preventDefault(); };
+    <script>
+      console.log('Tiempo restante:', "{{ tiempo_restante|floatformat:0 }}");
+      let tiempo = Number("{{ tiempo_restante|floatformat:0 }}");
+      function actualizarTimer() {
+        if (tiempo <= 0) {
+          document.getElementById('timer').innerText = "Tiempo agotado";
+          const btn = document.getElementById('pagar-btn');
+          if (btn) {
+            btn.classList.add('disabled');
+            btn.setAttribute('aria-disabled', 'true');
+            btn.onclick = function(e){ e.preventDefault(); };
+          }
+          return;
         }
-        return;
+        let horas = Math.floor(tiempo / 3600);
+        let minutos = Math.floor((tiempo % 3600) / 60);
+        let segundos = Math.floor(tiempo % 60);
+        document.getElementById('timer').innerText =
+          `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}:${segundos.toString().padStart(2, '0')}`;
+        tiempo--;
+        setTimeout(actualizarTimer, 1000);
       }
-      let horas = Math.floor(tiempo / 3600);
-      let minutos = Math.floor((tiempo % 3600) / 60);
-      let segundos = Math.floor(tiempo % 60);
-      document.getElementById('timer').innerText =
-        `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}:${segundos.toString().padStart(2, '0')}`;
-      tiempo--;
-      setTimeout(actualizarTimer, 1000);
-    }
-    actualizarTimer();
+      actualizarTimer();
+    </script>
   {% endif %}
-
-  document.addEventListener('DOMContentLoaded', function() {
-
-    // Cancelar reserva
-    const cancelarForm = document.getElementById('cancelarReservaForm');
-    if (cancelarForm) {
-      cancelarForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        Swal.fire({
-          title: '¿Seguro que deseas cancelar la reserva?',
-          text: "Esta acción no se puede deshacer.",
-          icon: 'warning',
-          showCancelButton: true,
-          confirmButtonColor: '#d33',
-          cancelButtonColor: '#3085d6',
-          confirmButtonText: 'Sí, cancelar',
-          cancelButtonText: 'No, volver'
-        }).then((result) => {
-          if (result.isConfirmed) {
-            fetch(this.action, {
-              method: 'POST',
-              headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRFToken': document.querySelector('input[name="csrfmiddlewaretoken"]').value
-              }
-            })
-            .then(res => res.json())
-            .then(data => {
-              if (data.success) {
-                Swal.fire({
-                  icon: 'success',
-                  title: 'Cancelada',
-                  text: data.mensaje,
-                  timer: 2500,
-                  timerProgressBar: true,
-                  showConfirmButton: false
-                }).then(() => {
-                  window.location.href = "{% url 'reservas_usuario' %}";
-                });
-              }
-            });
-          }
-        });
-      });
-    }
-
-    // Pago con MercadoPago
-    const pagarBtn = document.getElementById('pagar-btn');
-    if (pagarBtn) {
-      pagarBtn.addEventListener('click', function() {
-        fetch("{% url 'crear_preferencia_mp' %}", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": "{{ csrf_token }}"
-          },
-          body: JSON.stringify({
-              monto: {{ reserva.precio_total }},
-              descripcion: "Pago de reserva #{{ reserva.id_reserva }}",
-              id_reserva: {{ reserva.id_reserva }}
-          })
-        })
-        .then(res => res.json())
-        .then(data => {
-          if (data.init_point) {
-            window.location.href = data.init_point;
-          } else {
-              Swal.fire({
-              icon: 'error',
-              title: 'Error',
-              text: "Error al generar el pago: " + (data.error || "Error desconocido"),
-              timer: 3000,
-              timerProgressBar: true,
-              showConfirmButton: false
-              });
-          }
-        });
-      });
-    }
-
-    // Datepickers para fechas de nacimiento
-    const hoy = new Date();
-    const fechaMaxAdulto = new Date(hoy.getFullYear() - 18, hoy.getMonth(), hoy.getDate());
-    const fechaMinNino = new Date(hoy.getFullYear() - 18, hoy.getMonth(), hoy.getDate() + 1);
-
-    flatpickr('.fecha-adulto', {
-      dateFormat: "Y-m-d",
-      maxDate: fechaMaxAdulto,
-      locale: "es",
-      allowInput: true,
-      disableMobile: true,
-      onReady: function(selectedDates, dateStr, instance) {
-        instance.element.value = dateStr;
-      }
-    });
-
-    flatpickr('.fecha-nino', {
-      dateFormat: "Y-m-d",
-      minDate: fechaMinNino,
-      maxDate: hoy,
-      locale: "es",
-      allowInput: true,
-      disableMobile: true,
-      onReady: function(selectedDates, dateStr, instance) {
-        instance.element.value = dateStr;
-      }
-    });
-
-    // Formulario de huéspedes
-    const formHuespedes = document.getElementById('form-huespedes');
-    if (formHuespedes) {
-      formHuespedes.addEventListener('submit', function(e) {
-        e.preventDefault();
-        const formData = new FormData(formHuespedes);
-
-        // Limpiar errores anteriores
-        document.querySelectorAll('.error-message').forEach(el => el.remove());
-
-        fetch(formHuespedes.action, {
-          method: 'POST',
-          headers: {
-            'X-CSRFToken': formHuespedes.querySelector('[name=csrfmiddlewaretoken]').value,
-            'X-Requested-With': 'XMLHttpRequest'
-          },
-          body: formData
-        })
-        .then(res => res.json())
-        .then(data => {
-          if (data.success) {
-            // Éxito - recargar página
-            window.location.reload();
-          } else {
-            // Mostrar errores debajo de cada campo
-            if (data.errors) {
-              Object.entries(data.errors).forEach(([field, error]) => {
-                const input = document.querySelector(`[name="${field}"]`);
-                if (input && !input.parentNode.querySelector('.error-message')) {
-                  const errorElement = document.createElement('div');
-                  errorElement.className = 'error-message text-danger small mt-1';
-                  errorElement.textContent = error;
-                  input.parentNode.appendChild(errorElement);
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script>
+    console.log('Cargando script de cancelar reserva');
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('DOM completamente cargado y analizado');
+      const cancelarForm = document.getElementById('cancelarReservaForm');
+      console.log('Formulario de cancelar reserva:', cancelarForm);
+      if (cancelarForm) {
+        console.log('Se hizo submit y se interceptó el evento');
+        cancelarForm.addEventListener('submit', function(e) {
+          e.preventDefault();
+          console.log('Se hizo   submit y se interceptó el evento1');
+          Swal.fire({
+            title: '¿Seguro que deseas cancelar la reserva?',
+            text: "Esta acción no se puede deshacer.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Sí, cancelar',
+            cancelButtonText: 'No, volver'
+          }).then((result) => {
+            if (result.isConfirmed) {
+              fetch(this.action, {
+                method: 'POST',
+                headers: {
+                  'X-Requested-With': 'XMLHttpRequest',
+                  'X-CSRFToken': document.querySelector('input[name="csrfmiddlewaretoken"]').value
+                }
+              })
+              .then(res => res.json())
+              .then(data => {
+                if (data.success) {
+                  Swal.fire({
+                    icon: 'success',
+                    title: 'Cancelada',
+                    text: data.mensaje,
+                    timer: 2500,
+                    timerProgressBar: true,
+                    showConfirmButton: false
+                  }).then(() => {
+                    window.location.href = "{% url 'reservas_usuario' %}";
+                  });
                 }
               });
             }
-
-            // Repoblar los campos con los datos enviados (por si el navegador no los mantuvo)
-            if (data.huespedes_data) {
-              data.huespedes_data.forEach((huesped, index) => {
-                const nombreInput = document.querySelector(`input[name="nombre_${index}"]`);
-                const apellidoInput = document.querySelector(`input[name="apellido_${index}"]`);
-                const dniInput = document.querySelector(`input[name="dni_${index}"]`);
-                const fechaInput = document.querySelector(`input[name="fecha_nacimiento_${index}"]`);
-
-                if (nombreInput) nombreInput.value = huesped.nombre || '';
-                if (apellidoInput) apellidoInput.value = huesped.apellido || '';
-                if (dniInput) dniInput.value = huesped.dni || '';
-                if (fechaInput) fechaInput.value = huesped.fecha_nacimiento || '';
+          });
+        });
+      }
+    });
+    document.addEventListener('DOMContentLoaded', function() {
+      const pagarBtn = document.getElementById('pagar-btn');
+      if (pagarBtn) {
+        pagarBtn.addEventListener('click', function() {
+          fetch("{% url 'crear_preferencia_mp' %}", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRFToken": "{{ csrf_token }}"
+            },
+            body: JSON.stringify({
+                monto: {{ reserva.precio_total }},
+                descripcion: "Pago de reserva #{{ reserva.id_reserva }}",
+                id_reserva: {{ reserva.id_reserva }}
+            })
+          })
+          .then(res => res.json())
+          .then(data => {
+            if (data.init_point) {
+              window.location.href = data.init_point;
+            } else {
+                Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: "Error al generar el pago: " + (data.error || "Error desconocido"),
+                timer: 3000,
+                timerProgressBar: true,
+                showConfirmButton: false
+                });
+            }
+          });
+        });
+      }
+    });
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('Cargando script de formulario de huéspedes');
+      const form_huespedes = document.getElementById('form-huespedes');
+      if (form_huespedes) {
+        form_huespedes.addEventListener('submit', function(e) {
+          e.preventDefault();
+          const formData = new FormData(form_huespedes);
+          fetch(form_huespedes.action, {
+            method: 'POST',
+            headers: {
+              'X-CSRFToken': form_huespedes.querySelector('[name=csrfmiddlewaretoken]').value,
+              'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+          })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              Swal.fire({
+                icon: 'success',
+                title: data.message || 'Huéspedes guardados correctamente.',
+                toast: true,
+                position: 'top-end',
+                timer: 2000,
+                timerProgressBar: true,
+                showConfirmButton: false
+              }).then(() => {
+                window.location.reload();
+              });
+            } else if (data.errors) {
+              Swal.fire({
+                icon: 'error',
+                html: data.errors.map(e => `<div>${e}</div>`).join(''),
+                toast: true,
+                position: 'top-end',
+                timer: 4000,
+                timerProgressBar: true,
+                showConfirmButton: false
               });
             }
-          }
+          });
         });
-      });
+      }
+    });
+    document.addEventListener('DOMContentLoaded', function() {
+      // Calcular la fecha máxima para mayores de 18 años
+      const hoy = new Date();
+      const fechaMax = new Date(hoy.getFullYear() - 18, hoy.getMonth(), hoy.getDate());
+      const fechaMaxStr = fechaMax.toISOString().split('T')[0];
 
-      // Limpiar error al tipear en cada input
-      formHuespedes.querySelectorAll('input').forEach(input => {
-        input.addEventListener('input', function() {
-          const error = this.parentNode.querySelector('.error-message');
-          if (error) error.remove();
-        });
+      // Inicializar flatpickr solo en los campos de adultos
+      flatpickr('.fecha-adulto', {
+        dateFormat: "Y-m-d",
+        maxDate: fechaMaxStr,
+        locale: "es"
       });
-    }
+      // Calcular el rango para niños: deben ser menores de 18 años
+      const fechaMaxNino = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate()); // hasta ayer
+      const fechaMinNino = new Date(hoy.getFullYear() - 18, hoy.getMonth(), hoy.getDate() + 1); // desde hace 18 años + 1 día
 
-  });
-</script>
+      const fechaMaxNinoStr = fechaMaxNino.toISOString().split('T')[0];
+      const fechaMinNinoStr = fechaMinNino.toISOString().split('T')[0];
+
+      flatpickr('.fecha-nino', {
+        dateFormat: "Y-m-d",
+        minDate: fechaMinNinoStr,
+        maxDate: fechaMaxNinoStr,
+        locale: "es"
+      });
+    });
+
     document.addEventListener('DOMContentLoaded', function() {
       console.log('Cargando script de formulario de patente');
       const form_patente = document.getElementById('form-patente');
