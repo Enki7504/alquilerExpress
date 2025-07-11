@@ -60,6 +60,26 @@
               {{ reserva.estado.nombre }}
             </span>
           </div>
+          
+          <!-- Contador de 72 horas desde creación -->
+          {% if reserva.estado.nombre == "Pendiente" and tiempo_restante_creacion is not None %}
+            <div class="mb-2">
+              <strong>Tiempo para revisión:</strong>
+              {% if tiempo_restante_creacion > 0 %}
+                <div class="alert alert-warning d-flex align-items-center gap-2 mb-0 mt-1 py-2 px-3" style="background: #fff3cd;">
+                  <i class="bi bi-clock-history text-warning"></i>
+                  <span class="fw-semibold">
+                    Tiempo restante: <span id="timer-creacion" class="text-dark" style="font-family: monospace;"></span>
+                  </span>
+                </div>
+              {% else %}
+                <div class="alert alert-danger d-flex align-items-center gap-2 mb-0 mt-1 py-2 px-3">
+                  <i class="bi bi-exclamation-triangle"></i>
+                  <span>Las 72 horas de revisión han expirado.</span>
+                </div>
+              {% endif %}
+            </div>
+          {% endif %}
         </div>
         <div class="col-md-3 d-flex align-items-center justify-content-md-end justify-content-start mt-3 mt-md-0">
 
@@ -244,6 +264,29 @@
       actualizarTimer();
     </script>
   {% endif %}
+
+  <!-- Timer para las 72 horas desde creación -->
+  {% if tiempo_restante_creacion and tiempo_restante_creacion > 0 %}
+    <script>
+      console.log('Tiempo restante desde creación:', "{{ tiempo_restante_creacion|floatformat:0 }}");
+      let tiempoCreacion = Number("{{ tiempo_restante_creacion|floatformat:0 }}");
+      function actualizarTimerCreacion() {
+        if (tiempoCreacion <= 0) {
+          document.getElementById('timer-creacion').innerText = "Tiempo agotado";
+          return;
+        }
+        let horas = Math.floor(tiempoCreacion / 3600);
+        let minutos = Math.floor((tiempoCreacion % 3600) / 60);
+        let segundos = Math.floor(tiempoCreacion % 60);
+        document.getElementById('timer-creacion').innerText =
+          `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}:${segundos.toString().padStart(2, '0')}`;
+        tiempoCreacion--;
+        setTimeout(actualizarTimerCreacion, 1000);
+      }
+      actualizarTimerCreacion();
+    </script>
+  {% endif %}
+
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>

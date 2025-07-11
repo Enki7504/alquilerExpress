@@ -502,6 +502,16 @@ def ver_detalle_reserva(request, id_reserva):
         huespedes_precargados[f'dni_{i}'] = huesped.dni
         huespedes_precargados[f'fecha_nacimiento_{i}'] = huesped.fecha_nacimiento.strftime('%Y-%m-%d') if huesped.fecha_nacimiento else ''
 
+        # Calcular tiempo restante desde la creación (72 horas)
+    tiempo_restante_creacion = None
+    if reserva.estado.nombre == "Pendiente":
+        tiempo_limite_creacion = reserva.creada_en + timedelta(hours=72)  # Cambio aquí
+        ahora = timezone.now()
+        if ahora < tiempo_limite_creacion:
+            tiempo_restante_creacion = (tiempo_limite_creacion - ahora).total_seconds()
+        else:
+            tiempo_restante_creacion = 0
+
     context = {
         'reserva': reserva,
         'huespedes': huespedes,
@@ -509,6 +519,7 @@ def ver_detalle_reserva(request, id_reserva):
         'rango_ninos': range(reserva.cantidad_ninos),
         'huespedes_precargados': huespedes_precargados,
         'is_admin_or_empleado': is_admin_or_empleado(request.user),
+        'tiempo_restante_creacion': tiempo_restante_creacion,
     }
     return render(request, 'reservas_detalle.html', context)
 
