@@ -7,8 +7,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
-from datetime import datetime, timedelta, date
-from datetime import timedelta, datetime
+from datetime import datetime, timedelta
 
 # Importaciones de modelos locales
 from ..models import (
@@ -49,8 +48,8 @@ def crear_reserva_inmueble(request, id_inmueble):
         fecha_inicio_str = request.POST.get("fecha_inicio")
         fecha_fin_str = request.POST.get("fecha_fin")
         try:
-            fecha_inicio = datetime.datetime.strptime(fecha_inicio_str, "%Y-%m-%d").date()
-            fecha_fin = datetime.datetime.strptime(fecha_fin_str, "%Y-%m-%d").date()
+            fecha_inicio = datetime.strptime(fecha_inicio_str, "%Y-%m-%d").date()
+            fecha_fin = datetime.strptime(fecha_fin_str, "%Y-%m-%d").date()
         except (TypeError, ValueError):
             messages.error(request, "Fechas inválidas.")
             return redirect("detalle_inmueble", id_inmueble=id_inmueble)
@@ -480,9 +479,22 @@ def reservas_usuario(request):
 @login_required
 def ver_detalle_reserva(request, id_reserva):
     reserva = get_object_or_404(Reserva, id_reserva=id_reserva)
-    huespedes = Huesped.objects.filter(reserva=reserva)
+    huespedes = list(Huesped.objects.filter(reserva=reserva))
 
-    # Mapear datos para precargar inputs (según cantidad de adultos y niños)
+    # Agregar al titular como huésped si tiene datos válidos
+    cliente_principal = reserva.cliente()
+    huesped_titular = None
+    if cliente_principal:
+        huesped_titular = Huesped(
+            reserva=reserva,
+            nombre=cliente_principal.usuario.first_name,
+            apellido=cliente_principal.usuario.last_name,
+            dni=cliente_principal.dni,
+            fecha_nacimiento=cliente_principal.fecha_nacimiento
+        )
+        huespedes.insert(0, huesped_titular)
+
+    # Mapear datos para precargar inputs
     huespedes_precargados = {}
     for i, huesped in enumerate(huespedes):
         huespedes_precargados[f'nombre_{i}'] = huesped.nombre
@@ -635,74 +647,101 @@ def completar_huespedes(request, id_reserva):
     reserva = get_object_or_404(Reserva, id_reserva=id_reserva)
     total = reserva.cantidad_adultos + reserva.cantidad_ninos
 
-    huespedes_data = []
-    errores_dict = {}
+    errores = {}
     dnis = set()
+    huespedes_data = []
 
-    for i in range(total):
-        nombre = request.POST.get(f'nombre_{i}', '').strip()
-        apellido = request.POST.get(f'apellido_{i}', '').strip()
-        dni = request.POST.get(f'dni_{i}', '').strip()
-        fecha_nacimiento = request.POST.get(f'fecha_nacimiento_{i}', '').strip()
+    # 1. Datos del titular (índice 0)
+    # Ejemplo: suponemos que el titular es el cliente relacionado a la reserva
+    try:
+        titular = reserva.clienteinmueble_set.first().cliente  # o como tengas el modelo
+    except Exception:
+        titular = None
 
-        # Validar fecha nacimiento
-        try:
-            fecha_obj = datetime.strptime(fecha_nacimiento, '%Y-%m-%d').date()
-        except ValueError:
-            errores_dict[f'fecha_nacimiento_{i}'] = "Fecha de nacimiento inválida."
-            fecha_obj = None
+    if titular:
+        # Suponemos que el titular tiene nombre, apellido, dni y fecha_nacimiento
+        nombre = titular.usuario.first_name or ''
+        apellido = titular.usuario.last_name or ''
+        dni = getattr(titular, 'dni', '')  # o donde tengas el dni
+        fecha_nacimiento = getattr(titular, 'fecha_nacimiento', None)
+
+        # Validar datos del titular si querés (puedes saltar si confías)
+        if dni:
+            if not dni.isdigit():
+                errores['dni_0'] = "El DNI del titular debe contener solo números."
+            elif len(dni) not in [7,8]:
+                errores['dni_0'] = "El DNI del titular debe tener 7 u 8 dígitos."
+            elif dni in dnis:
+                errores['dni_0'] = "El DNI del titular está repetido."
+            else:
+                dnis.add(dni)
 
         huespedes_data.append({
             'nombre': nombre,
             'apellido': apellido,
             'dni': dni,
-            'fecha_nacimiento': fecha_nacimiento,
-            'fecha_obj': fecha_obj
+            'fecha_nacimiento': fecha_nacimiento
         })
+    else:
+        errores['titular'] = "No se pudo obtener datos del titular."
 
-        # Validaciones DNI
+    # 2. Datos del resto de huéspedes (del 1 al total-1)
+    for i in range(1, total):
+        nombre = request.POST.get(f'nombre_{i}', '').strip()
+        apellido = request.POST.get(f'apellido_{i}', '').strip()
+        dni = request.POST.get(f'dni_{i}', '').strip()
+        fecha_str = request.POST.get(f'fecha_nacimiento_{i}', '').strip()
+
+        print(f"Datos huésped {i}: nombre='{nombre}', apellido='{apellido}', dni='{dni}', fecha_nacimiento='{fecha_str}'")
+
+        # Validar fecha
+        try:
+            fecha_obj = datetime.strptime(fecha_str, '%Y-%m-%d').date()
+        except ValueError:
+            errores[f'fecha_nacimiento_{i}'] = "Fecha de nacimiento inválida."
+            fecha_obj = None
+
         if not dni.isdigit():
-            errores_dict[f'dni_{i}'] = "El DNI debe contener solo números."
+            errores[f'dni_{i}'] = "El DNI debe contener solo números."
         elif len(dni) not in [7, 8]:
-            errores_dict[f'dni_{i}'] = "El DNI debe tener 7 u 8 dígitos."
+            errores[f'dni_{i}'] = "El DNI debe tener 7 u 8 dígitos."
         elif dni in dnis:
-            errores_dict[f'dni_{i}'] = "Este DNI está repetido."
+            errores[f'dni_{i}'] = "Este DNI está repetido."
         elif Huesped.objects.filter(reserva=reserva, dni=dni).exists():
-            errores_dict[f'dni_{i}'] = "Este DNI ya está registrado para esta reserva."
+            errores[f'dni_{i}'] = "Este DNI ya está registrado para esta reserva."
         else:
             dnis.add(dni)
-            if any(char.isdigit() for char in nombre):
-                errores.append(f"El nombre '{nombre}' no puede contener números.")
-            if any(char.isdigit() for char in apellido):
-                errores.append(f"El apellido '{apellido}' no puede contener números.")
-            if not dni.isdigit():
-                errores.append(f"El DNI '{dni}' debe contener solo números.")
 
-        if errores:
-            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                return JsonResponse({'success': False, 'errors': errores})
-            for error in errores:
-                messages.error(request, error)
-            return redirect('ver_detalle_reserva', id_reserva=id_reserva)
+        if any(char.isdigit() for char in nombre):
+            errores[f'nombre_{i}'] = "El nombre no debe contener números."
+        if any(char.isdigit() for char in apellido):
+            errores[f'apellido_{i}'] = "El apellido no debe contener números."
 
-        # Guardar huéspedes...
-        for i in range(total):
-            nombre = request.POST.get(f'nombre_{i}', '').strip()
-            apellido = request.POST.get(f'apellido_{i}', '').strip()
-            dni = request.POST.get(f'dni_{i}', '').strip()
-            fecha_nacimiento = request.POST.get(f'fecha_nacimiento_{i}', '').strip()
-            Huesped.objects.create(
-                reserva=reserva,
-                nombre=nombre,
-                apellido=apellido,
-                dni=dni,
-                fecha_nacimiento=fecha_nacimiento
-            )
-        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return JsonResponse({'success': True, 'message': 'Huéspedes cargados correctamente.'})
-        messages.success(request, "Huéspedes cargados correctamente.")
-        return redirect('ver_detalle_reserva', id_reserva=id_reserva)
-    
+        huespedes_data.append({
+            'nombre': nombre,
+            'apellido': apellido,
+            'dni': dni,
+            'fecha_nacimiento': fecha_obj
+        })
+
+    if errores:
+        return JsonResponse({'success': False, 'errores': errores})
+
+    # Borrar huéspedes anteriores
+    Huesped.objects.filter(reserva=reserva).delete()
+
+    # Guardar todos
+    for data in huespedes_data:
+        Huesped.objects.create(
+            reserva=reserva,
+            nombre=data['nombre'],
+            apellido=data['apellido'],
+            dni=data['dni'],
+            fecha_nacimiento=data['fecha_nacimiento']
+        )
+
+    return JsonResponse({'success': True, 'message': 'Huéspedes cargados correctamente.'})
+
 @login_required
 def guardar_patente(request, id_reserva):
     if request.method == 'POST':
