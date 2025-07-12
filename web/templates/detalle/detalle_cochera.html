@@ -70,6 +70,14 @@
       color: #721c24 !important;
       opacity: 0.7;
     }
+
+    .hora-btn.ocupada.propia {
+      background-color: #fff3cd !important;
+      color: #856404 !important;
+      border-color: #ffeaa7 !important;
+      opacity: 1 !important;
+      cursor: not-allowed;
+    }
   </style>
 {% endblock %}
 
@@ -128,7 +136,7 @@
       <div id="hora-fin-selector" class="hora-selector">
         <!-- Se genera dinámicamente con JS -->
       </div>
-      <input type="hidden" id="fecha_fin_time" name="fecha_fin_time" required>
+      <input type="hidden" id="fecha
     </div>
     
     <button type="submit" class="btn btn-primary btn-azul w-100 py-2">
@@ -174,10 +182,10 @@
         });
     });
 
-    // Generar horas del día (6:00 AM a 11:00 PM)
+    // Generar horas del día (00:00 AM a 23:00 PM)
     function generarHoras() {
       const horas = [];
-      for (let i = 6; i <= 23; i++) {
+      for (let i = 0; i <= 23; i++) {
         horas.push(`${i.toString().padStart(2, '0')}:00`);
       }
       return horas;
@@ -229,7 +237,7 @@
     // Actualizar estado de las horas según disponibilidad (con fetch)
     async function actualizarHorasDisponibles(containerId, fecha) {
       const container = document.getElementById(containerId);
-      
+
       if (!fecha) {
         container.querySelectorAll('.hora-btn').forEach(btn => {
           btn.classList.remove('ocupada', 'propia');
@@ -237,35 +245,36 @@
         });
         return;
       }
-      
+
       try {
         console.log(`Obteniendo horarios para fecha: ${fecha}`);
         const url = `{% url 'obtener_horarios_ocupados' id_cochera=cochera.id_cochera %}?fecha=${fecha}`;
-        
+
         const response = await fetch(url);
         const data = await response.json();
-        
+
         if (data.error) {
           console.error('Error obteniendo horarios:', data.error);
           return;
         }
-        
+
         const horasOcupadas = data.horarios_ocupados || [];
-        let esFechaPropia = false;
-        if (typeof fechasOcupadasPropias !== 'undefined') {
-          esFechaPropia = fechasOcupadasPropias.includes(fecha);
-        }
-        
+        const horasPropias = data.horarios_propios || [];
+
         container.querySelectorAll('.hora-btn').forEach(btn => {
           const hora = btn.dataset.hora;
-          
-          // SOLO limpiar clases de estado, NO 'selected'
+
+          // Limpiar clases (menos 'selected')
           btn.classList.remove('ocupada', 'propia');
-          
-          // Marcar horas ocupadas
+
           if (horasOcupadas.includes(hora)) {
-            btn.classList.add('ocupada');
-            // Si estaba seleccionada una hora ocupada, deseleccionarla
+            if (horasPropias.includes(hora)) {
+              btn.classList.add('ocupada', 'propia');
+            } else {
+              btn.classList.add('ocupada');
+            }
+
+            // Deseleccionar si está ocupada
             if (btn.classList.contains('selected')) {
               btn.classList.remove('selected');
               const input = document.getElementById(containerId.replace('-selector', '_time'));
@@ -273,18 +282,16 @@
                 input.value = '';
               }
             }
-          }
-          
-          // Marcar si es fecha propia
-          if (esFechaPropia) {
+          } else if (horasPropias.includes(hora)) {
             btn.classList.add('propia');
           }
         });
-        
+
       } catch (error) {
         console.error('Error en fetch de horarios:', error);
       }
     }
+
 
     document.addEventListener('DOMContentLoaded', function() {
       var fechasOcupadas = JSON.parse(document.getElementById('fechasOcupadasJSON').textContent);

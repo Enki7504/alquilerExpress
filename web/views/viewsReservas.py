@@ -7,8 +7,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
-from datetime import datetime, timedelta, date
-from datetime import timedelta, datetime
+from datetime import datetime, timedelta
 
 # Importaciones de modelos locales
 from ..models import (
@@ -49,8 +48,8 @@ def crear_reserva_inmueble(request, id_inmueble):
         fecha_inicio_str = request.POST.get("fecha_inicio")
         fecha_fin_str = request.POST.get("fecha_fin")
         try:
-            fecha_inicio = datetime.datetime.strptime(fecha_inicio_str, "%Y-%m-%d").date()
-            fecha_fin = datetime.datetime.strptime(fecha_fin_str, "%Y-%m-%d").date()
+            fecha_inicio = datetime.strptime(fecha_inicio_str, "%Y-%m-%d").date()
+            fecha_fin = datetime.strptime(fecha_fin_str, "%Y-%m-%d").date()
         except (TypeError, ValueError):
             messages.error(request, "Fechas inválidas.")
             return redirect("detalle_inmueble", id_inmueble=id_inmueble)
@@ -171,36 +170,36 @@ def crear_reserva_cochera(request, id_cochera):
             messages.error(request, 'La fecha y hora de salida debe ser posterior a la de llegada.')
             return redirect('detalle_cochera', id_cochera=id_cochera)
 
-        # Validar mínimo de noches
+        # Validar mínimo de horas
         delta = fecha_fin - fecha_inicio
         horas = delta.total_seconds() / 60 / 60
-        print(horas)
-        print(cochera.minimo_dias_alquiler)
-        if horas < cochera.minimo_dias_alquiler :
+        if horas < cochera.minimo_dias_alquiler:
             messages.error(request, f"El mínimo de horas de alquiler para esta cochera es {cochera.minimo_dias_alquiler}.")
             return redirect('detalle_cochera', id_cochera=id_cochera)
 
         # Validar que el cliente no tenga reservas superpuestas para la misma cochera
+        # CORREGIDO: Comparar datetime completo, no solo fechas
         reserva_superpuesta_usuario = Reserva.objects.filter(
             clienteinmueble__cliente=perfil,
             cochera=cochera,
             estado__nombre__in=['Pendiente', 'Confirmada', 'Pagada', 'Aprobada'],
-            fecha_inicio__lte=fecha_fin,
-            fecha_fin__gte=fecha_inicio
+            fecha_inicio__lt=fecha_fin,      # Cambio: __lt en lugar de __lte
+            fecha_fin__gt=fecha_inicio       # Cambio: __gt en lugar de __gte
         ).exists()
         if reserva_superpuesta_usuario:
-            messages.error(request, "Ya tenés una reserva activa para esta cochera en esas fechas.")
+            messages.error(request, "Ya tenés una reserva activa para esta cochera en esas fechas y horarios.")
             return redirect('detalle_cochera', id_cochera=id_cochera)
 
-        # Validar que la cochera esté disponible en esas fechas
+        # Validar que la cochera esté disponible en esas fechas y horarios
+        # CORREGIDO: Comparar datetime completo, no solo fechas
         reserva_superpuesta_cochera = Reserva.objects.filter(
             cochera=cochera,
             estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada'],
-            fecha_inicio__lte=fecha_fin,
-            fecha_fin__gte=fecha_inicio
+            fecha_inicio__lt=fecha_fin,      # Cambio: __lt en lugar de __lte
+            fecha_fin__gt=fecha_inicio       # Cambio: __gt en lugar de __gte
         ).exists()
         if reserva_superpuesta_cochera:
-            messages.error(request, "La cochera no está disponible en esas fechas.")
+            messages.error(request, "La cochera no está disponible en esas fechas y horarios.")
             return redirect('detalle_cochera', id_cochera=id_cochera)
 
         # Calcular precio total
@@ -480,9 +479,22 @@ def reservas_usuario(request):
 @login_required
 def ver_detalle_reserva(request, id_reserva):
     reserva = get_object_or_404(Reserva, id_reserva=id_reserva)
-    huespedes = Huesped.objects.filter(reserva=reserva)
+    huespedes = list(Huesped.objects.filter(reserva=reserva))
 
-    # Mapear datos para precargar inputs (según cantidad de adultos y niños)
+    # Agregar al titular como huésped si tiene datos válidos
+    cliente_principal = reserva.cliente()
+    huesped_titular = None
+    if cliente_principal:
+        huesped_titular = Huesped(
+            reserva=reserva,
+            nombre=cliente_principal.usuario.first_name,
+            apellido=cliente_principal.usuario.last_name,
+            dni=cliente_principal.dni,
+            fecha_nacimiento=cliente_principal.fecha_nacimiento
+        )
+        huespedes.insert(0, huesped_titular)
+
+    # Mapear datos para precargar inputs
     huespedes_precargados = {}
     for i, huesped in enumerate(huespedes):
         huespedes_precargados[f'nombre_{i}'] = huesped.nombre
@@ -490,12 +502,24 @@ def ver_detalle_reserva(request, id_reserva):
         huespedes_precargados[f'dni_{i}'] = huesped.dni
         huespedes_precargados[f'fecha_nacimiento_{i}'] = huesped.fecha_nacimiento.strftime('%Y-%m-%d') if huesped.fecha_nacimiento else ''
 
+        # Calcular tiempo restante desde la creación (72 horas)
+    tiempo_restante_creacion = None
+    if reserva.estado.nombre == "Pendiente":
+        tiempo_limite_creacion = reserva.creada_en + timedelta(hours=72)  # Cambio aquí
+        ahora = timezone.now()
+        if ahora < tiempo_limite_creacion:
+            tiempo_restante_creacion = (tiempo_limite_creacion - ahora).total_seconds()
+        else:
+            tiempo_restante_creacion = 0
+
     context = {
         'reserva': reserva,
         'huespedes': huespedes,
         'rango_adultos': range(reserva.cantidad_adultos),
         'rango_ninos': range(reserva.cantidad_ninos),
         'huespedes_precargados': huespedes_precargados,
+        'is_admin_or_empleado': is_admin_or_empleado(request.user),
+        'tiempo_restante_creacion': tiempo_restante_creacion,
     }
     return render(request, 'reservas_detalle.html', context)
 
@@ -635,74 +659,101 @@ def completar_huespedes(request, id_reserva):
     reserva = get_object_or_404(Reserva, id_reserva=id_reserva)
     total = reserva.cantidad_adultos + reserva.cantidad_ninos
 
-    huespedes_data = []
-    errores_dict = {}
+    errores = {}
     dnis = set()
+    huespedes_data = []
 
-    for i in range(total):
-        nombre = request.POST.get(f'nombre_{i}', '').strip()
-        apellido = request.POST.get(f'apellido_{i}', '').strip()
-        dni = request.POST.get(f'dni_{i}', '').strip()
-        fecha_nacimiento = request.POST.get(f'fecha_nacimiento_{i}', '').strip()
+    # 1. Datos del titular (índice 0)
+    # Ejemplo: suponemos que el titular es el cliente relacionado a la reserva
+    try:
+        titular = reserva.clienteinmueble_set.first().cliente  # o como tengas el modelo
+    except Exception:
+        titular = None
 
-        # Validar fecha nacimiento
-        try:
-            fecha_obj = datetime.strptime(fecha_nacimiento, '%Y-%m-%d').date()
-        except ValueError:
-            errores_dict[f'fecha_nacimiento_{i}'] = "Fecha de nacimiento inválida."
-            fecha_obj = None
+    if titular:
+        # Suponemos que el titular tiene nombre, apellido, dni y fecha_nacimiento
+        nombre = titular.usuario.first_name or ''
+        apellido = titular.usuario.last_name or ''
+        dni = getattr(titular, 'dni', '')  # o donde tengas el dni
+        fecha_nacimiento = getattr(titular, 'fecha_nacimiento', None)
+
+        # Validar datos del titular si querés (puedes saltar si confías)
+        if dni:
+            if not dni.isdigit():
+                errores['dni_0'] = "El DNI del titular debe contener solo números."
+            elif len(dni) not in [7,8]:
+                errores['dni_0'] = "El DNI del titular debe tener 7 u 8 dígitos."
+            elif dni in dnis:
+                errores['dni_0'] = "El DNI del titular está repetido."
+            else:
+                dnis.add(dni)
 
         huespedes_data.append({
             'nombre': nombre,
             'apellido': apellido,
             'dni': dni,
-            'fecha_nacimiento': fecha_nacimiento,
-            'fecha_obj': fecha_obj
+            'fecha_nacimiento': fecha_nacimiento
         })
+    else:
+        errores['titular'] = "No se pudo obtener datos del titular."
 
-        # Validaciones DNI
+    # 2. Datos del resto de huéspedes (del 1 al total-1)
+    for i in range(1, total):
+        nombre = request.POST.get(f'nombre_{i}', '').strip()
+        apellido = request.POST.get(f'apellido_{i}', '').strip()
+        dni = request.POST.get(f'dni_{i}', '').strip()
+        fecha_str = request.POST.get(f'fecha_nacimiento_{i}', '').strip()
+
+        print(f"Datos huésped {i}: nombre='{nombre}', apellido='{apellido}', dni='{dni}', fecha_nacimiento='{fecha_str}'")
+
+        # Validar fecha
+        try:
+            fecha_obj = datetime.strptime(fecha_str, '%Y-%m-%d').date()
+        except ValueError:
+            errores[f'fecha_nacimiento_{i}'] = "Fecha de nacimiento inválida."
+            fecha_obj = None
+
         if not dni.isdigit():
-            errores_dict[f'dni_{i}'] = "El DNI debe contener solo números."
+            errores[f'dni_{i}'] = "El DNI debe contener solo números."
         elif len(dni) not in [7, 8]:
-            errores_dict[f'dni_{i}'] = "El DNI debe tener 7 u 8 dígitos."
+            errores[f'dni_{i}'] = "El DNI debe tener 7 u 8 dígitos."
         elif dni in dnis:
-            errores_dict[f'dni_{i}'] = "Este DNI está repetido."
+            errores[f'dni_{i}'] = "Este DNI está repetido."
         elif Huesped.objects.filter(reserva=reserva, dni=dni).exists():
-            errores_dict[f'dni_{i}'] = "Este DNI ya está registrado para esta reserva."
+            errores[f'dni_{i}'] = "Este DNI ya está registrado para esta reserva."
         else:
             dnis.add(dni)
-            if any(char.isdigit() for char in nombre):
-                errores.append(f"El nombre '{nombre}' no puede contener números.")
-            if any(char.isdigit() for char in apellido):
-                errores.append(f"El apellido '{apellido}' no puede contener números.")
-            if not dni.isdigit():
-                errores.append(f"El DNI '{dni}' debe contener solo números.")
 
-        if errores:
-            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                return JsonResponse({'success': False, 'errors': errores})
-            for error in errores:
-                messages.error(request, error)
-            return redirect('ver_detalle_reserva', id_reserva=id_reserva)
+        if any(char.isdigit() for char in nombre):
+            errores[f'nombre_{i}'] = "El nombre no debe contener números."
+        if any(char.isdigit() for char in apellido):
+            errores[f'apellido_{i}'] = "El apellido no debe contener números."
 
-        # Guardar huéspedes...
-        for i in range(total):
-            nombre = request.POST.get(f'nombre_{i}', '').strip()
-            apellido = request.POST.get(f'apellido_{i}', '').strip()
-            dni = request.POST.get(f'dni_{i}', '').strip()
-            fecha_nacimiento = request.POST.get(f'fecha_nacimiento_{i}', '').strip()
-            Huesped.objects.create(
-                reserva=reserva,
-                nombre=nombre,
-                apellido=apellido,
-                dni=dni,
-                fecha_nacimiento=fecha_nacimiento
-            )
-        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return JsonResponse({'success': True, 'message': 'Huéspedes cargados correctamente.'})
-        messages.success(request, "Huéspedes cargados correctamente.")
-        return redirect('ver_detalle_reserva', id_reserva=id_reserva)
-    
+        huespedes_data.append({
+            'nombre': nombre,
+            'apellido': apellido,
+            'dni': dni,
+            'fecha_nacimiento': fecha_obj
+        })
+
+    if errores:
+        return JsonResponse({'success': False, 'errores': errores})
+
+    # Borrar huéspedes anteriores
+    Huesped.objects.filter(reserva=reserva).delete()
+
+    # Guardar todos
+    for data in huespedes_data:
+        Huesped.objects.create(
+            reserva=reserva,
+            nombre=data['nombre'],
+            apellido=data['apellido'],
+            dni=data['dni'],
+            fecha_nacimiento=data['fecha_nacimiento']
+        )
+
+    return JsonResponse({'success': True, 'message': 'Huéspedes cargados correctamente.'})
+
 @login_required
 def guardar_patente(request, id_reserva):
     if request.method == 'POST':
@@ -731,12 +782,11 @@ def guardar_patente(request, id_reserva):
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({'success': True, 'message': 'Patente guardada correctamente.'})
         
-        messages.success(request, "Patente guardada correctamente.")
+        messages.success(request, "Patente guar dada correctamente.")
         return redirect('ver_detalle_reserva', id_reserva=id_reserva)
     
     return redirect('ver_detalle_reserva', id_reserva=id_reserva)
 
-@login_required
 def obtener_horarios_ocupados(request, id_cochera):
     """Obtiene los horarios ocupados para una fecha específica"""
     if request.method == 'GET':
@@ -763,7 +813,7 @@ def obtener_horarios_ocupados(request, id_cochera):
             
             # Filtrar por estados válidos
             reservas_validas = todas_reservas.filter(
-                estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada']
+                estado__nombre__in=['Pendiente','Confirmada', 'Pagada', 'Aprobada']
             )
             print(f"DEBUG: Reservas con estados válidos: {reservas_validas.count()}")
             
@@ -774,6 +824,7 @@ def obtener_horarios_ocupados(request, id_cochera):
                 print(f"  Fecha fin: {reserva.fecha_fin}")
             
             horarios_ocupados = set()
+            horas_propias = set()
             
             # Procesar cada reserva
             for reserva in reservas_validas:
@@ -795,8 +846,8 @@ def obtener_horarios_ocupados(request, id_cochera):
                         hora_inicio_dia = reserva.fecha_inicio.hour
                         print(f"  Hora inicio en este día: {hora_inicio_dia}")
                     else:
-                        # La reserva empezó antes, desde las 6:00 AM
-                        hora_inicio_dia = 6
+                        # La reserva empezó antes, desde las 00:00
+                        hora_inicio_dia = 0
                         print(f"  Reserva empezó antes, hora inicio: {hora_inicio_dia}")
                     
                     if fecha_fin_reserva == fecha_obj:
@@ -806,15 +857,17 @@ def obtener_horarios_ocupados(request, id_cochera):
                             hora_fin_dia += 1  # Si hay minutos, ocupar la hora completa
                         print(f"  Hora fin en este día: {hora_fin_dia}")
                     else:
-                        # La reserva termina después, hasta las 11:00 PM
+                        # La reserva termina después, hasta las 23:59 (24 horas)
                         hora_fin_dia = 24
                         print(f"  Reserva termina después, hora fin: {hora_fin_dia}")
                     
-                    # Agregar las horas ocupadas (dentro del horario de trabajo 6-24)
-                    for hora in range(max(6, hora_inicio_dia), min(24, hora_fin_dia)):
+                    # Agregar las horas ocupadas (de 0 a 23)
+                    for hora in range(max(0, hora_inicio_dia), min(24, hora_fin_dia)):
                         hora_str = f"{hora:02d}:00"
                         horarios_ocupados.add(hora_str)
+                        horas_propias.add(hora_str)
                         print(f"  → Agregando hora ocupada: {hora_str}")
+                            
                 else:
                     print(f"DEBUG: ✗ Reserva {reserva.id_reserva} NO afecta la fecha {fecha_obj}")
             
@@ -823,6 +876,7 @@ def obtener_horarios_ocupados(request, id_cochera):
             
             return JsonResponse({
                 'horarios_ocupados': horarios_lista,
+                'horarios_propios': sorted(horas_propias),
                 'fecha': fecha
             })
             
