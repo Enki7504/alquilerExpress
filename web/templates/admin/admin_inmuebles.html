@@ -228,7 +228,14 @@ document.addEventListener('DOMContentLoaded', function() {
         fecha = formValues[0];
         razon = formValues[1];
         if (!fecha || !razon) {
-          Swal.fire('Error', 'Debes completar la fecha y la razón.', 'error');
+          Swal.fire({
+            title: 'Error',
+            text: 'Debes completar la fecha y la razón.',
+            icon: 'error',
+            timer: 3000,
+            showConfirmButton: false,
+            timerProgressBar: true
+          });
           return;
         }
       } else {
