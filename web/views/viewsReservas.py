@@ -325,6 +325,7 @@ def cambiar_estado_reserva(request, id_reserva):
                         cuerpo += f"\nLa reserva ha sido confirmada. ¡Disfrute de su inmueble!\n"
                     elif nuevo_estado == "Finalizada":
                         cuerpo += f"\nLa reserva ha sido finalizada. Esperamos que haya disfrutado de su estancia.\n"
+                        cuerpo += f"\n¡Nos encantaría conocer tu experiencia! Te invitamos a dejar una reseña sobre tu estadía para ayudar a otros huéspedes a tomar la mejor decisión.\n"
                     elif nuevo_estado == "Cancelada":
                         cuerpo += f"\nLa reserva ha sido cancelada. Si tiene alguna pregunta, por favor contáctenos.\n"
                     elif nuevo_estado == "Rechazada":
@@ -350,6 +351,7 @@ def cambiar_estado_reserva(request, id_reserva):
                             f"El estado de tu reserva #{reserva.id_reserva} ha cambiado a: {estado.nombre}"
                             + (f" (Comentario: {comentario})" if comentario else "") + "."
                         )
+                        
 
                     crear_notificacion(
                         usuario=cliente_rel.cliente,
@@ -397,6 +399,7 @@ def cambiar_estado_reserva(request, id_reserva):
                         cuerpo += f"\nLa reserva ha sido confirmada. ¡Disfrute de su cochera!\n"
                     elif nuevo_estado == "Finalizada":
                         cuerpo += f"\nLa reserva ha sido finalizada. Esperamos que haya disfrutado de su estancia.\n"
+                        cuerpo += f"\n¡Nos encantaría conocer tu experiencia! Te invitamos a dejar una reseña sobre tu estadía para ayudar a otros huéspedes a tomar la mejor decisión.\n"
                     elif nuevo_estado == "Cancelada":
                         cuerpo += f"\nLa reserva ha sido cancelada. Si tiene alguna pregunta, por favor contáctenos.\n"
                     elif nuevo_estado == "Rechazada":
