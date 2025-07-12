@@ -48,12 +48,16 @@
             <a href="{% url 'admin_cocheras_historial' cochera.id_cochera %}" class="btn btn-sm btn-secondary" title="Ver Historial">Historial</a>
             {% if user.is_staff %}
               <a href="{% url 'admin_cocheras_editar' cochera.id_cochera %}" class="btn btn-sm btn-warning" title="Editar">Editar</a>
-              <a href="#" class="btn btn-sm btn-danger eliminar-cochera" data-id="{{ cochera.id_cochera }}" title="Eliminar">Eliminar</a>
+              <a href="#" class="btn btn-sm btn-danger eliminar-cochera" 
+                 data-id="{{ cochera.id_cochera }}" 
+                 data-nombre="{{ cochera.nombre }}" 
+                 title="Eliminar">Eliminar</a>
               <!-- Botón de mantenimiento -->
               <button type="button"
                       class="btn btn-sm btn-secondary cambiar-estado-btn"
                       data-cochera="{{ cochera.id_cochera }}"
-                      data-estado-actual="{{ cochera.estado.nombre }}">
+                      data-estado-actual="{{ cochera.estado.nombre }}"
+                      data-nombre="{{ cochera.nombre }}">
                 Cambiar Estado
               </button>
               <!-- Select de empleado asignado -->
@@ -107,9 +111,10 @@ document.addEventListener('DOMContentLoaded', function() {
     btn.addEventListener('click', async function(e) {
       e.preventDefault();
       const id = this.getAttribute('data-id');
+      const cocheraNombre = this.getAttribute('data-nombre'); // ← Agregar esta línea
       
       const result = await Swal.fire({
-        title: '¿Eliminar cochera?',
+        title: `¿Eliminar cochera "${cocheraNombre}"?`, // ← Usar el nombre aquí
         text: "¿Está seguro que desea eliminar esta cochera?",
         icon: 'warning',
         showCancelButton: true,
@@ -163,6 +168,7 @@ document.addEventListener('DOMContentLoaded', function() {
     btn.addEventListener('click', async function() {
       const cocheraId = btn.getAttribute('data-cochera');
       const estadoActual = btn.getAttribute('data-estado-actual');
+      const cocheraNombre = btn.getAttribute('data-nombre'); // ← Agregar esta línea
       let estadoOpuesto, estadoOpuestoId;
 
       // IDs de estado pasados desde Django
@@ -186,7 +192,7 @@ document.addEventListener('DOMContentLoaded', function() {
       let razon = null;
       if (estadoOpuesto === "En Mantenimiento") {
         const { value: formValues } = await Swal.fire({
-          title: 'Pasar a "En Mantenimiento"',
+          title: `Pasar "${cocheraNombre}" a "En Mantenimiento"`, // ← Cambiar esta línea
           html:
             '<input id="swal-fecha" type="text" class="swal2-input" placeholder="Fecha estimada de fin" required>' +
             '<input id="swal-razon" class="swal2-input" placeholder="Razón del mantenimiento" required>',
@@ -228,7 +234,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
       } else {
         const confirm = await Swal.fire({
-          title: '¿Pasar a "Disponible"?',
+          title: `¿Pasar "${cocheraNombre}" a "Disponible"?`,
           icon: 'question',
           showCancelButton: true,
           confirmButtonText: 'Sí, cambiar',
