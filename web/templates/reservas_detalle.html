@@ -19,7 +19,12 @@
         <div class="col-md-9">
           <div class="mb-2">
             <strong>Inmueble:</strong>
-            <span class="ms-1">{{ reserva.inmueble }}</span>
+            <span class="ms-1">{% if reserva.inmueble %}
+                                  {{ reserva.inmueble }}
+                                {% elif reserva.cochera %}
+                                  {{ reserva.cochera }}
+                                {% endif %}
+            </span>
           </div>
           <div class="mb-2">
             <strong>Cliente:</strong>
@@ -55,6 +60,26 @@
               {{ reserva.estado.nombre }}
             </span>
           </div>
+          
+          <!-- Contador de 72 horas desde creación -->
+          {% if reserva.estado.nombre == "Pendiente" and tiempo_restante_creacion is not None %}
+            <div class="mb-2">
+              <strong>Tiempo para revisión:</strong>
+              {% if tiempo_restante_creacion > 0 %}
+                <div class="alert alert-warning d-flex align-items-center gap-2 mb-0 mt-1 py-2 px-3" style="background: #fff3cd;">
+                  <i class="bi bi-clock-history text-warning"></i>
+                  <span class="fw-semibold">
+                    Tiempo restante: <span id="timer-creacion" class="text-dark" style="font-family: monospace;"></span>
+                  </span>
+                </div>
+              {% else %}
+                <div class="alert alert-danger d-flex align-items-center gap-2 mb-0 mt-1 py-2 px-3">
+                  <i class="bi bi-exclamation-triangle"></i>
+                  <span>Las 72 horas de revisión han expirado.</span>
+                </div>
+              {% endif %}
+            </div>
+          {% endif %}
         </div>
         <div class="col-md-3 d-flex align-items-center justify-content-md-end justify-content-start mt-3 mt-md-0">
 
@@ -69,10 +94,15 @@
                 <div class="d-flex align-items-center flex-wrap gap-3">
                   <!-- Icono -->
                   <span class="me-2">
-                    <i class="bi bi-person-fill text-primary fs-4"></i>
+                    <i class="bi bi-person-fill {% if forloop.first %}text-primary{% else %}text-secondary{% endif %} fs-4"></i>
                   </span>
                   <!-- Nombre y apellido -->
-                  <span class="fw-semibold">{{ h.nombre }} {{ h.apellido }}</span>
+                  <span class="fw-semibold">
+                    {{ h.nombre }} {{ h.apellido }}
+                    {% if forloop.first %}
+                      <span class="badge bg-primary ms-2">Titular</span>
+                    {% endif %}
+                  </span>
                   <!-- DNI -->
                   <span class="badge bg-light text-dark border fw-normal">
                     DNI: <span class="fw-semibold">{{ h.dni }}</span>
@@ -87,94 +117,127 @@
           </ul>
         </div>
       {% endif %}
-      <!-- Botones de acción -->
-      <div class="mt-4 d-flex flex-wrap gap-2 align-items-center">
-        {% if reserva.estado.nombre != "Cancelada" and reserva.estado.nombre != "Finalizada" %}
-          {% if reserva.estado.nombre == "Aprobada" %}
-            {% if tiempo_restante and tiempo_restante > 0 %}
-              <div class="alert alert-info d-flex align-items-center gap-2 mb-0 rounded-pill shadow-sm border-0 py-2 px-3" id="timer-pago" style="background: #e3f6fd; font-size: 1rem;">
-                <i class="bi bi-clock-history text-primary" style="font-size: 1.2rem;"></i>
-                <span class="fw-semibold">
-                  <span class="d-none d-md-inline">Tiempo restante para pagar:</span>
-                  <span id="timer" class="ms-1 text-dark" style="font-family: monospace; font-size: 1.1rem;"></span>
-                </span>
-              </div>
-              {% if not is_admin_or_empleado and huespedes|length == reserva.cantidad_adultos|add:reserva.cantidad_ninos %}
-                <button class="btn btn-success d-flex align-items-center h-100" id="pagar-btn">
-                  <i class="bi bi-cash-coin me-1"></i> Pagar
-                </button>
+      {% if not is_admin_or_empleado %}
+        <!-- Botones de acción -->
+        <div class="mt-4 d-flex flex-wrap gap-2 align-items-center">
+          {% if reserva.estado.nombre != "Cancelada" and reserva.estado.nombre != "Finalizada" %}
+            {% if reserva.estado.nombre == "Aprobada" %}
+              {% if tiempo_restante and tiempo_restante > 0 %}
+                <div class="alert alert-info d-flex align-items-center gap-2 mb-0 rounded-pill shadow-sm border-0 py-2 px-3" id="timer-pago" style="background: #e3f6fd; font-size: 1rem;">
+                  <i class="bi bi-clock-history text-primary" style="font-size: 1.2rem;"></i>
+                  <span class="fw-semibold">
+                    <span class="d-none d-md-inline">Tiempo restante para pagar:</span>
+                    <span id="timer" class="ms-1 text-dark" style="font-family: monospace; font-size: 1.1rem;"></span>
+                  </span>
+                </div>
+                {% if not is_admin_or_empleado and huespedes|length == reserva.cantidad_adultos|add:reserva.cantidad_ninos or reserva.patente %}
+                  <button class="btn btn-success d-flex align-items-center h-100" id="pagar-btn">
+                    <i class="bi bi-cash-coin me-1"></i> Pagar
+                  </button>
+                {% else %}
+                  <button class="btn btn-secondary d-flex align-items-center h-100" disabled>
+                    <i class="bi bi-cash-coin me-1"></i> Pagar
+                  </button>
+                {% endif %}
               {% else %}
-                <button class="btn btn-secondary d-flex align-items-center h-100" disabled>
-                  <i class="bi bi-cash-coin me-1"></i> Pagar
-                </button>
+                <div class="alert alert-danger d-flex align-items-center gap-2 mb-3">
+                  <i class="bi bi-clock-history fs-5"></i>
+                  <span>El tiempo para pagar la reserva ha expirado.</span>
+                </div>
               {% endif %}
-            {% else %}
-              <div class="alert alert-danger d-flex align-items-center gap-2 mb-3">
-                <i class="bi bi-clock-history fs-5"></i>
-                <span>El tiempo para pagar la reserva ha expirado.</span>
-              </div>
+            {% endif %}
+            {% if not is_admin_or_empleado %}
+              {% if tiempo_restante and tiempo_restante > 0 %}
+                <form id="cancelarReservaForm" method="post" action="{% url 'cancelar_reserva' reserva.id_reserva %}" class="m-0">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-danger d-flex align-items-center h-100">
+                    <i class="bi bi-x-circle me-1"></i> Cancelar reserva
+                  </button>
+                </form>
+              {% endif %}
             {% endif %}
           {% endif %}
-          {% if not is_admin_or_empleado %}
-            {% if tiempo_restante and tiempo_restante > 0 %}
-              <form id="cancelarReservaForm" method="post" action="{% url 'cancelar_reserva' reserva.id_reserva %}" class="m-0">
+        </div>
+        <br>
+        {% if not is_admin_or_empleado %}
+        {% if reserva.inmueble %}
+          {% with total_huespedes=huespedes|length %}
+            {% if total_huespedes < reserva.cantidad_adultos|add:reserva.cantidad_ninos %}
+              <form id="form-huespedes" method="post" action="{% url 'completar_huespedes' reserva.id_reserva %}">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-danger d-flex align-items-center h-100">
-                  <i class="bi bi-x-circle me-1"></i> Cancelar reserva
-                </button>
+                <h5>Completa los datos de los huéspedes antes de pagar</h5>
+                <h6> Adultos </h6>
+                {% for i in rango_adultos %}
+                  {% if forloop.counter0 >= 0 %}  {# Empezar desde el segundo adulto #}
+                    <div class="row mb-2">
+                      <div class="col">
+                        <input type="text" name="nombre_{{ forloop.counter0 }}" class="form-control" placeholder="Nombre" required>
+                      </div>
+                      <div class="col">
+                        <input type="text" name="apellido_{{ forloop.counter0 }}" class="form-control" placeholder="Apellido" required>
+                      </div>
+                      <div class="col">
+                        <input type="number" name="dni_{{ forloop.counter0 }}" class="form-control" placeholder="DNI" required>
+                      </div>
+                      <div class="col">
+                        <input type="date" name="fecha_nacimiento_{{ forloop.counter0 }}" class="form-control fecha-adulto" required>
+                        <small class="text-muted">Debe ser mayor de 18 años</small>
+                      </div>
+                    </div>
+                  {% endif %}
+                {% endfor %}
+                {% if reserva.cantidad_ninos > 0 %}
+                  <h6> Niños </h6>
+                  {% for i in rango_ninos %}
+                    <div class="row mb-2">
+                      <div class="col">
+                        <input type="text" name="nombre_{{ forloop.counter0|add:reserva.cantidad_adultos }}" class="form-control" placeholder="Nombre" required>
+                      </div>
+                      <div class="col">
+                        <input type="text" name="apellido_{{ forloop.counter0|add:reserva.cantidad_adultos }}" class="form-control" placeholder="Apellido" required>
+                      </div>
+                      <div class="col">
+                        <input type="number" name="dni_{{ forloop.counter0|add:reserva.cantidad_adultos }}" class="form-control" placeholder="DNI" required>
+                      </div>
+                      <div class="col">
+                        <input type="date" name="fecha_nacimiento_{{ forloop.counter0|add:reserva.cantidad_adultos }}" class="form-control fecha-nino" required>
+                      </div>
+                    </div>
+                  {% endfor %}
+                {% endif %}
+                <button type="submit" class="btn btn-primary">Guardar huéspedes</button>
               </form>
             {% endif %}
-          {% endif %}
+          {% endwith %}
         {% endif %}
-      </div>
-      <br>
-      {% if reserva.inmueble %}
-        {% with total_huespedes=huespedes|length %}
-          {% if total_huespedes < reserva.cantidad_adultos|add:reserva.cantidad_ninos %}
-            <form id="form-huespedes" method="post" action="{% url 'completar_huespedes' reserva.id_reserva %}">
-              {% csrf_token %}
-              <h5>Completa los datos de los huéspedes antes de pagar</h5>
-              <h6> Adultos </h6>
-              {% for i in rango_adultos %}
-                <div class="row mb-2">
-                  <div class="col">
-                    <input type="text" name="nombre_{{ forloop.counter0 }}" class="form-control" placeholder="Nombre" required>
-                  </div>
-                  <div class="col">
-                    <input type="text" name="apellido_{{ forloop.counter0 }}" class="form-control" placeholder="Apellido" required>
-                  </div>
-                  <div class="col">
-                    <input type="text" name="dni_{{ forloop.counter0 }}" class="form-control" placeholder="DNI" required>
-                  </div>
-                  <div class="col">
-                    <input type="text" name="fecha_nacimiento_{{ forloop.counter0 }}" class="form-control fecha-adulto" required>
-                    <small class="text-muted">Debe ser mayor de 18 años</small>
-                  </div>
+      {% endif %}
+    {% endif %}
+      {% if reserva.cochera %}
+        <div class="mb-3">
+          {% if reserva.patente %}
+            <div class="mt-2">
+              <strong>Patente registrada:</strong> {{ reserva.patente }}
+            </div>
+          {% else %}
+            {% if not is_admin_or_empleado %}
+              <form method="post" action="{% url 'guardar_patente' reserva.id_reserva %}" class="row g-2 align-items-end" id="form-patente">
+                {% csrf_token %}
+                <div class="col-auto">
+                  <label for="patente" class="form-label mb-0">Patente del vehículo</label>
+                  <input type="text" class="form-control" id="patente" name="patente" required maxlength="10" placeholder="ABC123 o AA123BB"
+                        value="{{ reserva.patente|default_if_none:'' }}">
                 </div>
-              {% endfor %}
-              {% if reserva.cantidad_ninos > 0 %}
-                <h6> Niños </h6>
-                {% for i in rango_ninos %}
-                  <div class="row mb-2">
-                    <div class="col">
-                      <input type="text" name="nombre_{{ forloop.counter0|add:reserva.cantidad_adultos }}" class="form-control" placeholder="Nombre" required>
-                    </div>
-                    <div class="col">
-                      <input type="text" name="apellido_{{ forloop.counter0|add:reserva.cantidad_adultos }}" class="form-control" placeholder="Apellido" required>
-                    </div>
-                    <div class="col">
-                      <input type="text" name="dni_{{ forloop.counter0|add:reserva.cantidad_adultos }}" class="form-control" placeholder="DNI" required>
-                    </div>
-                    <div class="col">
-                      <input type="date" name="fecha_nacimiento_{{ forloop.counter0|add:reserva.cantidad_adultos }}" class="form-control fecha-nino" required>
-                    </div>
-                  </div>
-                {% endfor %}
-              {% endif %}
-              <button type="submit" class="btn btn-primary">Guardar huéspedes</button>
-            </form>
+                <div class="col-auto">
+                  <button type="submit" class="btn btn-primary">Guardar patente</button>
+                </div>
+              </form>
+            {% else %}
+              <div class="mt-2">
+                <strong>Patente:</strong> <em>No registrada</em>
+              </div>
+            {% endif %}
           {% endif %}
-        {% endwith %}
+        </div>
       {% endif %}
     </div>
   </div>
@@ -206,11 +269,37 @@
       actualizarTimer();
     </script>
   {% endif %}
+
+  <!-- Timer para las 72 horas desde creación -->
+  {% if tiempo_restante_creacion and tiempo_restante_creacion > 0 %}
+    <script>
+      console.log('Tiempo restante desde creación:', "{{ tiempo_restante_creacion|floatformat:0 }}");
+      let tiempoCreacion = Number("{{ tiempo_restante_creacion|floatformat:0 }}");
+      function actualizarTimerCreacion() {
+        if (tiempoCreacion <= 0) {
+          document.getElementById('timer-creacion').innerText = "Tiempo agotado";
+          return;
+        }
+        let horas = Math.floor(tiempoCreacion / 3600);
+        let minutos = Math.floor((tiempoCreacion % 3600) / 60);
+        let segundos = Math.floor(tiempoCreacion % 60);
+        document.getElementById('timer-creacion').innerText =
+          `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}:${segundos.toString().padStart(2, '0')}`;
+        tiempoCreacion--;
+        setTimeout(actualizarTimerCreacion, 1000);
+      }
+      actualizarTimerCreacion();
+    </script>
+  {% endif %}
+
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script>
+
     console.log('Cargando script de cancelar reserva');
+
+    // Boton para cancelar la reserva
     document.addEventListener('DOMContentLoaded', function() {
       console.log('DOM completamente cargado y analizado');
       const cancelarForm = document.getElementById('cancelarReservaForm');
@@ -258,6 +347,8 @@
         });
       }
     });
+
+    // Boton para pagar la reserva
     document.addEventListener('DOMContentLoaded', function() {
       const pagarBtn = document.getElementById('pagar-btn');
       if (pagarBtn) {
@@ -292,6 +383,8 @@
         });
       }
     });
+
+    // JS para el formulario de huespedes
     document.addEventListener('DOMContentLoaded', function() {
       console.log('Cargando script de formulario de huéspedes');
       const form_huespedes = document.getElementById('form-huespedes');
@@ -299,6 +392,10 @@
         form_huespedes.addEventListener('submit', function(e) {
           e.preventDefault();
           const formData = new FormData(form_huespedes);
+
+          // Limpiar errores anteriores
+          document.querySelectorAll('.error-message').forEach(el => el.remove());
+
           fetch(form_huespedes.action, {
             method: 'POST',
             headers: {
@@ -321,21 +418,23 @@
               }).then(() => {
                 window.location.reload();
               });
-            } else if (data.errors) {
-              Swal.fire({
-                icon: 'error',
-                html: data.errors.map(e => `<div>${e}</div>`).join(''),
-                toast: true,
-                position: 'top-end',
-                timer: 4000,
-                timerProgressBar: true,
-                showConfirmButton: false
+            } else if (data.errores) {
+              Object.entries(data.errores).forEach(([field, error]) => {
+                const input = form_huespedes.querySelector(`[name="${field}"]`);
+                if (input && !input.parentNode.querySelector('.error-message')) {
+                  const div = document.createElement('div');
+                  div.className = 'error-message text-danger mt-1 small';
+                  div.textContent = error;
+                  input.parentNode.appendChild(div);
+                }
               });
             }
           });
         });
       }
     });
+
+    // Fechas Y Calendarios
     document.addEventListener('DOMContentLoaded', function() {
       // Calcular la fecha máxima para mayores de 18 años
       const hoy = new Date();
@@ -348,6 +447,7 @@
         maxDate: fechaMaxStr,
         locale: "es"
       });
+
       // Calcular el rango para niños: deben ser menores de 18 años
       const fechaMaxNino = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate()); // hasta ayer
       const fechaMinNino = new Date(hoy.getFullYear() - 18, hoy.getMonth(), hoy.getDate() + 1); // desde hace 18 años + 1 día
@@ -361,6 +461,65 @@
         maxDate: fechaMaxNinoStr,
         locale: "es"
       });
+    });
+
+    // JS para el formulario de patentes
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('Cargando script de formulario de patente');
+      const form_patente = document.getElementById('form-patente');
+      if (form_patente) {
+        form_patente.addEventListener('submit', function(e) {
+          e.preventDefault();
+          const formData = new FormData(form_patente);
+          fetch(form_patente.action, {
+            method: 'POST',
+            headers: {
+              'X-CSRFToken': form_patente.querySelector('[name=csrfmiddlewaretoken]').value,
+              'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+          })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              Swal.fire({
+                icon: 'success',
+                title: data.message || 'Patente guardada correctamente.',
+                toast: true,
+                position: 'top-end',
+                timer: 2000,
+                timerProgressBar: true,
+                showConfirmButton: false
+              }).then(() => {
+                window.location.reload();
+              });
+            } else {
+              Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: data.error || 'Ocurrió un error al guardar la patente.',
+                toast: true,
+                position: 'top-end',
+                timer: 4000,
+                timerProgressBar: true,
+                showConfirmButton: false
+              });
+            }
+          })
+          .catch(err => {
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: 'Ocurrió un error al procesar la solicitud.',
+              toast: true,
+              position: 'top-end',
+              timer: 3000,
+              timerProgressBar: true,
+              showConfirmButton: false
+            });
+          });
+        });
+      }
     });
   </script>
   

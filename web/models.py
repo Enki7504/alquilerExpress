@@ -105,6 +105,7 @@ class Reserva(models.Model):
     # Se agregan 2 campos para contar cantidad de adultos y niños
     cantidad_adultos = models.PositiveIntegerField(default=1, verbose_name="Cantidad de adultos")
     cantidad_ninos = models.PositiveIntegerField(default=0, verbose_name="Cantidad de niños")
+    patente = models.CharField(max_length=20, null=True, blank=True, verbose_name="Patente del vehículo")
     
     def cliente(self):
         rel = ClienteInmueble.objects.filter(reserva=self).first()

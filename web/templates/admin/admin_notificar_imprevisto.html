@@ -12,14 +12,16 @@
       {{ form.objeto.label_tag }}
       <select name="objeto" id="id_objeto" class="form-control" required>
         <option value="" disabled selected>Seleccionar vivienda o cochera...</option>
+        <option disabled>───── Viviendas ─────</option>
         {% for inmueble in inmuebles %}
           <option value="Vivienda #{{ inmueble.id_inmueble }} - {{ inmueble.nombre }}">
-            Vivienda #{{ inmueble.id_inmueble }} - {{ inmueble.nombre }}
+            {{ inmueble.nombre }}
           </option>
         {% endfor %}
+        <option disabled>───── Cocheras ─────</option>
         {% for cochera in cocheras %}
           <option value="Cochera #{{ cochera.id_cochera }} - {{ cochera.nombre }}">
-            Cochera #{{ cochera.id_cochera }} - {{ cochera.nombre }}
+            {{ cochera.nombre }}
           </option>
         {% endfor %}
       </select>

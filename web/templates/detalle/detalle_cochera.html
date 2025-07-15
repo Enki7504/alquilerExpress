@@ -9,6 +9,75 @@
       height: 500px;
       object-fit: cover;
     }
+    
+    /* Selector de horas visual */
+    .hora-selector {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+      gap: 5px;
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      padding: 10px;
+      border-radius: 5px;
+      background-color: #f9f9f9;
+    }
+    
+    .hora-btn {
+      padding: 8px 12px;
+      border: 1px solid #ccc;
+      background-color: white;
+      color: #333;
+      text-align: center;
+      cursor: pointer;
+      border-radius: 4px;
+      font-size: 0.9em;
+      transition: all 0.2s;
+    }
+    
+    .hora-btn:hover {
+      background-color: #e9ecef;
+      border-color: #adb5bd;
+    }
+    
+    .hora-btn.selected {
+      background-color: #007bff !important;
+      color: white !important;
+      border-color: #007bff !important;
+    }
+    
+    .hora-btn.ocupada {
+      background-color: #f8d7da;
+      color: #721c24;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+    
+    /* Agrega esta nueva regla para evitar hover en ocupadas */
+    .hora-btn.ocupada:hover {
+      background-color: #f8d7da !important;
+      border-color: #f5c6cb !important;
+    }
+    
+    .hora-btn.propia {
+      background-color: #fff3cd;
+      color: #856404;
+      border-color: #ffeaa7;
+    }
+    
+    .flatpickr-time input:disabled {
+      background-color: #f8d7da !important;
+      color: #721c24 !important;
+      opacity: 0.7;
+    }
+
+    .hora-btn.ocupada.propia {
+      background-color: #fff3cd !important;
+      color: #856404 !important;
+      border-color: #ffeaa7 !important;
+      opacity: 1 !important;
+      cursor: not-allowed;
+    }
   </style>
 {% endblock %}
 
@@ -33,25 +102,329 @@
   </div>
   <div class="d-flex align-items-center">
     <i class="bi bi-calendar-range text-primary me-2"></i>
-    <span>Mínimo {{ objeto.minimo_dias_alquiler }} noche{{ objeto.minimo_dias_alquiler|pluralize }}</span>
+    <span>Mínimo {{ objeto.minimo_dias_alquiler }} horas {{ objeto.minimo_dias_alquiler|pluralize }}</span>
   </div>
 {% endblock %}
 
 {% block precio_por %}día{% endblock %}
 
 {% block formulario_reserva %}
-  <form method="post" action="{% url 'crear_reserva_cochera' id_cochera=objeto.id_cochera %}">
+  <form method="post" action="{% url 'crear_reserva_cochera' id_cochera=cochera.id_cochera %}">
     {% csrf_token %}
     <div class="mb-3">
-      <label for="fecha_inicio" class="form-label">Fecha y hora de llegada</label>
-      <input type="text" class="form-control" id="fecha_inicio" name="fecha_inicio" required autocomplete="off">
+      <label for="fecha_inicio_date" class="form-label">Fecha de llegada</label>
+      <input type="text" class="form-control" id="fecha_inicio_date" name="fecha_inicio_date" required autocomplete="off">
     </div>
+    
+    <!-- Selector visual de hora de llegada -->
     <div class="mb-3">
-      <label for="fecha_fin" class="form-label">Fecha y hora de salida</label>
-      <input type="text" class="form-control" id="fecha_fin" name="fecha_fin" required autocomplete="off">
+      <label class="form-label">Hora de llegada</label>
+      <div id="hora-inicio-selector" class="hora-selector">
+        <!-- Se genera dinámicamente con JS -->
+      </div>
+      <input type="hidden" id="fecha_inicio_time" name="fecha_inicio_time" required>
     </div>
+    
+    <div class="mb-3">
+      <label for="fecha_fin_date" class="form-label">Fecha de salida</label>
+      <input type="text" class="form-control" id="fecha_fin_date" name="fecha_fin_date" required autocomplete="off">
+    </div>
+    
+    <!-- Selector visual de hora de salida -->
+    <div class="mb-3">
+      <label class="form-label">Hora de salida</label>
+      <div id="hora-fin-selector" class="hora-selector">
+        <!-- Se genera dinámicamente con JS -->
+      </div>
+      <input type="hidden" id="fecha
+    </div>
+    
     <button type="submit" class="btn btn-primary btn-azul w-100 py-2">
       <i class="bi bi-calendar-check me-2"></i> Reservar ahora
     </button>
+    <!-- campos ocultos para enviar la fecha completa -->
+    <input type="hidden" name="fecha_inicio" id="fecha_inicio_hidden">
+    <input type="hidden" name="fecha_fin" id="fecha_fin_hidden">
   </form>
+{% endblock %}
+
+{% block extra_js %}
+  {{ horarios_ocupados|json_script:"horariosOcupadosJSON" }}
+  {{ fechas_ocupadas|json_script:"fechasOcupadasJSON" }}
+  {{ fechas_ocupadas_propias|json_script:"fechasOcupadasPropiasJSON" }}
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script>
+    // Convertir los mensajes de Django a SweetAlert
+    const messageElements = document.querySelectorAll('.django-message');
+    var fechasOcupadas = JSON.parse(document.getElementById('fechasOcupadasJSON').textContent);
+    var fechasOcupadasPropias = JSON.parse(document.getElementById('fechasOcupadasPropiasJSON').textContent);
+
+    messageElements.forEach(element => {
+        const tags = element.getAttribute('data-tags');
+        const message = element.getAttribute('data-message');
+        
+        // Mapear las etiquetas de Django a iconos de SweetAlert
+        let icon = 'info';
+        if (tags.includes('success')) icon = 'success';
+        if (tags.includes('error') || tags.includes('danger')) icon = 'error';
+        if (tags.includes('warning')) icon = 'warning';
+        
+        // Mostrar la notificación tipo toast
+        Swal.fire({
+            position: 'top-end',
+            icon: icon,
+            title: message,
+            showConfirmButton: false,
+            timer: 3000,
+            toast: true,
+            timerProgressBar: true
+        });
+    });
+
+    // Generar horas del día (00:00 AM a 23:00 PM)
+    function generarHoras() {
+      const horas = [];
+      for (let i = 0; i <= 23; i++) {
+        horas.push(`${i.toString().padStart(2, '0')}:00`);
+      }
+      return horas;
+    }
+
+    // Crear selector de horas visual
+    function crearSelectorHoras(containerId, inputId) {
+      const container = document.getElementById(containerId);
+      const input = document.getElementById(inputId);
+      const horas = generarHoras();
+      
+      container.innerHTML = '';
+      
+      horas.forEach(hora => {
+        const btn = document.createElement('div');
+        btn.className = 'hora-btn';
+        btn.textContent = hora;
+        btn.dataset.hora = hora;
+        
+        btn.addEventListener('click', function() {
+          console.log(`Click en hora: ${hora}`);
+          console.log(`Clases actuales:`, this.classList.toString());
+          console.log(`¿Está ocupada?`, this.classList.contains('ocupada'));
+          
+          if (this.classList.contains('ocupada')) {
+            console.log(`❌ Hora ${hora} está ocupada, no se puede seleccionar`);
+            return;
+          }
+          
+          console.log(`✅ Seleccionando hora: ${hora}`);
+          
+          // Remover selección anterior EN TODO EL CONTENEDOR
+          container.querySelectorAll('.hora-btn').forEach(b => {
+            b.classList.remove('selected');
+          });
+          
+          // Seleccionar esta hora (solo con clase CSS)
+          this.classList.add('selected');
+          input.value = hora;
+          
+          console.log(`Valor guardado en input: ${input.value}`);
+          console.log(`Clases después de seleccionar:`, this.classList.toString());
+        });
+        
+        container.appendChild(btn);
+      });
+    }
+
+    // Actualizar estado de las horas según disponibilidad (con fetch)
+    async function actualizarHorasDisponibles(containerId, fecha) {
+      const container = document.getElementById(containerId);
+
+      if (!fecha) {
+        container.querySelectorAll('.hora-btn').forEach(btn => {
+          btn.classList.remove('ocupada', 'propia');
+          // NO remover 'selected' aquí
+        });
+        return;
+      }
+
+      try {
+        console.log(`Obteniendo horarios para fecha: ${fecha}`);
+        const url = `{% url 'obtener_horarios_ocupados' id_cochera=cochera.id_cochera %}?fecha=${fecha}`;
+
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.error) {
+          console.error('Error obteniendo horarios:', data.error);
+          return;
+        }
+
+        const horasOcupadas = data.horarios_ocupados || [];
+        const horasPropias = data.horarios_propios || [];
+
+        container.querySelectorAll('.hora-btn').forEach(btn => {
+          const hora = btn.dataset.hora;
+
+          // Limpiar clases (menos 'selected')
+          btn.classList.remove('ocupada', 'propia');
+
+          if (horasOcupadas.includes(hora)) {
+            if (horasPropias.includes(hora)) {
+              btn.classList.add('ocupada', 'propia');
+            } else {
+              btn.classList.add('ocupada');
+            }
+
+            // Deseleccionar si está ocupada
+            if (btn.classList.contains('selected')) {
+              btn.classList.remove('selected');
+              const input = document.getElementById(containerId.replace('-selector', '_time'));
+              if (input && input.value === hora) {
+                input.value = '';
+              }
+            }
+          } else if (horasPropias.includes(hora)) {
+            btn.classList.add('propia');
+          }
+        });
+
+      } catch (error) {
+        console.error('Error en fetch de horarios:', error);
+      }
+    }
+
+
+    document.addEventListener('DOMContentLoaded', function() {
+      var fechasOcupadas = JSON.parse(document.getElementById('fechasOcupadasJSON').textContent);
+      var fechasOcupadasPropias = JSON.parse(document.getElementById('fechasOcupadasPropiasJSON').textContent);
+
+      function marcarPropias(date, domElement) {
+        const fechaStr = date.toISOString().slice(0, 10);
+        if (fechasOcupadasPropias.includes(fechaStr)) {
+          domElement.classList.add('flatpickr-day-propia');
+        }
+      }
+
+      // Flatpickr para fechas
+      const fechaInicioPicker = flatpickr("#fecha_inicio_date", {
+        dateFormat: "Y-m-d",
+        minDate: "today",
+        locale: "es",
+        disable: fechasOcupadas,
+        onDayCreate: function(dObj, dStr, fp, dayElem) {
+          marcarPropias(dayElem.dateObj, dayElem);
+        },
+        onChange: function(selectedDates, dateStr) {
+          actualizarHorasDisponibles('hora-inicio-selector', dateStr);
+        }
+      });
+
+      const fechaFinPicker = flatpickr("#fecha_fin_date", {
+        dateFormat: "Y-m-d",
+        minDate: "today",
+        locale: "es",
+        disable: fechasOcupadas,
+        onDayCreate: function(dObj, dStr, fp, dayElem) {
+          marcarPropias(dayElem.dateObj, dayElem);
+        },
+        onChange: function(selectedDates, dateStr) {
+          actualizarHorasDisponibles('hora-fin-selector', dateStr);
+        }
+      });
+
+      // Crear selectores de horas
+      crearSelectorHoras('hora-inicio-selector', 'fecha_inicio_time');
+      crearSelectorHoras('hora-fin-selector', 'fecha_fin_time');
+
+      // Combinar fecha y hora antes de enviar el formulario
+      document.querySelector('form').addEventListener('submit', function(e) {
+        const fechaInicio = document.getElementById('fecha_inicio_date').value;
+        const horaInicio = document.getElementById('fecha_inicio_time').value;
+        const fechaFin = document.getElementById('fecha_fin_date').value;
+        const horaFin = document.getElementById('fecha_fin_time').value;
+
+        if (!horaInicio || !horaFin) {
+          e.preventDefault();
+          Swal.fire('Error', 'Debes seleccionar las horas de llegada y salida', 'error');
+          return;
+        }
+
+        if (fechaInicio && horaInicio) {
+          document.getElementById('fecha_inicio_hidden').value = `${fechaInicio} ${horaInicio}`;
+        }
+        if (fechaFin && horaFin) {
+          document.getElementById('fecha_fin_hidden').value = `${fechaFin} ${horaFin}`;
+        }
+      });      
+    });
+
+     document.addEventListener('DOMContentLoaded', function() {
+      // Manejo del botón "Responder"
+      document.querySelectorAll('.btn-responder-comentario').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const id = this.getAttribute('data-comentario');
+          // Oculta todos los formularios de respuesta
+          document.querySelectorAll('.form-respuesta-comentario').forEach(form => {
+            form.style.display = 'none';
+          });
+          // Restaura todos los botones "Responder" a su estado original
+          document.querySelectorAll('.btn-responder-comentario').forEach(b => {
+            b.classList.remove('btn-primary');
+            b.classList.add('btn-outline-primary');
+          });
+          // Muestra el formulario de respuesta para este comentario específico
+          const formRespuesta = document.getElementById('form-respuesta-' + id);
+          if (formRespuesta) {
+            formRespuesta.style.display = 'block';
+          }
+          // Marca el botón "Responder" de este comentario
+          const btnResponder = document.getElementById('btn-responder-' + id);
+          if (btnResponder) {
+            btnResponder.classList.remove('btn-outline-primary');
+            btnResponder.classList.add('btn-primary');
+          }
+        });
+      });
+
+      // Manejo del botón "Cancelar"
+      document.querySelectorAll('.btn-cancelar-respuesta').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const id = this.getAttribute('data-comentario');
+          // Oculta el formulario de respuesta
+          const formRespuesta = document.getElementById('form-respuesta-' + id);
+          if (formRespuesta) {
+            formRespuesta.style.display = 'none';
+          }
+          // Restaura el botón "Responder" a su estado original
+          const btnResponder = document.getElementById('btn-responder-' + id);
+          if (btnResponder) {
+            btnResponder.classList.remove('btn-primary');
+            btnResponder.classList.add('btn-outline-primary');
+          }
+        });
+      });
+
+      // Confirmación para eliminar comentario (sin cambios)
+      document.querySelectorAll('.btn-eliminar-comentario').forEach(btn => {
+        btn.addEventListener('click', async function() {
+          const id = this.getAttribute('data-comentario');
+          const result = await Swal.fire({
+            title: '¿Eliminar comentario?',
+            text: "¿Está seguro que desea eliminar este comentario?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Confirmar',
+            cancelButtonText: 'Cancelar'
+          });
+          if (result.isConfirmed) {
+            const formEliminar = document.getElementById('form-eliminar-' + id);
+            if (formEliminar) {
+              formEliminar.submit();
+            }
+          }
+        });
+      });
+    });
+  </script>
 {% endblock %}

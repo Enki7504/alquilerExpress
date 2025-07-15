@@ -16,6 +16,7 @@
       <table class="table table-hover">
         <thead>
           <tr>
+            <!-- <th>Nro</th> -->
             <th>Cliente</th>
             <th>Fechas</th>
             <th>Estado</th>
@@ -25,6 +26,7 @@
         <tbody>
           {% for reserva in reservas %}
           <tr>
+            <!-- <td>{{ reserva.id_reserva }}</td> -->
             <td>
               {% with relacion=reserva.clienteinmueble_set.first %}
                 {% if relacion and relacion.cliente %}

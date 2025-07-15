@@ -16,7 +16,7 @@
       <table class="table table-hover">
         <thead>
           <tr>
-            <th>ID</th>
+            <!--<th>Nro</th>-->
             <th>Cliente</th>
             <th>Fechas</th>
             <th>Estado</th>
@@ -26,7 +26,7 @@
         <tbody>
           {% for reserva in reservas %}
           <tr>
-            <td>{{ reserva.id_reserva }}</td>
+            <!--<td>{{ reserva.id_reserva }}</td>-->
             <td>
               {% if reserva.cliente %}
                 {{ reserva.cliente.usuario.get_full_name|default:reserva.cliente.usuario.username }}
@@ -34,7 +34,11 @@
                 Cliente no disponible
               {% endif %}
             </td>
-            <td>{{ reserva.fecha_inicio|date:"d/m/Y" }} - {{ reserva.fecha_fin|date:"d/m/Y" }}</td>
+            <td>
+              {{ reserva.fecha_inicio|date:"d/m/Y" }} {{ reserva.fecha_inicio|time:"H:i" }}
+              <br>
+              {{ reserva.fecha_fin|date:"d/m/Y" }} {{ reserva.fecha_fin|time:"H:i" }}
+            </td>
             <td>
               <span class="badge 
                 {% if reserva.estado.nombre == 'Confirmada' %}bg-success
@@ -62,6 +66,7 @@
                 <button class="btn btn-sm btn-danger" onclick="cambiarEstado('{{ reserva.id_reserva }}', 'Cancelada')">Cancelar Alquiler</button>
               {% endif %}
               <a href="{% url 'detalle_cochera' cochera.id_cochera %}" class="btn btn-sm btn-info">Ver Cochera</a>
+              <a href="{% url 'ver_detalle_reserva' reserva.id_reserva %}" class="btn btn-sm btn-secondary">Ver Detalle</a>
             </td>
           </tr>
           {% empty %}

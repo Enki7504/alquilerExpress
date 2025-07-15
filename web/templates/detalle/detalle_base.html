@@ -81,7 +81,7 @@
             <h3 class="h4 mb-3">Gestión del {{ tipo|title }}</h3>
             <div class="d-flex align-items-end mb-3">
               <span class="h3 text-primary">${{ objeto.precio_por_dia|floatformat:"0" }}</span>
-              <span class="text-muted ms-1">/ {% block precio_por %}{% endblock %}</span>
+              <span class="text-muted ms-1">/ {% if tipo == 'cochera' %}hora{% else %}noche{% endif %}</span>
             </div>
             {% if objeto.estado.nombre == 'En Mantenimiento' %}
             <div class="alert alert-warning mt-3">
@@ -93,7 +93,7 @@
             <h3 class="h4 mb-3">Reservar</h3>
             <div class="d-flex align-items-end mb-3">
               <span class="h3 text-primary">${{ objeto.precio_por_dia|floatformat:"0" }}</span>
-              <span class="text-muted ms-1">/ noche</span>
+              <span class="text-muted ms-1">/ {% if tipo == 'cochera' %}hora{% else %}noche{% endif %}</span>
             </div>
             {% if objeto.estado.nombre == 'En Mantenimiento' %}
               <div class="alert alert-warning">
