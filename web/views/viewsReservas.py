@@ -486,16 +486,20 @@ def ver_detalle_reserva(request, id_reserva):
 
     # Agregar al titular como huésped si tiene datos válidos
     cliente_principal = reserva.cliente()
-    huesped_titular = None
     if cliente_principal:
-        huesped_titular = Huesped(
-            reserva=reserva,
-            nombre=cliente_principal.usuario.first_name,
-            apellido=cliente_principal.usuario.last_name,
-            dni=cliente_principal.dni,
-            fecha_nacimiento=cliente_principal.fecha_nacimiento
+        ya_esta = any(
+            h.dni == cliente_principal.dni
+            for h in huespedes
         )
-        huespedes.insert(0, huesped_titular)
+        if not ya_esta:
+            huesped_titular = Huesped(
+                reserva=reserva,
+                nombre=cliente_principal.usuario.first_name,
+                apellido=cliente_principal.usuario.last_name,
+                dni=cliente_principal.dni,
+                fecha_nacimiento=cliente_principal.fecha_nacimiento
+            )
+            huespedes.insert(0, huesped_titular)
 
     # Mapear datos para precargar inputs
     huespedes_precargados = {}
@@ -505,7 +509,7 @@ def ver_detalle_reserva(request, id_reserva):
         huespedes_precargados[f'dni_{i}'] = huesped.dni
         huespedes_precargados[f'fecha_nacimiento_{i}'] = huesped.fecha_nacimiento.strftime('%Y-%m-%d') if huesped.fecha_nacimiento else ''
 
-        # Calcular tiempo restante desde la creación (72 horas)
+    # Calcular tiempo restante desde la creación (72 horas)
     tiempo_restante_creacion = None
     if reserva.estado.nombre == "Pendiente":
         tiempo_limite_creacion = reserva.creada_en + timedelta(hours=72)  # Cambio aquí
@@ -515,6 +519,22 @@ def ver_detalle_reserva(request, id_reserva):
         else:
             tiempo_restante_creacion = 0
 
+    # Calcular tiempo restante para pagar (24 horas desde aprobación)
+    tiempo_restante = None
+    if reserva.estado.nombre == "Aprobada":
+        aprobada_estado = ReservaEstado.objects.filter(
+            reserva=reserva,
+            estado__nombre='Aprobada'
+        ).order_by('-fecha').first()
+        
+        if aprobada_estado:
+            tiempo_limite = aprobada_estado.fecha + timedelta(hours=24)
+            ahora = timezone.now()
+            if ahora < tiempo_limite:
+                tiempo_restante = (tiempo_limite - ahora).total_seconds()
+            else:
+                tiempo_restante = 0
+
     context = {
         'reserva': reserva,
         'huespedes': huespedes,
@@ -522,6 +542,7 @@ def ver_detalle_reserva(request, id_reserva):
         'rango_ninos': range(reserva.cantidad_ninos),
         'huespedes_precargados': huespedes_precargados,
         'is_admin_or_empleado': is_admin_or_empleado(request.user),
+        'tiempo_restante': tiempo_restante,
         'tiempo_restante_creacion': tiempo_restante_creacion,
     }
     return render(request, 'reservas_detalle.html', context)
