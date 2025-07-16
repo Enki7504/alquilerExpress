@@ -147,11 +147,20 @@
               {% endif %}
             {% endif %}
             {% if not is_admin_or_empleado %}
+              <!-- Botón de cancelar ANTES del pago (Pendiente/Aprobada) -->
               {% if tiempo_restante and tiempo_restante > 0 %}
                 <form id="cancelarReservaForm" method="post" action="{% url 'cancelar_reserva' reserva.id_reserva %}" class="m-0">
                   {% csrf_token %}
                   <button type="submit" class="btn btn-danger d-flex align-items-center h-100">
                     <i class="bi bi-x-circle me-1"></i> Cancelar reserva
+                  </button>
+                </form>
+              <!-- Botón de cancelar DESPUÉS del pago (Pagada/Confirmada) -->
+              {% elif reserva.estado.nombre in "Pagada,Confirmada" %}
+                <form id="cancelarReservaPagadaForm" method="post" action="{% url 'cancelar_reserva' reserva.id_reserva %}" class="m-0">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-warning d-flex align-items-center h-100">
+                    <i class="bi bi-exclamation-triangle me-1"></i> Cancelar reserva
                   </button>
                 </form>
               {% endif %}
@@ -346,8 +355,70 @@
           });
         });
       }
+      const cancelarPagadaForm = document.getElementById('cancelarReservaPagadaForm');
+      if (cancelarPagadaForm) {
+        cancelarPagadaForm.addEventListener('submit', function(e) {
+          e.preventDefault();
+          
+          // Obtener la política de cancelación
+          let politicaCancelacion = '';
+          {% if reserva.inmueble %}
+            politicaCancelacion = `{{ reserva.inmueble.politica_cancelacion|escapejs }}`;
+          {% elif reserva.cochera %}
+            politicaCancelacion = `{{ reserva.cochera.politica_cancelacion|escapejs }}`;
+          {% else %}
+            politicaCancelacion = 'No hay política de cancelación disponible.';
+          {% endif %}          
+          
+          // Modal único: Mostrar política y confirmar cancelación
+          Swal.fire({
+            title: 'Política de Cancelación',
+            html: `
+              <div class="text-start mb-3">
+                <p><strong>Antes de cancelar tu reserva, revisa la política de cancelación:</strong></p>
+                <div class="alert alert-info text-start">
+                  ${politicaCancelacion}
+                </div>
+                <p class="text-warning"><strong>Esta acción no se puede deshacer.</strong></p>
+              </div>
+            `,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Sí, cancelar reserva',
+            cancelButtonText: 'No, mantener reserva',
+            width: '600px'
+          }).then((result) => {
+            if (result.isConfirmed) {
+              // Proceder directamente con la cancelación
+              fetch(this.action, {
+                method: 'POST',
+                headers: {
+                  'X-Requested-With': 'XMLHttpRequest',
+                  'X-CSRFToken': document.querySelector('input[name="csrfmiddlewaretoken"]').value
+                }
+              })
+              .then(res => res.json())
+              .then(data => {
+                if (data.success) {
+                  Swal.fire({
+                    icon: 'success',
+                    title: 'Reserva Cancelada',
+                    text: data.mensaje,
+                    timer: 3000,
+                    timerProgressBar: true,
+                    showConfirmButton: false
+                  }).then(() => {
+                    window.location.href = "{% url 'reservas_usuario' %}";
+                  });
+                }
+              });
+            }
+          });
+        });
+      }
     });
-
     // Boton para pagar la reserva
     document.addEventListener('DOMContentLoaded', function() {
       const pagarBtn = document.getElementById('pagar-btn');

@@ -563,9 +563,16 @@ def cancelar_reserva(request, id_reserva):
         empleado = reserva.cochera.empleado
 
     if empleado:
+        mensaje = f"El cliente canceló la reserva #{reserva.id_reserva}."
+        # Agregar política de cancelación si el estado es "Pagada"
+        if reserva.estado.nombre == "Pagada":
+            if reserva.inmueble and hasattr(reserva.inmueble, 'politica_cancelacion'):
+                mensaje += f" Política de cancelación: {reserva.inmueble.politica_cancelacion}"
+            elif reserva.cochera and hasattr(reserva.cochera, 'politica_cancelacion'):
+                mensaje += f" Política de cancelación: {reserva.cochera.politica_cancelacion}"
         crear_notificacion(
             usuario=empleado,
-            mensaje=f"El cliente canceló la reserva #{reserva.id_reserva}."
+            mensaje=mensaje
         )
     mensaje = "La reserva fue cancelada correctamente."
     # Si es una petición AJAX, devolvé JSON
