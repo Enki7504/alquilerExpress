@@ -397,6 +397,7 @@ def cambiar_estado_inmueble(request, id_inmueble):
             estado=estado,
             fecha_inicio=timezone.now().date(),
             fecha_fin=fecha_estimacion if fecha_estimacion else None,
+            descripcion=razon or ""
         )
     # Si es "Disponible", cerrar el historial anterior y crear uno nuevo
     elif estado.nombre == "Disponible":
@@ -412,6 +413,7 @@ def cambiar_estado_inmueble(request, id_inmueble):
             estado=estado,
             fecha_inicio=timezone.now().date(),
             fecha_fin=None,  # No hay fecha de fin para "Disponible"
+            descripcion=""
         )
 
     messages.success(request, "Estado actualizado correctamente.")

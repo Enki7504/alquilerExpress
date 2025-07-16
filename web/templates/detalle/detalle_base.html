@@ -87,6 +87,7 @@
             <div class="alert alert-warning mt-3">
               <i class="bi bi-exclamation-triangle-fill me-2"></i>
               Actualmente en mantenimiento hasta el {{ fecha_fin_mantenimiento|date:"d/m/Y" }}
+              <br><small class="text-muted">Motivo: {{ razon_mantenimiento }}</small>
             </div>
             {% endif %}
           {% else %}
@@ -100,6 +101,7 @@
                 <i class="bi bi-exclamation-triangle-fill me-2"></i>
                 <strong>No disponible temporalmente</strong>
                 <p class="mb-0">Estamos realizando tareas de mantenimiento hasta el {{ fecha_fin_mantenimiento|date:"d/m/Y" }}.</p>
+                <p class="mb-0 mt-1"><small>Motivo: {{ razon_mantenimiento }}</small></p>
                 <p class="mb-0 mt-2">Disculpe las molestias.</p>
               </div>
             {% else %}
