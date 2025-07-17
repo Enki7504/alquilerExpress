@@ -79,34 +79,29 @@
         <div class="card-body">
           {% if is_admin_or_empleado %}
             <h3 class="h4 mb-3">Gestión del {{ tipo|title }}</h3>
-            <div class="d-flex align-items-end mb-3">
-              <span class="h3 text-primary">${{ objeto.precio_por_dia|floatformat:"0" }}</span>
-              <span class="text-muted ms-1">/ {% if tipo == 'cochera' %}hora{% else %}noche{% endif %}</span>
-            </div>
-            {% if objeto.estado.nombre == 'En Mantenimiento' %}
-            <div class="alert alert-warning mt-3">
-              <i class="bi bi-exclamation-triangle-fill me-2"></i>
-              Actualmente en mantenimiento hasta el {{ fecha_fin_mantenimiento|date:"d/m/Y" }}
-              <br><small class="text-muted">Motivo: {{ razon_mantenimiento }}</small>
-            </div>
-            {% endif %}
           {% else %}
             <h3 class="h4 mb-3">Reservar</h3>
-            <div class="d-flex align-items-end mb-3">
-              <span class="h3 text-primary">${{ objeto.precio_por_dia|floatformat:"0" }}</span>
-              <span class="text-muted ms-1">/ {% if tipo == 'cochera' %}hora{% else %}noche{% endif %}</span>
-            </div>
-            {% if objeto.estado.nombre == 'En Mantenimiento' %}
-              <div class="alert alert-warning">
-                <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                <strong>No disponible temporalmente</strong>
-                <p class="mb-0">Estamos realizando tareas de mantenimiento hasta el {{ fecha_fin_mantenimiento|date:"d/m/Y" }}.</p>
+          {% endif %}
+          
+          <div class="d-flex align-items-end mb-3">
+            <span class="h3 text-primary">${{ objeto.precio_por_dia|floatformat:"0" }}</span>
+            <span class="text-muted ms-1">/ {% if tipo == 'cochera' %}hora{% else %}noche{% endif %}</span>
+          </div>
+          
+          {% if objeto.estado.nombre == 'En Mantenimiento' %}
+            <div class="alert alert-warning">
+              <i class="bi bi-exclamation-triangle-fill me-2"></i>
+              <strong>{% if is_admin_or_empleado %}Actualmente en mantenimiento{% else %}No disponible temporalmente{% endif %}</strong>
+              <p class="mb-0">{% if is_admin_or_empleado %}Hasta{% else %}Estamos realizando tareas de mantenimiento hasta{% endif %} el {{ fecha_fin_mantenimiento|date:"d/m/Y" }}.</p>
+              {% if razon_mantenimiento %}
                 <p class="mb-0 mt-1"><small>Motivo: {{ razon_mantenimiento }}</small></p>
+              {% endif %}
+              {% if not is_admin_or_empleado %}
                 <p class="mb-0 mt-2">Disculpe las molestias.</p>
-              </div>
-            {% else %}
-              {% block formulario_reserva %}{% endblock %}
-            {% endif %}
+              {% endif %}
+            </div>
+          {% elif not is_admin_or_empleado %}
+            {% block formulario_reserva %}{% endblock %}
           {% endif %}
         </div>
       </div>
