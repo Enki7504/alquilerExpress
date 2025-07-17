@@ -555,7 +555,7 @@ def reservas_usuario(request):
     """
     Muestra todas las reservas del usuario autenticado.
     """
-    reservas = Reserva.objects.filter(clienteinmueble__cliente=request.user.perfil).distinct().order_by('-fecha_inicio')
+    reservas = Reserva.objects.filter(clienteinmueble__cliente=request.user.perfil).distinct().order_by('-id_reserva')
     return render(request, 'reservas.html', {
         'reservas': reservas
     })
@@ -678,39 +678,64 @@ def ver_detalle_reserva(request, id_reserva):
 @login_required
 def cancelar_reserva(request, id_reserva):
     reserva = get_object_or_404(Reserva, id_reserva=id_reserva)
-    estado_cancelada = Estado.objects.get(nombre="Cancelada")
-    reserva.estado = estado_cancelada
-    reserva.save()
+    if request.method == 'POST':
+        estado_cancelada = Estado.objects.get(nombre='Cancelada')
+        estado_pendiente = Estado.objects.get(nombre='Pendiente')
+        reserva_estado_anterior = reserva.estado.nombre if reserva.estado else None
 
-    # Notificar al empleado a cargo
-    empleado = None
-    if reserva.inmueble and reserva.inmueble.empleado:
-        empleado = reserva.inmueble.empleado
-    elif reserva.cochera and reserva.cochera.empleado:
-        empleado = reserva.cochera.empleado
+        reserva.estado = estado_cancelada
+        reserva.save()
 
-    if empleado:
-        mensaje = f"El cliente canceló la reserva #{reserva.id_reserva}."
-        # Agregar política de cancelación si el estado es "Pagada"
-        if reserva.estado.nombre == "Pagada":
-            if reserva.inmueble and hasattr(reserva.inmueble, 'politica_cancelacion'):
-                mensaje += f" Política de cancelación: {reserva.inmueble.politica_cancelacion}"
-            elif reserva.cochera and hasattr(reserva.cochera, 'politica_cancelacion'):
-                mensaje += f" Política de cancelación: {reserva.cochera.politica_cancelacion}"
-        crear_notificacion(
-            usuario=empleado,
-            mensaje=mensaje
-        )
-    mensaje = "La reserva fue cancelada correctamente."
-    # Si es una petición AJAX, devolé JSON
-    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-        return JsonResponse({
-            'success': True,
-            'mensaje': mensaje
-        })
-    # Redirección tradicional
-    messages.success(request, mensaje)
-    return redirect('reservas_usuario')
+        # Si la reserva cancelada era "Aprobada", liberar las concurrentes
+        if reserva_estado_anterior == 'Aprobada':
+            if reserva.inmueble:
+                reservas_concurrentes = Reserva.objects.filter(
+                    inmueble=reserva.inmueble,
+                    estado__nombre='Concurrente',
+                    fecha_inicio__lt=reserva.fecha_fin,
+                    fecha_fin__gt=reserva.fecha_inicio
+                ).exclude(id_reserva=reserva.id_reserva)
+            elif reserva.cochera:
+                reservas_concurrentes = Reserva.objects.filter(
+                    cochera=reserva.cochera,
+                    estado__nombre='Concurrente',
+                    fecha_inicio__lt=reserva.fecha_fin,
+                    fecha_fin__gt=reserva.fecha_inicio
+                ).exclude(id_reserva=reserva.id_reserva)
+            else:
+                reservas_concurrentes = Reserva.objects.none()
+
+            for r in reservas_concurrentes:
+                r.estado = estado_pendiente
+                r.save()
+                # Opcional: notificar al cliente
+
+        # Notificar al empleado a cargo
+        empleado = None
+        if reserva.inmueble and reserva.inmueble.empleado:
+            empleado = reserva.inmueble.empleado
+        elif reserva.cochera and reserva.cochera.empleado:
+            empleado = reserva.cochera.empleado
+
+        if empleado:
+            mensaje = f"El cliente canceló la reserva #{reserva.id_reserva}."
+            if reserva.estado.nombre == "Pagada":
+                if reserva.inmueble and hasattr(reserva.inmueble, 'politica_cancelacion'):
+                    mensaje += f" Política de cancelación: {reserva.inmueble.politica_cancelacion}"
+                elif reserva.cochera and hasattr(reserva.cochera, 'politica_cancelacion'):
+                    mensaje += f" Política de cancelación: {reserva.cochera.politica_cancelacion}"
+            crear_notificacion(
+                usuario=empleado,
+                mensaje=mensaje
+            )
+        mensaje = "La reserva fue cancelada correctamente."
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': True,
+                'mensaje': mensaje
+            })
+        messages.success(request, mensaje)
+        return redirect('reservas_usuario')
 
 def pagar_reserva(request, id_reserva):
     reserva = get_object_or_404(Reserva, id_reserva=id_reserva)
@@ -752,7 +777,7 @@ def pagar_reserva(request, id_reserva):
             estado_pagada = Estado.objects.get(nombre='Confirmada')
             reserva.estado = estado_pagada
             reserva.save()
-
+                    
             # Rechazar automáticamente reservas pendientes superpuestas
             reservas_superpuestas = Reserva.objects.filter(
                 inmueble=reserva.inmueble,
@@ -766,6 +791,25 @@ def pagar_reserva(request, id_reserva):
                 r.estado = estado_rechazada
                 r.save()
                 # Notificar al cliente si querés
+                cliente_rel = ClienteInmueble.objects.filter(reserva=r).first()
+                if cliente_rel:
+                    crear_notificacion(
+                        usuario=cliente_rel.cliente,
+                        mensaje=f"Tu reserva #{r.id_reserva} para la vivienda '{reserva.inmueble.nombre} fue rechazada'."
+                    )
+
+            # Cancelar reservas superpuestas en estado "Concurrente"
+            reservas_concurrentes = Reserva.objects.filter(
+                inmueble=reserva.inmueble,
+                estado__nombre='Concurrente',
+                fecha_inicio__lt=reserva.fecha_fin,
+                fecha_fin__gt=reserva.fecha_inicio
+            ).exclude(id_reserva=reserva.id_reserva)
+
+            estado_rechazada = Estado.objects.get(nombre='Rechazada')
+            for r in reservas_concurrentes:
+                r.estado = estado_rechazada
+                r.save()
                 cliente_rel = ClienteInmueble.objects.filter(reserva=r).first()
                 if cliente_rel:
                     crear_notificacion(
