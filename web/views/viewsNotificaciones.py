@@ -59,32 +59,50 @@ def admin_notificar_imprevisto(request):
                 nombre_objeto = ""
 
                 # Notificar a todos los clientes con reservas a futuro
-                hoy = timezone.now().date()
+                hoy_datetime = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
                 if objeto.startswith("Vivienda #"):
                     reservas_futuras = Reserva.objects.filter(
                         inmueble=inmueble,
-                        fecha_inicio__gte=hoy,
+                        fecha_inicio__gte=hoy_datetime,  # ← Cambio aquí
                         estado__nombre__in=estados_activos
                     )
                     nombre_objeto = inmueble.nombre
                 elif objeto.startswith("Cochera #"):
                     reservas_futuras = Reserva.objects.filter(
                         cochera=cochera,
-                        fecha_inicio__gte=hoy,
+                        fecha_inicio__gte=hoy_datetime,  # ← Cambio aquí
                         estado__nombre__in=estados_activos
                     )
                     nombre_objeto = cochera.nombre
                 else:
                     reservas_futuras = Reserva.objects.none()
 
+                # ✅ CÓDIGO CORREGIDO - Sin duplicados
+                clientes_notificados = set()  # Para evitar duplicados
+
                 for reserva in reservas_futuras:
                     rel = ClienteInmueble.objects.filter(reserva=reserva).first()
-                    if rel:
+                    if rel and rel.cliente.pk not in clientes_notificados:
                         cliente = rel.cliente
+                        
+                        # Contar cuántas reservas tiene este cliente
+                        num_reservas = reservas_futuras.filter(
+                            clienteinmueble__cliente=cliente
+                        ).count()
+                        
+                        # Personalizar el mensaje según el número de reservas
+                        if num_reservas == 1:
+                            mensaje_personalizado = f"Imprevisto reportado en {nombre_objeto} donde tenes una reserva: '{mensaje}'"
+                        else:
+                            mensaje_personalizado = f"Imprevisto reportado en {nombre_objeto} donde tenes {num_reservas} reservas: '{mensaje}'"
+                        
                         crear_notificacion(
                             usuario=cliente,
-                            mensaje=f"Imprevisto reportado en {nombre_objeto} donde tienes una reserva: '{mensaje}'"
+                            mensaje=mensaje_personalizado
                         )
+                        
+                        # Marcar cliente como notificado
+                        clientes_notificados.add(cliente.pk)
 
                 # Notificar al empleado asignado
                 crear_notificacion(

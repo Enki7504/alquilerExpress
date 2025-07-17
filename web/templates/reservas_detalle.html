@@ -309,6 +309,12 @@
     {% endif %}
       {% if reserva.cochera %}
         <div class="mb-3">
+          <div class="mt-2">
+            <strong>Horarios:</strong> 
+            <span class="ms-1">
+              {{ reserva.fecha_inicio|time:"H:i" }} - {{ reserva.fecha_fin|time:"H:i" }}
+            </span>
+          </div>
           {% if reserva.patente %}
             <div class="mt-2">
               <strong>Patente registrada:</strong> {{ reserva.patente }}
@@ -468,9 +474,12 @@
                 'X-CSRFToken': document.querySelector('input[name="csrfmiddlewaretoken"]').value
               }
             })
-            .then(res => res.json())
-            .then data => {
-              if (data.success) {
+          })
+          .then(res => res.json())
+          .then data => {
+            if (data.init_point) {
+              window.location.href = data.init_point;
+            } else {
                 Swal.fire({
                   icon: 'success',
                   title: 'Cancelada',
