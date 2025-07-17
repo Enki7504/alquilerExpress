@@ -11,6 +11,7 @@
       <table class="table table-hover align-middle">
         <thead>
           <tr>
+            <th>N° Reserva</th>
             <th>Inmueble</th>
             <th>Fecha de llegada</th>
             <th>Fecha de salida</th>
@@ -21,6 +22,9 @@
         <tbody>
           {% for reserva in reservas %}
           <tr>
+            <td>
+              #{{ reserva.id_reserva }}
+            </td>
             <td>
               {% if reserva.inmueble %}
                 {{ reserva.inmueble }}

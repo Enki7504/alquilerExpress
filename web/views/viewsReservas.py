@@ -555,7 +555,7 @@ def reservas_usuario(request):
     """
     Muestra todas las reservas del usuario autenticado.
     """
-    reservas = Reserva.objects.filter(clienteinmueble__cliente=request.user.perfil).distinct().order_by('-fecha_inicio')
+    reservas = Reserva.objects.filter(clienteinmueble__cliente=request.user.perfil).distinct().order_by('-id_reserva')
     return render(request, 'reservas.html', {
         'reservas': reservas
     })
