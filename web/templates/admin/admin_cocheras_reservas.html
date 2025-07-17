@@ -148,12 +148,27 @@ function cambiarEstado(reservaId, nuevoEstado) {
       }
     });
   } else {
+    // ✅ AGREGAR MENSAJE ESPECIAL PARA ESTADO "APROBADA"
+    let mensaje = `¿Estás seguro que desea cambiar el estado de la vivienda "${nombreInmueble}" a "${nuevoEstado}"?`;
+    let htmlContent = '';
+    
+    if (nuevoEstado === 'Aprobada') {
+      htmlContent = `
+        <div class="alert alert-warning mt-3 text-start">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>
+          <strong>Importante:</strong> Las reservas superpuestas con esta aprobación no podrán ser aceptadas hasta que esta reserva se cancele. Si esta reserva se paga, las reservas superpuestas se cancelarán automáticamente.
+        </div>
+      `;
+    }
+
     Swal.fire({
-      title: `¿Estás seguro que desea cambiar el estado de la cochera "${nombreCochera}" a "${nuevoEstado}"?`,
+      title: mensaje,
+      html: htmlContent,  // ← AGREGAR CONTENIDO HTML
       icon: 'question',
       showCancelButton: true,
       confirmButtonText: 'Confirmar',
       cancelButtonText: 'Cancelar',
+      width: '500px'  // ← AGREGAR ANCHO PARA QUE SE VEA BIEN EL MENSAJE
     }).then((result) => {
       if (result.isConfirmed) {
         // Mostrar notificación de carga
