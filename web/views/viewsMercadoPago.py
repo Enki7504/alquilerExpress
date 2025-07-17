@@ -7,7 +7,9 @@ from django.views.decorators.csrf import csrf_exempt
 from ..models import (
     Reserva,
     Estado,
+    ClienteInmueble,  # ← Agregar
 )
+from ..utils import crear_notificacion  # ← Agregar
 
 def crear_preferencia_mp(request):
     if request.method == "POST":
@@ -70,6 +72,8 @@ def probar_mp(request):
 def mercadopago_webhook(request):
     import mercadopago
     import json
+    from ..utils import crear_notificacion  # ← Agregar import
+    from ..models import ClienteInmueble      # ← Agregar import
 
     payment_id = None
 
@@ -90,7 +94,6 @@ def mercadopago_webhook(request):
             pass
 
     if not payment_id:
-        # Si no es un pago, simplemente responde 200 OK para otros topics
         return JsonResponse({"success": True})
 
     sdk = mercadopago.SDK(settings.MERCADOPAGO_ACCESS_TOKEN)
@@ -103,9 +106,59 @@ def mercadopago_webhook(request):
             try:
                 reserva = Reserva.objects.get(id_reserva=reserva_id)
                 estado_pagada = Estado.objects.get(nombre="Pagada")
+                estado_cancelada = Estado.objects.get(nombre="Cancelada")
+                
+                # Cambiar estado de la reserva pagada
                 reserva.estado = estado_pagada
                 reserva.save()
+                
+                # ✅ NUEVO: Cancelar automáticamente reservas superpuestas
+                # Para inmuebles
+                if reserva.inmueble:
+                    reservas_superpuestas = Reserva.objects.filter(
+                        inmueble=reserva.inmueble,
+                        estado__nombre__in=['Pendiente', 'Concurrente'],  # Estados que se pueden cancelar
+                        fecha_inicio__lt=reserva.fecha_fin,
+                        fecha_fin__gt=reserva.fecha_inicio
+                    ).exclude(id_reserva=reserva.id_reserva)
+                    
+                    for r in reservas_superpuestas:
+                        r.estado = estado_cancelada
+                        r.save()
+                        
+                        # Notificar al cliente afectado
+                        cliente_rel = ClienteInmueble.objects.filter(reserva=r).first()
+                        if cliente_rel:
+                            crear_notificacion(
+                                usuario=cliente_rel.cliente,
+                                mensaje=f"Tu reserva #{r.id_reserva} para '{reserva.inmueble.nombre}' del {r.fecha_inicio.strftime('%d/%m/%Y')} al {r.fecha_fin.strftime('%d/%m/%Y')} fue cancelada automáticamente porque se pagó otra reserva en fechas superpuestas."
+                            )
+                
+                # Para cocheras
+                elif reserva.cochera:
+                    reservas_superpuestas = Reserva.objects.filter(
+                        cochera=reserva.cochera,
+                        estado__nombre__in=['Pendiente', 'Concurrente'],  # Estados que se pueden cancelar
+                        fecha_inicio__lt=reserva.fecha_fin,
+                        fecha_fin__gt=reserva.fecha_inicio
+                    ).exclude(id_reserva=reserva.id_reserva)
+                    
+                    for r in reservas_superpuestas:
+                        r.estado = estado_cancelada
+                        r.save()
+                        
+                        # Notificar al cliente afectado
+                        cliente_rel = ClienteInmueble.objects.filter(reserva=r).first()
+                        if cliente_rel:
+                            crear_notificacion(
+                                usuario=cliente_rel.cliente,
+                                mensaje=f"Tu reserva #{r.id_reserva} para '{reserva.cochera.nombre}' del {r.fecha_inicio.strftime('%d/%m/%Y %H:%M')} al {r.fecha_fin.strftime('%d/%m/%Y %H:%M')} fue cancelada automáticamente porque se pagó otra reserva en horarios superpuestos."
+                            )
+                
                 return JsonResponse({"success": True})
-            except Reserva.DoesNotExist:
-                return JsonResponse({"error": "Reserva no encontrada"}, status=404)
+            except (Reserva.DoesNotExist, Estado.DoesNotExist) as e:
+                return JsonResponse({"error": f"Error al procesar pago: {str(e)}"}, status=404)
+            except Exception as e:
+                return JsonResponse({"error": f"Error interno: {str(e)}"}, status=500)
+    
     return JsonResponse({"success": False})
