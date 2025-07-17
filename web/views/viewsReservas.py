@@ -65,6 +65,30 @@ def crear_reserva_inmueble(request, id_inmueble):
             messages.error(request, f"El mínimo de noches de alquiler para esta vivienda es {inmueble.minimo_dias_alquiler}.")
             return redirect("detalle_inmueble", id_inmueble=id_inmueble)
 
+        # Validar cantidad de adultos y niños
+        try:
+            cantidad_adultos = int(request.POST.get("cantidad_adultos", 1))
+            cantidad_ninos = int(request.POST.get("cantidad_ninos", 0))
+        except (TypeError, ValueError):
+            messages.error(request, "Cantidad de huéspedes inválida.")
+            return redirect("detalle_inmueble", id_inmueble=id_inmueble)
+
+        # Validar que haya al menos 1 adulto
+        if cantidad_adultos < 1:
+            messages.error(request, "Debe haber al menos 1 adulto.")
+            return redirect("detalle_inmueble", id_inmueble=id_inmueble)
+
+        # Validar que no se exceda la capacidad del inmueble
+        total_huespedes = cantidad_adultos + cantidad_ninos
+        if total_huespedes > inmueble.cantidad_huespedes:
+            messages.error(request, f"El total de huéspedes ({total_huespedes}) excede la capacidad del inmueble ({inmueble.cantidad_huespedes}).")
+            return redirect("detalle_inmueble", id_inmueble=id_inmueble)
+
+        # Validar que haya al menos 1 huésped en total
+        if total_huespedes < 1:
+            messages.error(request, "Debe haber al menos 1 huésped.")
+            return redirect("detalle_inmueble", id_inmueble=id_inmueble)
+
         # Validar que el cliente no tenga reservas superpuestas para el mismo inmueble
         reserva_superpuesta_usuario = Reserva.objects.filter(
             clienteinmueble__cliente=perfil,
@@ -87,15 +111,6 @@ def crear_reserva_inmueble(request, id_inmueble):
         if reserva_superpuesta_inmueble:
             messages.error(request, "El inmueble no está disponible en esas fechas.")
             return redirect("detalle_inmueble", id_inmueble=id_inmueble)
-        
-        # Validar cantidad de adultos
-        try:
-            cantidad_adultos = int(request.POST.get("cantidad_adultos", 1))
-        except (TypeError, ValueError):
-            cantidad_adultos = 0
-        if (cantidad_adultos < 1):
-            messages.error(request, "Debe haber al menos un adulto.")
-            return redirect("detalle_inmueble", id_inmueble=id_inmueble)
 
         # Crear la reserva
         reserva = Reserva.objects.create(
@@ -104,9 +119,8 @@ def crear_reserva_inmueble(request, id_inmueble):
             fecha_fin=fecha_fin,
             estado=Estado.objects.get(nombre="Pendiente"),
             precio_total=inmueble.precio_por_dia * (fecha_fin - fecha_inicio).days,
-            # asigna cantidad de niños y adultos recibidos por el form
-            cantidad_adultos=request.POST.get("cantidad_adultos", 1),
-            cantidad_ninos=request.POST.get("cantidad_ninos", 0)
+            cantidad_adultos=cantidad_adultos,
+            cantidad_ninos=cantidad_ninos
         )
 
         # Relacionar el cliente con la reserva

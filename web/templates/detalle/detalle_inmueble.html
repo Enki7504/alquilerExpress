@@ -51,7 +51,7 @@
 {% block precio_por %}noche{% endblock %}
 
 {% block formulario_reserva %}
-  <form method="post" action="{% url 'crear_reserva_inmueble' id_inmueble=objeto.id_inmueble %}">
+  <form method="post" action="{% url 'crear_reserva_inmueble' id_inmueble=objeto.id_inmueble %}" id="form-reserva">
     {% csrf_token %}
     <div class="mb-3">
       <label for="fecha_inicio" class="form-label">Fecha de llegada</label>
@@ -75,14 +75,96 @@
     </div>
     <div class="mb-3">
       <label for="cantidad_adultos" class="form-label">Cantidad de adultos</label>
-      <input type="number" class="form-control" id="cantidad_adultos" name="cantidad_adultos" min="1" max="{{ objeto.cantidad_huespedes }}" required>
+      <input type="number" 
+             class="form-control" 
+             id="cantidad_adultos" 
+             name="cantidad_adultos" 
+             min="1" 
+             max="{{ objeto.cantidad_huespedes }}" 
+             value="1"
+             required>
     </div>
     <div class="mb-3">
       <label for="cantidad_ninos" class="form-label">Cantidad de niños</label>
-      <input type="number" class="form-control" id="cantidad_ninos" name="cantidad_ninos" min="0" max="{{ objeto.cantidad_huespedes }}" required>
+      <input type="number" 
+             class="form-control" 
+             id="cantidad_ninos" 
+             name="cantidad_ninos" 
+             min="0" 
+             max="{{ objeto.cantidad_huespedes|add:'-1' }}" 
+             value="0"
+             required>
     </div>
     <button type="submit" class="btn btn-primary btn-azul w-100 py-2">
       <i class="bi bi-calendar-check me-2"></i> Reservar ahora
     </button>
   </form>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const adultosInput = document.getElementById('cantidad_adultos');
+    const ninosInput = document.getElementById('cantidad_ninos');
+    const maxHuespedes = {{ objeto.cantidad_huespedes }};
+    
+    function validarCantidades() {
+        const adultos = parseInt(adultosInput.value) || 0;
+        const ninos = parseInt(ninosInput.value) || 0;
+        const total = adultos + ninos;
+        
+        // Actualizar el max de adultos basado en niños seleccionados
+        const maxAdultos = Math.max(1, maxHuespedes - ninos);
+        adultosInput.max = maxAdultos;
+        
+        // Si los adultos exceden el máximo permitido, ajustar
+        if (adultos > maxAdultos) {
+            adultosInput.value = maxAdultos;
+        }
+        
+        // Validar que siempre haya al menos 1 adulto
+        if (adultos < 1) {
+            adultosInput.value = 1;
+        }
+        
+        // Actualizar el max de niños basado en adultos seleccionados
+        const maxNinos = Math.max(0, maxHuespedes - parseInt(adultosInput.value));
+        ninosInput.max = maxNinos;
+        
+        // Si los niños exceden el máximo permitido, ajustar
+        if (ninos > maxNinos) {
+            ninosInput.value = maxNinos;
+        }
+    }
+    
+    adultosInput.addEventListener('input', validarCantidades);
+    ninosInput.addEventListener('input', validarCantidades);
+    
+    // Validar al enviar el formulario
+    document.getElementById('form-reserva').addEventListener('submit', function(e) {
+        const adultos = parseInt(adultosInput.value) || 0;
+        const ninos = parseInt(ninosInput.value) || 0;
+        const total = adultos + ninos;
+        
+        if (adultos < 1) {
+            e.preventDefault();
+            alert('Debe haber al menos 1 adulto.');
+            return false;
+        }
+        
+        if (total > maxHuespedes) {
+            e.preventDefault();
+            alert(`El total de huéspedes no puede exceder ${maxHuespedes}.`);
+            return false;
+        }
+        
+        if (total === 0) {
+            e.preventDefault();
+            alert('Debe seleccionar al menos 1 huésped.');
+            return false;
+        }
+    });
+});
+</script>
 {% endblock %}

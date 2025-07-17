@@ -159,14 +159,14 @@ def loginAdmin_2fa(request):
     Vista para la verificación de dos factores (2FA) para administradores/empleados.
     Verifica el código OTP ingresado por el usuario.
     """
-    tiempo_restante = 70
+    tiempo_restante = 20
     error = None
 
     if "username_otp" in request.session:
         try:
             user = User.objects.get(username=request.session["username_otp"])
             otp_obj = LoginOTP.objects.get(user=user)
-            expiracion = otp_obj.creado_en + timedelta(minutes=1)
+            expiracion = otp_obj.creado_en + timedelta(seconds=20)
             ahora = timezone.now()
             tiempo_restante = int((expiracion - ahora).total_seconds())
             if tiempo_restante <= 0:
@@ -215,7 +215,7 @@ def loginAdmin_2fa_reenviar(request):
                 [user.email],
                 fail_silently=False,
             )
-            return JsonResponse({"success": True, "tiempo_restante": 60})
+            return JsonResponse({"success": True, "tiempo_restante": 15})
         except Exception as e:
             return JsonResponse({"success": False, "error": str(e)})
     return JsonResponse({"success": False, "error": "Método no permitido."})
