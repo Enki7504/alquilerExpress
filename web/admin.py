@@ -19,7 +19,8 @@ from .models import (
     Ciudad,
     Notificacion,
     Huesped,
-    Tarjeta
+    Tarjeta,
+    ExtensionReserva
 )
 
 # --- Inlines para mostrar imágenes asociadas ---
@@ -138,3 +139,64 @@ class HuespedAdmin(admin.ModelAdmin):
 class TarjetaAdmin(admin.ModelAdmin):
     list_display = ('id_tarjeta', 'nombre', 'numero', 'vencimiento', 'saldo')
     search_fields = ('nombre', 'numero')
+
+@admin.register(ExtensionReserva)
+class ExtensionReservaAdmin(admin.ModelAdmin):
+    list_display = (
+        'id', 
+        'reserva', 
+        'fecha_fin_original', 
+        'fecha_fin_nueva', 
+        'dias_extension', 
+        'precio_extension', 
+        'estado', 
+        'fecha_solicitud'
+    )
+    list_filter = (
+        'estado', 
+        'fecha_solicitud', 
+        'dias_extension'
+    )
+    search_fields = (
+        'reserva__id_reserva', 
+        'motivo', 
+        'comentario_admin'
+    )
+    readonly_fields = (
+        'fecha_solicitud', 
+        'reserva', 
+        'fecha_fin_original', 
+        'dias_extension', 
+        'precio_extension'
+    )
+    fieldsets = (
+        ('Información de la Extensión', {
+            'fields': (
+                'reserva', 
+                'fecha_fin_original', 
+                'fecha_fin_nueva', 
+                'dias_extension', 
+                'precio_extension'
+            )
+        }),
+        ('Estado y Fechas', {
+            'fields': (
+                'estado', 
+                'fecha_solicitud', 
+                'fecha_respuesta'
+            )
+        }),
+        ('Detalles', {
+            'fields': (
+                'motivo', 
+                'comentario_admin'
+            )
+        })
+    )
+    ordering = ['-fecha_solicitud']
+    
+    def get_readonly_fields(self, request, obj=None):
+        """Solo hacer algunos campos readonly si está editando"""
+        if obj:  # Editando objeto existente
+            return self.readonly_fields + ('fecha_fin_nueva',)
+        return self.readonly_fields

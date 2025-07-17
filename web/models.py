@@ -261,3 +261,6 @@ class ExtensionReserva(models.Model):
     class Meta:
         db_table = 'extension_reserva'
         ordering = ['-fecha_solicitud']
+
+    def __str__(self):
+        return f"Extensión de Reserva #{self.reserva.id_reserva} ({self.estado.nombre})"

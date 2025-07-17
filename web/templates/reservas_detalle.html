@@ -184,7 +184,26 @@
           {% if reserva.estado.nombre == 'Confirmada' and not is_admin_or_empleado %}
             <div class="card mt-4 shadow-sm border-0" style="border-left: 4px solid #ffc107 !important;">
               <div class="card-body">
-                {% if puede_extender %}
+                {% if extension_pendiente %}
+                  <!-- Estado: Extensión pendiente de aprobación -->
+                  <div class="alert alert-info border-0 mb-3" style="background: linear-gradient(135deg, #cce7ff 0%, #b3d9ff 100%);">
+                    <div class="d-flex align-items-center">
+                      <i class="bi bi-clock-history me-3 fs-4 text-info"></i>
+                      <div>
+                        <h6 class="mb-1 text-info fw-bold">Extensión en Revisión</h6>
+                        <p class="mb-0 text-muted">Tu solicitud de extensión está siendo revisada por un administrador.</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="text-center">
+                    <button type="button" class="btn btn-outline-info btn-lg px-5 py-3" disabled style="border-radius: 15px; font-weight: 600;">
+                      <i class="bi bi-hourglass-split me-2"></i>
+                      Solicitud en Revisión
+                    </button>
+                  </div>
+                  
+                {% elif puede_extender %}
                   <!-- Estado: Disponible (más de 24 horas restantes) -->
                   <div class="alert alert-success border-0 mb-3" style="background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);">
                     <div class="d-flex align-items-center">
@@ -641,7 +660,8 @@
               title: 'Error',
               text: "Error al generar el pago: " + (data.error || "Error desconocido"),
               timer: 3000,
-              showConfirmButton: false
+              showConfirmButton: false,
+              timerProgressBar: true
             });
           }
         });
@@ -682,7 +702,8 @@
                           title: '¡Guardado!',
                           text: data.message || 'Huéspedes guardados correctamente',
                           timer: 2000,
-                          showConfirmButton: false
+                          showConfirmButton: false,
+                          timerProgressBar: true
                       }).then(() => {
                           // Recargar página para mostrar datos actualizados
                           window.location.reload();
@@ -775,8 +796,14 @@
         .then(res => res.json())
         .then(data => {
           if (data.success) {
-            Swal.fire({ icon: 'success', title: data.message || 'Patente guardada', toast: true, timer: 2000, showConfirmButton: false })
-              .then(() => window.location.reload());
+            Swal.fire({ 
+              icon: 'success', 
+              title: data.message || 'Patente guardada', 
+              timer: 2000, 
+              timerProgressBar: true,  // ✅ AGREGAR
+              showConfirmButton: false // ✅ AGREGAR
+            })
+            .then(() => window.location.reload());
           } else {
             Swal.fire({ icon: 'error', title: 'Error', text: data.error || 'Error al guardar', toast: true, timer: 4000 });
           }
@@ -799,13 +826,14 @@
             <input type="text" class="form-control" value="{{ reserva.fecha_fin|date:'d/m/Y' }}" readonly>
           </div>
           <div class="mb-3">
-            <label for="swal-dias" class="form-label">Días adicionales</label>
-            <input type="number" id="swal-dias" class="form-control" min="1" max="7" value="1" required>
-            <small class="text-muted">Máximo 7 días</small>
+            <label for="swal-nueva-fecha" class="form-label">Nueva fecha de finalización <span class="text-danger">*</span></label>
+            <input type="text" id="swal-nueva-fecha" class="form-control" placeholder="Seleccione la nueva fecha" required readonly>
+            <small class="text-muted">Máximo 7 días adicionales</small>
           </div>
           <div class="mb-3">
-            <label for="swal-motivo" class="form-label">Motivo de la extensión</label>
-            <textarea id="swal-motivo" class="form-control" rows="3" placeholder="Explique por qué necesita extender la reserva"></textarea>
+            <label for="swal-motivo" class="form-label">Motivo de la extensión <span class="text-danger">*</span></label>
+            <textarea id="swal-motivo" class="form-control" rows="3" placeholder="Explique por qué necesita extender la reserva (mínimo 10 caracteres)" required minlength="10"></textarea>
+            <small class="text-muted">Campo obligatorio - Mínimo 10 caracteres</small>
           </div>
           <div class="alert alert-info">
             <i class="bi bi-info-circle me-2"></i>
@@ -820,14 +848,99 @@
       cancelButtonColor: '#6c757d',
       width: '500px',
       focusConfirm: false,
+      didOpen: () => {
+        // ✅ CONFIGURAR FLATPICKR CUANDO SE ABRE EL MODAL
+        const fechaFinActual = new Date('{{ reserva.fecha_fin|date:"Y-m-d" }}');
+        const fechaMinima = new Date(fechaFinActual);
+        fechaMinima.setDate(fechaMinima.getDate() + 2); // Mínimo 1 día después
+        
+        const fechaMaxima = new Date(fechaFinActual);
+        fechaMaxima.setDate(fechaMaxima.getDate() + 7); // Máximo 7 días después
+        
+        flatpickr('#swal-nueva-fecha', {
+          dateFormat: "d/m/Y",
+          minDate: fechaMinima,
+          maxDate: fechaMaxima,
+          locale: "es",
+          allowInput: false,
+          clickOpens: true,
+          defaultDate: null,
+          // ✅ NUEVO: Validar cuando se selecciona una fecha
+          onChange: function(selectedDates, dateStr, instance) {
+            validarFormulario();
+          }
+        });
+        
+        // ✅ FUNCIÓN PARA VALIDAR EL FORMULARIO COMPLETO
+        function validarFormulario() {
+          const nuevaFecha = document.getElementById('swal-nueva-fecha').value;
+          const motivo = document.getElementById('swal-motivo').value.trim();
+          const confirmButton = document.querySelector('.swal2-confirm');
+          
+          // Habilitar botón solo si ambos campos están completos
+          if (nuevaFecha && motivo.length >= 10) {
+            confirmButton.disabled = false;
+            confirmButton.style.opacity = '1';
+            confirmButton.style.cursor = 'pointer';
+          } else {
+            confirmButton.disabled = true;
+            confirmButton.style.opacity = '0.6';
+            confirmButton.style.cursor = 'not-allowed';
+          }
+        }
+        
+        // ✅ VALIDACIÓN EN TIEMPO REAL DEL MOTIVO
+        const motivoTextarea = document.getElementById('swal-motivo');
+        motivoTextarea.addEventListener('input', function() {
+          validarFormulario(); // Llamar a la validación general
+        });
+        
+        // ✅ VALIDACIÓN EN TIEMPO REAL DE CARACTERES
+        motivoTextarea.addEventListener('keyup', function() {
+          const caracteresActuales = this.value.length;
+          const caracteresMinimos = 10;z
+        });
+        
+        // Inicialmente deshabilitar el botón
+        const confirmButton = document.querySelector('.swal2-confirm');
+        confirmButton.disabled = true;
+        confirmButton.style.opacity = '0.6';
+        confirmButton.style.cursor = 'not-allowed';
+      },
       preConfirm: () => {
-        const dias = document.getElementById('swal-dias').value;
+        const nuevaFecha = document.getElementById('swal-nueva-fecha').value;
         const motivo = document.getElementById('swal-motivo').value;
-        if (!dias || dias < 1 || dias > 7) {
-          Swal.showValidationMessage('Los días deben estar entre 1 y 7');
+        
+        if (!nuevaFecha) {
+          Swal.showValidationMessage('Debe seleccionar una nueva fecha');
           return false;
         }
-        return { dias_extension: dias, motivo: motivo };
+        
+        if (!motivo || motivo.trim() === '') {
+          Swal.showValidationMessage('Debe explicar el motivo de la extensión');
+          return false;
+        }
+        
+        if (motivo.trim().length < 10) {
+          Swal.showValidationMessage('El motivo debe tener al menos 10 caracteres');
+          return false;
+        }
+        
+        // Calcular días de diferencia
+        const fechaFinActual = new Date('{{ reserva.fecha_fin|date:"Y-m-d" }}');
+        const fechaSeleccionada = new Date(nuevaFecha.split('/').reverse().join('-'));
+        const diasDiferencia = Math.ceil((fechaSeleccionada - fechaFinActual) / (1000 * 60 * 60 * 24));
+        
+        if (diasDiferencia < 1 || diasDiferencia > 7) {
+          Swal.showValidationMessage('La extensión debe ser entre 1 y 7 días');
+          return false;
+        }
+        
+        return { 
+          dias_extension: diasDiferencia, 
+          nueva_fecha_fin: fechaSeleccionada.toISOString().split('T')[0],
+          motivo: motivo.trim()
+        };
       }
     }).then((result) => {
       if (result.isConfirmed) {
@@ -844,8 +957,15 @@
         .then(res => res.json())
         .then(data => {
           if (data.success) {
-            Swal.fire({ icon: 'success', title: 'Solicitud enviada', text: 'Será revisada', timer: 3000 })
-              .then(() => window.location.reload());
+            Swal.fire({ 
+              icon: 'success', 
+              title: 'Solicitud enviada', 
+              text: 'Será revisada por un administrador', 
+              timer: 3000,
+              timerProgressBar: true,  // ✅ MOSTRAR BARRA DE PROGRESO
+              showConfirmButton: false // ✅ OCULTAR BOTÓN OK
+            })
+            .then(() => window.location.reload());
           } else {
             Swal.fire({ icon: 'error', title: 'Error', text: data.error || 'Error desconocido' });
           }

@@ -609,7 +609,8 @@ def ver_detalle_reserva(request, id_reserva):
     puede_extender = False
     fecha_disponible_extension = None
     horas_para_extension = None
-    
+    extension_pendiente = False  # ← AGREGAR NUEVA VARIABLE
+
     if reserva.estado.nombre == 'Confirmada' and not is_admin_or_empleado(request.user):
         # Usar localtime para obtener la fecha/hora actual con la zona horaria correcta
         ahora = timezone.localtime()
@@ -624,8 +625,15 @@ def ver_detalle_reserva(request, id_reserva):
         # Calcular horas restantes hasta el final de la reserva
         horas_restantes = (fecha_fin_datetime - ahora).total_seconds() / 3600
         
-        # ✅ CORREGIR: Permitir extensión si quedan MÁS de 24 horas
-        puede_extender = horas_restantes > 24
+        # ✅ CORREGIR: Verificar si hay extensiones pendientes PRIMERO
+        extension_pendiente = ExtensionReserva.objects.filter(reserva=reserva, estado__nombre='Pendiente').exists()
+        
+        if extension_pendiente:
+            # Si hay extensión pendiente, no permitir nueva solicitud pero mostrar mensaje específico
+            puede_extender = False
+        else:
+            # ✅ CORREGIR: Permitir extensión si quedan MÁS de 24 horas
+            puede_extender = horas_restantes > 24
         
         # Calcular cuándo ya NO estará disponible la extensión (24 horas antes del final)
         fecha_limite_extension = fecha_fin_datetime - timedelta(hours=24)
@@ -640,16 +648,6 @@ def ver_detalle_reserva(request, id_reserva):
             # Si ya no puede extender, mostrar que ya pasó el límite
             horas_para_extension = 0
             fecha_disponible_extension = fecha_limite_extension
-        
-        # Debug: Agregar print para verificar
-        print(f"DEBUG - horas_restantes hasta final: {horas_restantes}")
-        print(f"DEBUG - puede_extender: {puede_extender}")
-        print(f"DEBUG - fecha_limite_extension: {fecha_limite_extension}")
-        print(f"DEBUG - horas_para_extension: {horas_para_extension}")
-            
-        # Verificar que no haya extensiones pendientes
-        if ExtensionReserva.objects.filter(reserva=reserva, estado__nombre='Pendiente').exists():
-            puede_extender = False
     
     # Obtener extensiones de la reserva
     extensiones = ExtensionReserva.objects.filter(reserva=reserva).order_by('-fecha_solicitud')
@@ -666,6 +664,7 @@ def ver_detalle_reserva(request, id_reserva):
         'puede_extender': puede_extender,
         'fecha_disponible_extension': fecha_disponible_extension,
         'horas_para_extension': horas_para_extension,
+        'extension_pendiente': extension_pendiente,  # ← AGREGAR AL CONTEXT
         'extensiones': extensiones,
     }
     return render(request, 'reservas_detalle.html', context)
