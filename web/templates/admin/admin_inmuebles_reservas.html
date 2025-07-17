@@ -63,7 +63,11 @@
                 <button class="btn btn-sm btn-success" onclick="cambiarEstado('{{ reserva.id_reserva }}', 'Confirmada')">Llaves Entregadas</button>
                 <button class="btn btn-sm btn-danger" onclick="cambiarEstado('{{ reserva.id_reserva }}', 'Cancelada')">Cancelar Alquiler</button>
               {% elif reserva.estado.nombre == 'Confirmada' %}
-                <button class="btn btn-sm btn-success" onclick="cambiarEstado('{{ reserva.id_reserva }}', 'Finalizada')">Terminar Alquiler</button>
+                {% if reserva.fecha_fin < today %}
+                  <button class="btn btn-sm btn-success" onclick="cambiarEstado('{{ reserva.id_reserva }}', 'Finalizada')">Terminar Alquiler</button>
+                {% else %}
+                  <button class="btn btn-sm btn-success" disabled title="Solo disponible cuando finalice el alquiler">Terminar Alquiler</button>
+                {% endif %}
                 <button class="btn btn-sm btn-danger" onclick="cambiarEstado('{{ reserva.id_reserva }}', 'Cancelada')">Cancelar Alquiler</button>
               {% endif %}
               <a href="{% url 'detalle_inmueble' inmueble.id_inmueble %}" class="btn btn-sm btn-info">Ver Vivienda</a>
