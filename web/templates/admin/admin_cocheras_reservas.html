@@ -28,11 +28,13 @@
           <tr>
             <td>{{ reserva.id_reserva }}</td>
             <td>
-              {% if reserva.cliente %}
-                {{ reserva.cliente.usuario.get_full_name|default:reserva.cliente.usuario.username }}
-              {% else %}
-                Cliente no disponible
-              {% endif %}
+              {% with relacion=reserva.clienteinmueble_set.first %}
+                {% if relacion and relacion.cliente %}
+                  {{ relacion.cliente.usuario.get_full_name|default:relacion.cliente.usuario.username }}
+                {% else %}
+                  Cliente no disponible
+                {% endif %}
+              {% endwith %}
             </td>
             <td>
               {{ reserva.fecha_inicio|date:"d/m/Y" }} {{ reserva.fecha_inicio|time:"H:i" }}
@@ -148,8 +150,8 @@ function cambiarEstado(reservaId, nuevoEstado) {
       }
     });
   } else {
-    // ✅ AGREGAR MENSAJE ESPECIAL PARA ESTADO "APROBADA"
-    let mensaje = `¿Estás seguro que desea cambiar el estado de la vivienda "${nombreInmueble}" a "${nuevoEstado}"?`;
+    // ✅ CORREGIR: Usar nombreCochera en el mensaje
+    let mensaje = `¿Estás seguro que desea cambiar el estado de la cochera "${nombreCochera}" a "${nuevoEstado}"?`;
     let htmlContent = '';
     
     if (nuevoEstado === 'Aprobada') {
@@ -163,12 +165,12 @@ function cambiarEstado(reservaId, nuevoEstado) {
 
     Swal.fire({
       title: mensaje,
-      html: htmlContent,  // ← AGREGAR CONTENIDO HTML
+      html: htmlContent,
       icon: 'question',
       showCancelButton: true,
       confirmButtonText: 'Confirmar',
       cancelButtonText: 'Cancelar',
-      width: '500px'  // ← AGREGAR ANCHO PARA QUE SE VEA BIEN EL MENSAJE
+      width: '500px'
     }).then((result) => {
       if (result.isConfirmed) {
         // Mostrar notificación de carga

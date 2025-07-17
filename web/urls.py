@@ -83,7 +83,7 @@ urlpatterns = [
     # Reservas
     path('crear-reserva/<int:id_inmueble>/', viewsReservas.crear_reserva_inmueble, name='crear_reserva_inmueble'),
     path('crear-reserva-cochera/<int:id_cochera>/', viewsReservas.crear_reserva_cochera, name='crear_reserva_cochera'),
-    path('panel/reserva-inmueble/<int:id_reserva>/cambiar-estado/', viewsReservas.cambiar_estado_reserva, name='cambiar_estado_reserva_inmueble'),
+    path('panel/reserva-inmueble/<int:id_reserva>/cambiar-estado/', viewsReservas.cambiar_estado_reserva, name='cambiar_estado_reserva'),
     path('panel/reserva-cochera/<int:id_reserva>/cambiar-estado/', viewsReservas.cambiar_estado_reserva, name='cambiar_estado_reserva'),
     
     # Reservas del usuario autenticado

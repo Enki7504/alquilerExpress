@@ -317,12 +317,9 @@ def cambiar_estado_reserva(request, id_reserva):
                         fecha_fin__gt=reserva.fecha_inicio
                     ).exclude(id_reserva=reserva.id_reserva)
                     
+                    estado_concurrente, _ = Estado.objects.get_or_create(nombre='Concurrente')
                     for r in reservas_superpuestas:
-                        #r.estado = estado_cancelada
-                        #r.save()
-
-                        # Cambia el estado de la reserva a "Concurrente"
-                        r.estado, _ = Estado.objects.get_or_create(nombre='Concurrente')
+                        r.estado = estado_concurrente
                         r.save()
 
                         
@@ -343,11 +340,9 @@ def cambiar_estado_reserva(request, id_reserva):
                         fecha_fin__gt=reserva.fecha_inicio
                     ).exclude(id_reserva=reserva.id_reserva)
                     
+                    estado_concurrente, _ = Estado.objects.get_or_create(nombre='Concurrente')
                     for r in reservas_superpuestas:
-                        #r.estado = estado_cancelada
-                        #r.save()
-
-                        r.estado = Estado.objects.get_or_create(nombre='Concurrente')
+                        r.estado = estado_concurrente
                         r.save()
                         
                         # Notificar al cliente afectado
