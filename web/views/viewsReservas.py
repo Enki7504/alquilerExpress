@@ -778,7 +778,7 @@ def pagar_reserva(request, id_reserva):
             estado_pagada = Estado.objects.get(nombre='Confirmada')
             reserva.estado = estado_pagada
             reserva.save()
-
+                    
             # Rechazar automáticamente reservas pendientes superpuestas
             reservas_superpuestas = Reserva.objects.filter(
                 inmueble=reserva.inmueble,
@@ -792,6 +792,25 @@ def pagar_reserva(request, id_reserva):
                 r.estado = estado_rechazada
                 r.save()
                 # Notificar al cliente si querés
+                cliente_rel = ClienteInmueble.objects.filter(reserva=r).first()
+                if cliente_rel:
+                    crear_notificacion(
+                        usuario=cliente_rel.cliente,
+                        mensaje=f"Tu reserva #{r.id_reserva} para la vivienda '{reserva.inmueble.nombre} fue rechazada'."
+                    )
+
+            # Cancelar reservas superpuestas en estado "Concurrente"
+            reservas_concurrentes = Reserva.objects.filter(
+                inmueble=reserva.inmueble,
+                estado__nombre='Concurrente',
+                fecha_inicio__lt=reserva.fecha_fin,
+                fecha_fin__gt=reserva.fecha_inicio
+            ).exclude(id_reserva=reserva.id_reserva)
+
+            estado_rechazada = Estado.objects.get(nombre='Rechazada')
+            for r in reservas_concurrentes:
+                r.estado = estado_rechazada
+                r.save()
                 cliente_rel = ClienteInmueble.objects.filter(reserva=r).first()
                 if cliente_rel:
                     crear_notificacion(
