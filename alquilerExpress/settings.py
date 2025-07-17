@@ -43,7 +43,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'web',
     "widget_tweaks",
-    "django_celery_beat"
 ]
 
 MIDDLEWARE = [
@@ -55,6 +54,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'web.middleware.FirstLoginForcePasswordChangeMiddleware',
+    'web.middleware.RevisionAutomaticaMiddleware',
 ]
 
 ROOT_URLCONF = 'alquilerExpress.urls'
@@ -66,6 +66,7 @@ TEMPLATES = [
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
+                'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
@@ -147,7 +148,6 @@ EMAIL_HOST_PASSWORD = 'wnpl jnfr ohrp dwio'  # contraseña de aplicación
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER  # opcional, para que el "remitente" sea ese
 
 # Mercado Pago
-# settings.py
 MERCADOPAGO_ACCESS_TOKEN = 'APP_USR-7150305971631682-061620-32fa3df117937f87b66baaff5e7bae8c-2498476215'
 MERCADOPAGO_PUBLIC_KEY = 'APP_USR-dd45282b-9b8b-4fdb-92ec-3ccc4ff0340c'
 
@@ -155,12 +155,6 @@ CSRF_TRUSTED_ORIGINS = [
     "https://reptile-genuine-redbird.ngrok-free.app",
 ]
 
-# Celery settings
-CELERY_BROKER_URL = 'redis://localhost:6379/0'
-CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
-CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
-
-# En settings.py
 AUTHENTICATION_BACKENDS = [
     'web.authentication.CustomAuthBackend',  # Tu backend personalizado
     'django.contrib.auth.backends.ModelBackend',  # Backend por defecto

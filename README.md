@@ -30,8 +30,6 @@ pip install django
 pip install Pillow
 # Para personalizar los formularios en las plantillas de Django (lo use con el login del admin)
 pip install django-widget-tweaks
-# Para la creacion de tareas asincronicas en segundo plano
-pip install celery redis django-celery-beat
 # Para mercado pago
 pip install mercadopago
 
