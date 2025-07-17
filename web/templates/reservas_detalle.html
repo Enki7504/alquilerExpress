@@ -344,143 +344,141 @@
   </div>
 </div>
 
-
-<!-- ⏱️ TIMER DE PAGO (CONTEO REGRESIVO) -->
-{% if tiempo_restante and tiempo_restante > 0 %}
-<script>
-  let tiempo = Number("{{ tiempo_restante|floatformat:0 }}");
-  function actualizarTimer() {
-    if (tiempo <= 0) {
-      document.getElementById('timer').innerText = "Tiempo agotado";
-      const btn = document.getElementById('pagar-btn');
-      if (btn) {
-        btn.classList.add('disabled');
-        btn.setAttribute('aria-disabled', 'true');
-        btn.onclick = function(e){ e.preventDefault(); };
-      }
-      return;
-    }
-    let horas = Math.floor(tiempo / 3600);
-    let minutos = Math.floor((tiempo % 3600) / 60);
-    let segundos = Math.floor(tiempo % 60);
-    document.getElementById('timer').innerText =
-      `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}:${segundos.toString().padStart(2, '0')}`;
-    tiempo--;
-    setTimeout(actualizarTimer, 1000);
-  }
-  actualizarTimer();
-</script>
-{% endif %}
-
-<!-- ⏳ CUENTA REGRESIVA PARA SOLICITAR EXTENSIÓN -->
-{% if reserva.estado.nombre == 'Confirmada' and not is_admin_or_empleado %}
-<script>
-  function updateExtensionCountdown() {
-    {% if puede_extender and fecha_disponible_extension %}
-      const fechaLimite = new Date('{{ fecha_disponible_extension|date:"c" }}');
-      const ahora = new Date();
-      const diferencia = fechaLimite - ahora;
-
-      const countdownElement = document.getElementById('countdown-extension');
-      if (countdownElement) {
-        if (diferencia > 0) {
-          const horas = Math.floor(diferencia / (1000 * 60 * 60));
-          const minutos = Math.floor((diferencia % (1000 * 60 * 60)) / (1000 * 60));
-          
-          let textoTiempo = '';
-          let iconoTiempo = 'bi-clock';
-          
-          if (horas > 24) {
-            const dias = Math.floor(horas / 24);
-            const horasRestantes = horas % 24;
-            textoTiempo = `${dias}d ${horasRestantes}h para deshabilitarse`;
-            iconoTiempo = 'bi-calendar-check';
-          } else if (horas > 0) {
-            textoTiempo = `${horas}h ${minutos}m para deshabilitarse`;
-            iconoTiempo = 'bi-clock';
-          } else {
-            textoTiempo = `${minutos}m para deshabilitarse`;
-            iconoTiempo = 'bi-hourglass-bottom';
-          }
-          
-          countdownElement.innerHTML = `<i class="${iconoTiempo} me-2"></i>${textoTiempo}`;
-          
-          // Cambiar color según el tiempo restante
-          const parent = countdownElement.parentElement;
-          if (horas < 1) {
-            parent.style.background = 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)';
-            countdownElement.style.animationDuration = '0.5s';
-          } else if (horas < 6) {
-            parent.style.background = 'linear-gradient(135deg, #ffc107 0%, #e0a800 100%)';
-            countdownElement.style.animationDuration = '1s';
-          } else {
-            parent.style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
-            countdownElement.style.animationDuration = '2s';
-          }
-        } else {
-          // Tiempo agotado - la extensión ya no está disponible
-          countdownElement.innerHTML = `<i class="bi bi-x-circle-fill me-2"></i>Extensión ya no disponible`;
-          countdownElement.parentElement.style.background = 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)';
-          
-          // Recargar después de 3 segundos para mostrar el estado deshabilitado
-          setTimeout(() => {
-            location.reload();
-          }, 3000);
-        }
-      }
-    {% endif %}
-  }
-
-  // Ejecutar inmediatamente y cada 30 segundos
-  updateExtensionCountdown();
-  setInterval(updateExtensionCountdown, 30000);
-</script>
-{% endif %}
-
-<!-- ⏰ TIMER DE REVISIÓN (72 HORAS DESDE CREACIÓN) -->
-{% if reserva.estado.nombre == "Pendiente" and tiempo_restante_creacion and tiempo_restante_creacion > 0 %}
-<script>
-  let tiempoCreacion = Number("{{ tiempo_restante_creacion|floatformat:0 }}");
-  function actualizarTimerCreacion() {
-    const timerElement = document.getElementById('timer-creacion');
-    if (!timerElement) return;
-    
-    if (tiempoCreacion <= 0) {
-      timerElement.innerText = "Tiempo agotado";
-      // Cambiar el alert a rojo cuando expire
-      const alertElement = timerElement.closest('.alert');
-      if (alertElement) {
-        alertElement.className = 'alert alert-danger d-flex align-items-center gap-2 mb-0 mt-1 py-2 px-3';
-        alertElement.innerHTML = `
-          <i class="bi bi-exclamation-triangle"></i>
-          <span>Las 72 horas de revisión han expirado.</span>
-        `;
-      }
-      return;
-    }
-    
-    let horas = Math.floor(tiempoCreacion / 3600);
-    let minutos = Math.floor((tiempoCreacion % 3600) / 60);
-    let segundos = Math.floor(tiempoCreacion % 60);
-    
-    timerElement.innerText = 
-      `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}:${segundos.toString().padStart(2, '0')}`;
-    
-    tiempoCreacion--;
-    setTimeout(actualizarTimerCreacion, 1000);
-  }
-  
-  // Iniciar el timer cuando el DOM esté listo
-  document.addEventListener('DOMContentLoaded', function() {
-    actualizarTimerCreacion();
-  });
-</script>
-{% endif %}
-
 {% block extra_js %}
-  {{ block.super }}
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <!-- ⏰ TIMER DE REVISIÓN (72 HORAS DESDE CREACIÓN) -->
+  {% if reserva.estado.nombre == "Pendiente" and tiempo_restante_creacion and tiempo_restante_creacion > 0 %}
+  <script>
+    let tiempoCreacion = Number("{{ tiempo_restante_creacion|floatformat:0 }}");
+    function actualizarTimerCreacion() {
+      const timerElement = document.getElementById('timer-creacion');
+      if (!timerElement) return;
+      
+      if (tiempoCreacion <= 0) {
+        timerElement.innerText = "Tiempo agotado";
+        // Cambiar el alert a rojo cuando expire
+        const alertElement = timerElement.closest('.alert');
+        if (alertElement) {
+          alertElement.className = 'alert alert-danger d-flex align-items-center gap-2 mb-0 mt-1 py-2 px-3';
+          alertElement.innerHTML = `
+            <i class="bi bi-exclamation-triangle"></i>
+            <span>Las 72 horas de revisión han expirado.</span>
+          `;
+        }
+        return;
+      }
+      
+      let horas = Math.floor(tiempoCreacion / 3600);
+      let minutos = Math.floor((tiempoCreacion % 3600) / 60);
+      let segundos = Math.floor(tiempoCreacion % 60);
+      
+      timerElement.innerText = 
+        `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}:${segundos.toString().padStart(2, '0')}`;
+      
+      tiempoCreacion--;
+      setTimeout(actualizarTimerCreacion, 1000);
+    }
+    
+    // Iniciar el timer cuando el DOM esté listo
+    document.addEventListener('DOMContentLoaded', function() {
+      actualizarTimerCreacion();
+    });
+  </script>
+  {% endif %}
+  
+  <!-- ⏱️ TIMER DE PAGO (CONTEO REGRESIVO) -->
+  {% if tiempo_restante and tiempo_restante > 0 %}
+  <script>
+    let tiempo = Number("{{ tiempo_restante|floatformat:0 }}");
+    function actualizarTimer() {
+      if (tiempo <= 0) {
+        document.getElementById('timer').innerText = "Tiempo agotado";
+        const btn = document.getElementById('pagar-btn');
+        if (btn) {
+          btn.classList.add('disabled');
+          btn.setAttribute('aria-disabled', 'true');
+          btn.onclick = function(e){ e.preventDefault(); };
+        }
+        return;
+      }
+      let horas = Math.floor(tiempo / 3600);
+      let minutos = Math.floor((tiempo % 3600) / 60);
+      let segundos = Math.floor(tiempo % 60);
+      document.getElementById('timer').innerText =
+        `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}:${segundos.toString().padStart(2, '0')}`;
+      tiempo--;
+      setTimeout(actualizarTimer, 1000);
+    }
+    actualizarTimer();
+  </script>
+  {% endif %}
+
+  <!-- ⏳ CUENTA REGRESIVA PARA SOLICITAR EXTENSIÓN -->
+  {% if reserva.estado.nombre == 'Confirmada' and not is_admin_or_empleado %}
+  <script>
+    function updateExtensionCountdown() {
+      {% if puede_extender and fecha_disponible_extension %}
+        const fechaLimite = new Date('{{ fecha_disponible_extension|date:"c" }}');
+        const ahora = new Date();
+        const diferencia = fechaLimite - ahora;
+
+        const countdownElement = document.getElementById('countdown-extension');
+        if (countdownElement) {
+          if (diferencia > 0) {
+            const horas = Math.floor(diferencia / (1000 * 60 * 60));
+            const minutos = Math.floor((diferencia % (1000 * 60 * 60)) / (1000 * 60));
+            
+            let textoTiempo = '';
+            let iconoTiempo = 'bi-clock';
+            
+            if (horas > 24) {
+              const dias = Math.floor(horas / 24);
+              const horasRestantes = horas % 24;
+              textoTiempo = `${dias}d ${horasRestantes}h para deshabilitarse`;
+              iconoTiempo = 'bi-calendar-check';
+            } else if (horas > 0) {
+              textoTiempo = `${horas}h ${minutos}m para deshabilitarse`;
+              iconoTiempo = 'bi-clock';
+            } else {
+              textoTiempo = `${minutos}m para deshabilitarse`;
+              iconoTiempo = 'bi-hourglass-bottom';
+            }
+            
+            countdownElement.innerHTML = `<i class="${iconoTiempo} me-2"></i>${textoTiempo}`;
+            
+            // Cambiar color según el tiempo restante
+            const parent = countdownElement.parentElement;
+            if (horas < 1) {
+              parent.style.background = 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)';
+              countdownElement.style.animationDuration = '0.5s';
+            } else if (horas < 6) {
+              parent.style.background = 'linear-gradient(135deg, #ffc107 0%, #e0a800 100%)';
+              countdownElement.style.animationDuration = '1s';
+            } else {
+              parent.style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
+              countdownElement.style.animationDuration = '2s';
+            }
+          } else {
+            // Tiempo agotado - la extensión ya no está disponible
+            countdownElement.innerHTML = `<i class="bi bi-x-circle-fill me-2"></i>Extensión ya no disponible`;
+            countdownElement.parentElement.style.background = 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)';
+            
+            // Recargar después de 3 segundos para mostrar el estado deshabilitado
+            setTimeout(() => {
+              location.reload();
+            }, 3000);
+          }
+        }
+      {% endif %}
+    }
+
+    // Ejecutar inmediatamente y cada 30 segundos
+    updateExtensionCountdown();
+    setInterval(updateExtensionCountdown, 30000);
+  </script>
+  {% endif %}
+
   <script>
   // 💡 INICIALIZAR TOOLTIP DE BOOTSTRAP
   document.addEventListener('DOMContentLoaded', function() {
@@ -621,41 +619,87 @@
     }
   });
 
-  // 🧍‍♂️ FORMULARIO DE HUÉSPEDES (VALIDACIÓN + GUARDADO)
+  // Buscar y reemplazar la sección del formulario de huéspedes:
   document.addEventListener('DOMContentLoaded', function() {
-    const form_huespedes = document.getElementById('form-huespedes');
-    if (form_huespedes) {
-      form_huespedes.addEventListener('submit', function(e) {
-        e.preventDefault();
-        const formData = new FormData(form_huespedes);
-        document.querySelectorAll('.error-message').forEach(el => el.remove());
-        fetch(form_huespedes.action, {
-          method: 'POST',
-          headers: {
-            'X-CSRFToken': form_huespedes.querySelector('[name=csrfmiddlewaretoken]').value,
-            'X-Requested-With': 'XMLHttpRequest'
-          },
-          body: formData
-        })
-        .then(res => res.json())
-        .then(data => {
-          if (data.success) {
-            Swal.fire({ icon: 'success', title: data.message || 'Guardado', toast: true, timer: 2000, showConfirmButton: false })
-              .then(() => window.location.reload());
-          } else if (data.errores) {
-            Object.entries(data.errores).forEach(([field, error]) => {
-              const input = form_huespedes.querySelector(`[name="${field}"]`);
-              if (input) {
-                const div = document.createElement('div');
-                div.className = 'error-message text-danger mt-1 small';
-                div.textContent = error;
-                input.parentNode.appendChild(div);
-              }
-            });
-          }
-        });
-      });
-    }
+      const formHuespedes = document.getElementById('form-huespedes');
+      
+      if (formHuespedes) {
+          formHuespedes.addEventListener('submit', function(e) {
+              console.log('Interceptando submit de huéspedes'); // <-- Agrega esto
+              e.preventDefault(); // ← Esto evita el envío tradicional
+              const formData = new FormData(formHuespedes);
+              const submitBtn = formHuespedes.querySelector('button[type="submit"]');
+              const originalText = submitBtn.textContent;
+              submitBtn.textContent = 'Guardando...';
+              submitBtn.disabled = true;
+              document.querySelectorAll('.error-message').forEach(el => el.remove());
+              document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+              fetch(formHuespedes.action, {
+                  method: 'POST',
+                  body: formData,
+                  headers: {
+                      'X-Requested-With': 'XMLHttpRequest' // ← Importante para Django
+                  }
+              })
+              .then(response => response.json())
+              .then(data => {
+                  submitBtn.textContent = originalText;
+                  submitBtn.disabled = false;
+                  if (data.success) {
+                      // ✅ ÉXITO
+                      Swal.fire({
+                          icon: 'success',
+                          title: '¡Guardado!',
+                          text: data.message || 'Huéspedes guardados correctamente',
+                          timer: 2000,
+                          showConfirmButton: false
+                      }).then(() => {
+                          // Recargar página para mostrar datos actualizados
+                          window.location.reload();
+                      });
+                      
+                  } else if (data.errores) {
+                      // ❌ ERRORES DE VALIDACIÓN
+                      Object.entries(data.errores).forEach(([field, error]) => {
+                          const input = formHuespedes.querySelector(`[name="${field}"]`);
+                          if (input) {
+                              // Agregar clase de error
+                              input.classList.add('is-invalid');
+                              
+                              // Agregar mensaje de error
+                              const errorDiv = document.createElement('div');
+                              errorDiv.className = 'error-message text-danger mt-1 small';
+                              errorDiv.textContent = error;
+                              input.parentNode.appendChild(errorDiv);
+                          }
+                      });
+                      
+                      Swal.fire({
+                          icon: 'error',
+                          title: 'Errores en el formulario',
+                          text: 'Por favor, corrige los errores marcados en rojo'
+                      });
+                      
+                  } else {
+                      // ❌ ERROR GENÉRICO
+                      Swal.fire({
+                          icon: 'error',
+                          title: 'Error',
+                          text: data.error || 'Error al guardar los huéspedes'
+                      });
+                  }
+              })
+              .catch(error => {
+                  submitBtn.textContent = originalText;
+                  submitBtn.disabled = false;
+                  Swal.fire({
+                      icon: 'error',
+                      title: 'Error de conexión',
+                      text: 'No se pudo procesar la solicitud. Inténtalo de nuevo.'
+                  });
+              });
+          });
+      }
   });
 
   // 📅 CONFIGURACIÓN DE FLATPICKR PARA FECHAS DE NACIMIENTO
