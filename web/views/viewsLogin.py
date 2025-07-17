@@ -117,8 +117,7 @@ def login_view(request):
                     request.session["username_otp"] = user_auth.username
                     return redirect("loginAdmin_2fa")
                 else:
-                    # Para clientes, permitir login independientemente de is_active
-                    login(request, user_auth)
+                    login(request, user_auth, backend='django.contrib.auth.backends.ModelBackend')
                     request.session['mostrar_bienvenida'] = True
                     
                     if user_auth.is_active:
@@ -196,7 +195,7 @@ def loginAdmin_2fa(request):
         elif otp_obj.codigo != codigo_ingresado:
             error = "Código inválido."
         else:
-            login(request, user)
+            login(request, user, backend='django.contrib.auth.backends.ModelBackend')
             request.session.pop("username_otp", None)
             otp_obj.delete()
             return redirect("/panel")
@@ -243,7 +242,7 @@ def verify_admin_link(request, uidb64, token):
         user = None
 
     if user is not None and email_link_token.check_token(user, token):
-        login(request, user)
+        login(request, user, backend='django.contrib.auth.backends.ModelBackend')
         messages.success(request, "Inicio de sesión exitoso a través del enlace.")
         return redirect('index')   # o la vista principal de admin
     else:
