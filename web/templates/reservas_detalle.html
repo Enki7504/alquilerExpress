@@ -175,9 +175,10 @@
               <form id="form-huespedes" method="post" action="{% url 'completar_huespedes' reserva.id_reserva %}">
                 {% csrf_token %}
                 <h5>Completa los datos de los huéspedes antes de pagar</h5>
+                {% if reserva.cantidad_adultos > 1 %}
                 <h6> Adultos </h6>
                 {% for i in rango_adultos %}
-                  {% if forloop.counter0 >= 0 %}  {# Empezar desde el segundo adulto #}
+                  {% if forloop.counter0 >= 1 %}
                     <div class="row mb-2">
                       <div class="col">
                         <input type="text" name="nombre_{{ forloop.counter0 }}" class="form-control" placeholder="Nombre" required>
@@ -195,6 +196,7 @@
                     </div>
                   {% endif %}
                 {% endfor %}
+                {% endif %}
                 {% if reserva.cantidad_ninos > 0 %}
                   <h6> Niños </h6>
                   {% for i in rango_ninos %}

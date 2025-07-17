@@ -175,8 +175,10 @@ def detalle_inmueble(request, id_inmueble):
         .first()
     )
     fecha_fin_mantenimiento_var = None
+    razon_mantenimiento = None  # Agregar esta línea
     if mantenimiento_activo and mantenimiento_activo.fecha_fin:
         fecha_fin_mantenimiento_var = mantenimiento_activo.fecha_fin
+        razon_mantenimiento = mantenimiento_activo.descripcion  # Agregar esta línea
 
     return render(request, 'detalle/detalle_inmueble.html', {
         'inmueble': inmueble,
@@ -197,6 +199,7 @@ def detalle_inmueble(request, id_inmueble):
         'puede_reseñar': puede_reseñar,
         'datos_cliente': datos_cliente, 
         'fecha_fin_mantenimiento': fecha_fin_mantenimiento_var,
+        'razon_mantenimiento': razon_mantenimiento,
     })
 
 def detalle_cochera(request, id_cochera):
@@ -369,8 +372,10 @@ def detalle_cochera(request, id_cochera):
     )
 
     fecha_fin_mantenimiento_var = None
+    razon_mantenimiento = None  # Agregar esta línea
     if mantenimiento_activo and mantenimiento_activo.fecha_fin:
         fecha_fin_mantenimiento_var = mantenimiento_activo.fecha_fin
+        razon_mantenimiento = mantenimiento_activo.descripcion  # Agregar esta línea
 
     return render(request, 'detalle/detalle_cochera.html', {
         'cochera': cochera,
@@ -391,6 +396,7 @@ def detalle_cochera(request, id_cochera):
         'is_cliente': is_cliente_var,
         'puede_reseñar': puede_reseñar,
         'fecha_fin_mantenimiento': fecha_fin_mantenimiento_var,
+        'razon_mantenimiento': razon_mantenimiento,  # Agregar esta línea
     })
 
 ################################################################################################################
