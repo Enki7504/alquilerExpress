@@ -491,8 +491,8 @@ def cambiar_estado_reserva(request, id_reserva):
                         protocolo = 'https' if request.is_secure() else 'http'
                         url_pago = f"{protocolo}://{dominio}/reservas/{reserva.id_reserva}/pagar/"
                         mensaje_notif = (
-                            f"El estado de tu reserva #{reserva.id_reserva} ha cambiado a: {estado.nombre}."
-                            f" Ahora debes abonar ${reserva.precio_total} dentro de las próximas 24 horas. "
+                            f"El estado de tu reserva #{reserva.id_reserva} ha cambiado a: {estado.nombre}."+
+                            f" Ahora debes abonar ${reserva.precio_total} dentro de las próximas 24 horas. "+
                             f"Accedé al apartado 'Mis Reservas' para pagar."
                             + (f" (Comentario: {comentario})" if comentario else "")
                         )
@@ -875,21 +875,36 @@ def solicitar_extension(request, id_reserva):
                 conflictos = Reserva.objects.filter(
                     inmueble=reserva.inmueble,
                     estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada'],
-                    fecha_inicio__lte=fecha_fin_nueva,
-                    fecha_fin__gte=reserva.fecha_fin
+                    fecha_inicio__lt=fecha_fin_nueva,  # ← CAMBIO: usar < en lugar de <=
+                    fecha_fin__gt=reserva.fecha_fin    # ← CAMBIO: usar > en lugar de >=
                 ).exclude(id_reserva=reserva.id_reserva)
             else:
                 conflictos = Reserva.objects.filter(
                     cochera=reserva.cochera,
                     estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada'],
-                    fecha_inicio__lte=fecha_fin_nueva,
-                    fecha_fin__gte=reserva.fecha_fin
+                    fecha_inicio__lt=fecha_fin_nueva,  # ← CAMBIO: usar < en lugar de <=
+                    fecha_fin__gt=reserva.fecha_fin    # ← CAMBIO: usar > en lugar de >=
                 ).exclude(id_reserva=reserva.id_reserva)
-            
+
             if conflictos.exists():
+                primera_reserva = conflictos.order_by('fecha_inicio').first()
+                
+                # ✅ CAMBIO: Aplicar regla diferente según el tipo
+                if reserva.inmueble:
+                    # Para inmuebles: un día antes
+                    fecha_limite_extension = primera_reserva.fecha_inicio - timedelta(days=1)
+                    mensaje_error = f'No se puede extender. Hay una reserva confirmada desde el {primera_reserva.fecha_inicio.strftime("%d/%m/%Y")}. Máximo hasta el {fecha_limite_extension.strftime("%d/%m/%Y")} para dejar un día libre.'
+                else:
+                    # Para cocheras: mismo día
+                    fecha_limite_extension = primera_reserva.fecha_inicio
+                    mensaje_error = f'No se puede extender. Hay una reserva confirmada desde el {primera_reserva.fecha_inicio.strftime("%d/%m/%Y")}.'
+                
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                    return JsonResponse({'success': False, 'error': 'No se puede extender. Hay conflictos con otras reservas.'})
-                messages.error(request, "No se puede extender. Hay conflictos con otras reservas.")
+                    return JsonResponse({
+                        'success': False, 
+                        'error': mensaje_error
+                    })
+                messages.error(request, mensaje_error)
                 return redirect('ver_detalle_reserva', id_reserva=id_reserva)
             
             # Calcular precio
@@ -1182,5 +1197,150 @@ def obtener_horarios_ocupados(request, id_cochera):
             import traceback
             traceback.print_exc()
             return JsonResponse({'error': f'Error interno: {str(e)}'}, status=500)
-    
-    return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+@login_required
+def verificar_disponibilidad_extension(request, id_reserva):
+    """
+    Verifica qué fechas están disponibles para extender una reserva
+    """
+    try:
+        reserva = get_object_or_404(Reserva, id_reserva=id_reserva)
+        
+        print(f"🔍 DEBUG - Verificando extensión para reserva #{reserva.id_reserva}")
+        print(f"   📅 Fecha fin actual: {reserva.fecha_fin}")
+        print(f"   🏠 Tipo: {'Inmueble' if reserva.inmueble else 'Cochera'}")
+        if reserva.inmueble:
+            print(f"   🏡 Inmueble: {reserva.inmueble.nombre}")
+        else:
+            print(f"   🚗 Cochera: {reserva.cochera.nombre}")
+        
+        # Verificar que el usuario es el dueño de la reserva
+        if not ClienteInmueble.objects.filter(cliente=request.user.perfil, reserva=reserva).exists():
+            print(f"   ❌ Usuario no tiene permisos para esta reserva")
+            return JsonResponse({'error': 'No tienes permisos para esta reserva.'}, status=403)
+        
+        # Fechas a verificar (próximos 7 días desde el fin de la reserva)
+        fecha_inicio_busqueda = reserva.fecha_fin
+        fecha_fin_busqueda = reserva.fecha_fin + timedelta(days=7)
+        
+        # ✅ DEBUG: Rango de búsqueda
+        print(f"   🔎 Buscando conflictos desde: {fecha_inicio_busqueda}")
+        print(f"   🔎 Hasta: {fecha_fin_busqueda}")
+        print(f"   📊 Rango total: {(fecha_fin_busqueda - fecha_inicio_busqueda).days} días")
+        
+        fechas_bloqueadas = []
+        fecha_limite = None
+        
+        # Buscar reservas que bloqueen la extensión
+        if reserva.inmueble:
+            print(f"   🔍 Buscando reservas conflictivas en inmueble...")
+            reservas_bloqueantes = Reserva.objects.filter(
+                inmueble=reserva.inmueble,
+                estado__nombre__in=['Aprobada', 'Pagada', 'Confirmada'],
+                fecha_inicio__gte=fecha_inicio_busqueda,
+                fecha_inicio__lte=fecha_fin_busqueda
+            ).exclude(id_reserva=reserva.id_reserva).order_by('fecha_inicio')
+        elif reserva.cochera:
+            print(f"   🔍 Buscando reservas conflictivas en cochera...")
+            reservas_bloqueantes = Reserva.objects.filter(
+                cochera=reserva.cochera,
+                estado__nombre__in=['Aprobada', 'Pagada', 'Confirmada'],
+                fecha_inicio__gte=fecha_inicio_busqueda,
+                fecha_inicio__lte=fecha_fin_busqueda
+            ).exclude(id_reserva=reserva.id_reserva).order_by('fecha_inicio')
+        else:
+            print(f"   ❌ Reserva sin inmueble ni cochera!")
+            reservas_bloqueantes = Reserva.objects.none()
+        
+        # ✅ DEBUG: Resumen de reservas bloqueantes
+        if reservas_bloqueantes.exists():
+            primera_reserva = reservas_bloqueantes.first()
+            print(f"   📊 Primera reserva bloqueante: #{primera_reserva.id_reserva}")
+            print(f"      Fecha inicio: {primera_reserva.fecha_inicio}")
+            print(f"      Fecha fin: {primera_reserva.fecha_fin}")
+            print(f"      Estado: {primera_reserva.estado.nombre}")
+            if primera_reserva.inmueble:
+                print(f"      Inmueble: {primera_reserva.inmueble.nombre}")
+            else:
+                print(f"      Cochera: {primera_reserva.cochera.nombre}")
+        
+        if reservas_bloqueantes.exists():
+            print(f"   🚫 RESERVAS CONFLICTIVAS:")
+            for i, rb in enumerate(reservas_bloqueantes, 1):
+                print(f"      {i}. Reserva #{rb.id_reserva}")
+                print(f"         📅 Fecha inicio: {rb.fecha_inicio}")
+                print(f"         📅 Fecha fin: {rb.fecha_fin}")
+                print(f"         🎯 Estado: {rb.estado.nombre}")
+                if rb.inmueble:
+                    print(f"         🏡 Inmueble: {rb.inmueble.nombre}")
+                else:
+                    print(f"         🚗 Cochera: {rb.cochera.nombre}")
+                
+                # Mostrar cliente de la reserva conflictiva
+                cliente_conflicto = ClienteInmueble.objects.filter(reserva=rb).first()
+                if cliente_conflicto:
+                    print(f"         👤 Cliente: {cliente_conflicto.cliente.usuario.username}")
+            
+            # La primera reserva bloqueante marca el límite
+            primera_reserva = reservas_bloqueantes.first()
+            
+            # ✅ CAMBIO: Solo para INMUEBLES bloquear un día antes, para COCHERAS desde el mismo día
+            if reserva.inmueble:
+                # Para inmuebles: bloquear desde UN DÍA ANTES
+                fecha_limite = primera_reserva.fecha_inicio - timedelta(days=1)
+                print(f"   🏡 INMUEBLE: Bloqueando desde 1 día antes de la reserva conflictiva")
+                print(f"   📅 Fecha inicio de la reserva: {primera_reserva.fecha_inicio}")
+                print(f"   📅 Fecha límite para extensión (1 día antes): {fecha_limite}")
+                
+                # Generar fechas bloqueadas desde UN DÍA ANTES
+                fecha_actual = fecha_limite
+                print(f"   🔒 Generando fechas bloqueadas desde {fecha_actual} (1 día antes de la reserva)...")
+                
+            else:
+                # Para cocheras: bloquear desde EL MISMO DÍA de la reserva
+                fecha_limite = primera_reserva.fecha_inicio
+                print(f"   🚗 COCHERA: Bloqueando desde el mismo día de la reserva conflictiva")
+                print(f"   📅 Fecha inicio de la reserva: {primera_reserva.fecha_inicio}")
+                print(f"   📅 Fecha límite para extensión (mismo día): {fecha_limite}")
+                
+                # Generar fechas bloqueadas desde EL MISMO DÍA
+                fecha_actual = fecha_limite
+                print(f"   🔒 Generando fechas bloqueadas desde {fecha_actual} (mismo día de la reserva)...")
+            
+            dias_bloqueados = 0
+            while fecha_actual <= fecha_fin_busqueda:
+                # Solo bloquear si la fecha está dentro del rango de extensión posible
+                if fecha_actual >= fecha_inicio_busqueda:
+                    fechas_bloqueadas.append(fecha_actual.strftime('%Y-%m-%d'))
+                    print(f"      📅 Bloqueada: {fecha_actual.strftime('%Y-%m-%d')}")
+                    dias_bloqueados += 1
+                else:
+                    print(f"      ⏭️ Saltando: {fecha_actual.strftime('%Y-%m-%d')} (fuera del rango)")
+                
+                fecha_actual += timedelta(days=1)
+            
+            print(f"   📊 Total días bloqueados: {dias_bloqueados}")
+            
+        else:
+            print(f"   ✅ No hay reservas conflictivas - Extensión disponible para todos los 7 días")
+        
+        # ✅ DEBUG: Respuesta final
+        response_data = {
+            'fechas_bloqueadas': fechas_bloqueadas,
+            'fecha_limite': fecha_limite.strftime('%Y-%m-%d') if fecha_limite else None,
+            'hay_bloqueos': bool(reservas_bloqueantes.exists())
+        }
+        
+        print(f"   📤 Respuesta final:")
+        print(f"      🔒 Fechas bloqueadas: {len(fechas_bloqueadas)} días")
+        print(f"      📅 Fecha límite: {response_data['fecha_limite']}")
+        print(f"      🚫 Hay bloqueos: {response_data['hay_bloqueos']}")
+        print(f"🔚 FIN DEBUG - verificar_disponibilidad_extension\n")
+        
+        return JsonResponse(response_data)
+        
+    except Exception as e:
+        print(f"❌ ERROR en verificar_disponibilidad_extension: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'error': f'Error interno: {str(e)}'}, status=500)
