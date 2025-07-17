@@ -817,162 +817,183 @@
 
   // ➕ FUNCIONALIDAD PARA SOLICITAR EXTENSIÓN DE RESERVA
   function solicitarExtension() {
-    Swal.fire({
-      title: 'Solicitar Extensión de Reserva',
-      html: `
-        <div class="text-start">
-          <div class="mb-3">
-            <label class="form-label">Fecha actual de finalización</label>
-            <input type="text" class="form-control" value="{{ reserva.fecha_fin|date:'d/m/Y' }}" readonly>
+    // ✅ OBTENER FECHAS BLOQUEADAS VÍA AJAX
+    fetch(`/reservas/verificar-disponibilidad/{{ reserva.id_reserva }}/`, {
+      method: 'GET',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
+    .then(res => res.json())
+    .then(disponibilidad => {
+      
+      Swal.fire({
+        title: 'Solicitar Extensión de Reserva',
+        html: `
+          <div class="text-start">
+            <div class="mb-3">
+              <label class="form-label">Fecha actual de finalización</label>
+              <input type="text" class="form-control" value="{{ reserva.fecha_fin|date:'d/m/Y' }}" readonly>
+            </div>
+            <div class="mb-3">
+              <label for="swal-nueva-fecha" class="form-label">Nueva fecha de finalización <span class="text-danger">*</span></label>
+              <input type="text" id="swal-nueva-fecha" class="form-control" placeholder="Seleccione la nueva fecha" required readonly>
+              <small class="text-muted">Máximo 7 días adicionales</small>
+            </div>
+            <div class="mb-3">
+              <label for="swal-motivo" class="form-label">Motivo de la extensión <span class="text-danger">*</span></label>
+              <textarea id="swal-motivo" class="form-control" rows="3" placeholder="Explique por qué necesita extender la reserva (mínimo 10 caracteres)" required minlength="10"></textarea>
+              <small class="text-muted">Campo obligatorio - Mínimo 10 caracteres</small>
+            </div>
+            <div class="alert alert-info">
+              <i class="bi bi-info-circle me-2"></i>
+              El costo será calculado automáticamente según los días adicionales.
+            </div>
+            ${disponibilidad.fechas_bloqueadas && disponibilidad.fechas_bloqueadas.length > 0 ? 
+              `<div class="alert alert-warning">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <strong>Fechas no disponibles:</strong> Hay reservas confirmadas que limitan la extensión.
+              </div>` : ''
+            }
           </div>
-          <div class="mb-3">
-            <label for="swal-nueva-fecha" class="form-label">Nueva fecha de finalización <span class="text-danger">*</span></label>
-            <input type="text" id="swal-nueva-fecha" class="form-control" placeholder="Seleccione la nueva fecha" required readonly>
-            <small class="text-muted">Máximo 7 días adicionales</small>
-          </div>
-          <div class="mb-3">
-            <label for="swal-motivo" class="form-label">Motivo de la extensión <span class="text-danger">*</span></label>
-            <textarea id="swal-motivo" class="form-control" rows="3" placeholder="Explique por qué necesita extender la reserva (mínimo 10 caracteres)" required minlength="10"></textarea>
-            <small class="text-muted">Campo obligatorio - Mínimo 10 caracteres</small>
-          </div>
-          <div class="alert alert-info">
-            <i class="bi bi-info-circle me-2"></i>
-            El costo será calculado automáticamente según los días adicionales.
-          </div>
-        </div>
-      `,
-      showCancelButton: true,
-      confirmButtonText: 'Solicitar Extensión',
-      cancelButtonText: 'Cancelar',
-      confirmButtonColor: '#0d6efd',
-      cancelButtonColor: '#6c757d',
-      width: '500px',
-      focusConfirm: false,
-      didOpen: () => {
-        // ✅ CONFIGURAR FLATPICKR CUANDO SE ABRE EL MODAL
-        const fechaFinActual = new Date('{{ reserva.fecha_fin|date:"Y-m-d" }}');
-        const fechaMinima = new Date(fechaFinActual);
-        fechaMinima.setDate(fechaMinima.getDate() + 2); // Mínimo 1 día después
-        
-        const fechaMaxima = new Date(fechaFinActual);
-        fechaMaxima.setDate(fechaMaxima.getDate() + 7); // Máximo 7 días después
-        
-        flatpickr('#swal-nueva-fecha', {
-          dateFormat: "d/m/Y",
-          minDate: fechaMinima,
-          maxDate: fechaMaxima,
-          locale: "es",
-          allowInput: false,
-          clickOpens: true,
-          defaultDate: null,
-          // ✅ NUEVO: Validar cuando se selecciona una fecha
-          onChange: function(selectedDates, dateStr, instance) {
-            validarFormulario();
-          }
-        });
-        
-        // ✅ FUNCIÓN PARA VALIDAR EL FORMULARIO COMPLETO
-        function validarFormulario() {
-          const nuevaFecha = document.getElementById('swal-nueva-fecha').value;
-          const motivo = document.getElementById('swal-motivo').value.trim();
-          const confirmButton = document.querySelector('.swal2-confirm');
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Solicitar Extensión',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#0d6efd',
+        cancelButtonColor: '#6c757d',
+        width: '500px',
+        focusConfirm: false,
+        didOpen: () => {
+          const fechaFinActual = new Date('{{ reserva.fecha_fin|date:"Y-m-d" }}');
+          const fechaMinima = new Date(fechaFinActual);
+          fechaMinima.setDate(fechaMinima.getDate() + 2);
           
-          // Habilitar botón solo si ambos campos están completos
-          if (nuevaFecha && motivo.length >= 10) {
-            confirmButton.disabled = false;
-            confirmButton.style.opacity = '1';
-            confirmButton.style.cursor = 'pointer';
-          } else {
-            confirmButton.disabled = true;
-            confirmButton.style.opacity = '0.6';
-            confirmButton.style.cursor = 'not-allowed';
+          let fechaMaxima = new Date(fechaFinActual);
+          fechaMaxima.setDate(fechaMaxima.getDate() + 8);
+          
+          if (disponibilidad.fecha_limite) {
+            const fechaLimite = new Date(disponibilidad.fecha_limite);
+            if (fechaLimite < fechaMaxima) {
+              fechaMaxima = fechaLimite;
+            }
           }
-        }
-        
-        // ✅ VALIDACIÓN EN TIEMPO REAL DEL MOTIVO
-        const motivoTextarea = document.getElementById('swal-motivo');
-        motivoTextarea.addEventListener('input', function() {
-          validarFormulario(); // Llamar a la validación general
-        });
-        
-        // ✅ VALIDACIÓN EN TIEMPO REAL DE CARACTERES
-        motivoTextarea.addEventListener('keyup', function() {
-          const caracteresActuales = this.value.length;
-          const caracteresMinimos = 10;z
-        });
-        
-        // Inicialmente deshabilitar el botón
-        const confirmButton = document.querySelector('.swal2-confirm');
-        confirmButton.disabled = true;
-        confirmButton.style.opacity = '0.6';
-        confirmButton.style.cursor = 'not-allowed';
-      },
-      preConfirm: () => {
-        const nuevaFecha = document.getElementById('swal-nueva-fecha').value;
-        const motivo = document.getElementById('swal-motivo').value;
-        
-        if (!nuevaFecha) {
-          Swal.showValidationMessage('Debe seleccionar una nueva fecha');
-          return false;
-        }
-        
-        if (!motivo || motivo.trim() === '') {
-          Swal.showValidationMessage('Debe explicar el motivo de la extensión');
-          return false;
-        }
-        
-        if (motivo.trim().length < 10) {
-          Swal.showValidationMessage('El motivo debe tener al menos 10 caracteres');
-          return false;
-        }
-        
-        // Calcular días de diferencia
-        const fechaFinActual = new Date('{{ reserva.fecha_fin|date:"Y-m-d" }}');
-        const fechaSeleccionada = new Date(nuevaFecha.split('/').reverse().join('-'));
-        const diasDiferencia = Math.ceil((fechaSeleccionada - fechaFinActual) / (1000 * 60 * 60 * 24));
-        
-        if (diasDiferencia < 1 || diasDiferencia > 7) {
-          Swal.showValidationMessage('La extensión debe ser entre 1 y 7 días');
-          return false;
-        }
-        
-        return { 
-          dias_extension: diasDiferencia, 
-          nueva_fecha_fin: fechaSeleccionada.toISOString().split('T')[0],
-          motivo: motivo.trim()
-        };
-      }
-    }).then((result) => {
-      if (result.isConfirmed) {
-        Swal.fire({ title: 'Procesando...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
-        fetch("{% url 'solicitar_extension' reserva.id_reserva %}", {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-            'X-Requested-With': 'XMLHttpRequest'
-          },
-          body: new URLSearchParams(result.value)
-        })
-        .then(res => res.json())
-        .then(data => {
-          if (data.success) {
-            Swal.fire({ 
-              icon: 'success', 
-              title: 'Solicitud enviada', 
-              text: 'Será revisada por un administrador', 
-              timer: 3000,
-              timerProgressBar: true,  // ✅ MOSTRAR BARRA DE PROGRESO
-              showConfirmButton: false // ✅ OCULTAR BOTÓN OK
-            })
-            .then(() => window.location.reload());
-          } else {
-            Swal.fire({ icon: 'error', title: 'Error', text: data.error || 'Error desconocido' });
+          
+          flatpickr('#swal-nueva-fecha', {
+            dateFormat: "d/m/Y",
+            minDate: fechaMinima,
+            maxDate: fechaMaxima,
+            locale: "es",
+            allowInput: false,
+            clickOpens: true,
+            defaultDate: null,
+            disable: disponibilidad.fechas_bloqueadas || [],
+            onChange: function(selectedDates, dateStr, instance) {
+              validarFormulario();
+            }
+          });
+          
+          function validarFormulario() {
+            const nuevaFecha = document.getElementById('swal-nueva-fecha').value;
+            const motivo = document.getElementById('swal-motivo').value.trim();
+            const confirmButton = document.querySelector('.swal2-confirm');
+            
+            if (nuevaFecha && motivo.length >= 10) {
+              confirmButton.disabled = false;
+              confirmButton.style.opacity = '1';
+              confirmButton.style.cursor = 'pointer';
+            } else {
+              confirmButton.disabled = true;
+              confirmButton.style.opacity = '0.6';
+              confirmButton.style.cursor = 'not-allowed';
+            }
           }
-        });
-      }
-    });
-  }
+          
+          const motivoTextarea = document.getElementById('swal-motivo');
+          motivoTextarea.addEventListener('input', validarFormulario);
+          
+          const confirmButton = document.querySelector('.swal2-confirm');
+          confirmButton.disabled = true;
+          confirmButton.style.opacity = '0.6';
+          confirmButton.style.cursor = 'not-allowed';
+        },
+        preConfirm: () => {
+          const nuevaFecha = document.getElementById('swal-nueva-fecha').value;
+          const motivo = document.getElementById('swal-motivo').value;
+          
+          if (!nuevaFecha) {
+            Swal.showValidationMessage('Debe seleccionar una nueva fecha');
+            return false;
+          }
+          
+          if (!motivo || motivo.trim() === '') {
+            Swal.showValidationMessage('Debe explicar el motivo de la extensión');
+            return false;
+          }
+          
+          if (motivo.trim().length < 10) {
+            Swal.showValidationMessage('El motivo debe tener al menos 10 caracteres');
+            return false;
+          }
+          
+          const fechaFinActual = new Date('{{ reserva.fecha_fin|date:"Y-m-d" }}');
+          const fechaSeleccionada = new Date(nuevaFecha.split('/').reverse().join('-'));
+          const diasDiferencia = Math.ceil((fechaSeleccionada - fechaFinActual) / (1000 * 60 * 60 * 24));
+          
+          if (diasDiferencia < 1 || diasDiferencia > 7) {
+            Swal.showValidationMessage('La extensión debe ser entre 1 y 7 días');
+            return false;
+          }
+          
+          return { 
+            dias_extension: diasDiferencia, 
+            nueva_fecha_fin: fechaSeleccionada.toISOString().split('T')[0],
+            motivo: motivo.trim()
+          };
+        }
+      }).then((result) => {
+        if (result.isConfirmed) {
+          Swal.fire({ title: 'Procesando...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
+          fetch("{% url 'solicitar_extension' reserva.id_reserva %}", {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+              'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: new URLSearchParams(result.value)
+          })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              Swal.fire({ 
+                icon: 'success', 
+                title: 'Solicitud enviada', 
+                text: 'Tu solicitud será revisada por un administrador en las próximas horas', 
+                timer: 4000,
+                timerProgressBar: true,
+                showConfirmButton: false
+              })
+              .then(() => window.location.reload());
+            } else {
+              Swal.fire({ 
+                icon: 'error', 
+                title: 'Error', 
+                text: data.error || 'Error desconocido'
+              });
+            }
+          });
+        }
+      }); // ← CERRAR EL .then(result) del SweetAlert
+    }) // ← CERRAR EL .then(disponibilidad) del fetch inicial
+    .catch(error => {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'No se pudo verificar la disponibilidad. Intenta nuevamente.'
+      });
+    }); // ← CERRAR EL .catch del fetch inicial
+  } // ← CERRAR LA FUNCIÓN solicitarExtension
   </script>
 {% endblock %} 
 {% endblock %}

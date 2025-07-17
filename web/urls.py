@@ -93,6 +93,11 @@ urlpatterns = [
     path('reservas/<int:id_reserva>/pagar/', viewsReservas.pagar_reserva, name='pagar_reserva'),
     path('reservas/<int:id_reserva>/extender/', viewsReservas.solicitar_extension, name='solicitar_extension'),
     path('reservas/<int:id_reserva>/completar-huespedes/', viewsReservas.completar_huespedes, name='completar_huespedes'),
+
+    # Verificar disponibilidad para extensiones
+    path('reservas/verificar-disponibilidad/<int:id_reserva>/', viewsReservas.verificar_disponibilidad_extension, name='verificar_disponibilidad_extension'),
+    
+
     # guardar_patente
     path('reservas/<int:id_reserva>/guardar-patente/', viewsReservas.guardar_patente, name='guardar_patente'),
     path('cochera/<int:id_cochera>/horarios/', viewsReservas.obtener_horarios_ocupados, name='obtener_horarios_ocupados'),
