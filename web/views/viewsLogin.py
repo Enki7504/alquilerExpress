@@ -96,6 +96,11 @@ def login_view(request):
             user_auth = authenticate(request, username=user.username, password=password)
             if user_auth is not None:
                 if user_auth.is_staff:
+                    # Solo permitir acceso a staff si está activo
+                    if not user_auth.is_active:
+                        messages.error(request, 'Tu cuenta de administrador está desactivada.')
+                        return render(request, 'login.html', {'form': form})
+                    
                     # Si es admin o empleado, inicia 2FA
                     codigo = f"{random.randint(0, 999999):06d}"
                     LoginOTP.objects.update_or_create(
@@ -112,9 +117,15 @@ def login_view(request):
                     request.session["username_otp"] = user_auth.username
                     return redirect("loginAdmin_2fa")
                 else:
+                    # Para clientes, permitir login independientemente de is_active
                     login(request, user_auth)
                     request.session['mostrar_bienvenida'] = True
-                    messages.success(request, f"Bienvenido, {user_auth.first_name}!")
+                    
+                    if user_auth.is_active:
+                        messages.success(request, f"Bienvenido, {user_auth.first_name}!")
+                    else:
+                        messages.warning(request, f"Bienvenido, {user_auth.first_name}. Tu cuenta está temporalmente limitada.")
+                    
                     return redirect('index')
             else:
                 messages.error(request, 'Usuario o contraseña inválidos.')

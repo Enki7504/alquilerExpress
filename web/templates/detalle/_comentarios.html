@@ -25,7 +25,7 @@
 <div class="collapse" id="collapseComentarios">
 
   <!-- FORMULARIO PARA AGREGAR COMENTARIOS -->
-  {% if user.is_authenticated and es_usuario %}
+  {% if user.is_authenticated and user.is_active %}
     <section class="container mt-5">
       <div class="card shadow-sm border-0 mb-5">
         <div class="card-body p-4">

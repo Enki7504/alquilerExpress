@@ -37,9 +37,13 @@ from ..utils import (
 @login_required
 def crear_reserva_inmueble(request, id_inmueble):
     """
-    Permite a un cliente crear una reserva para un inmueble, validando que no existan reservas superpuestas
-    del mismo cliente para el mismo inmueble.
+    Permite a un cliente crear una reserva para un inmueble
     """
+    # Verificar que el cliente no esté bloqueado
+    if not request.user.is_active:
+        messages.error(request, "Tu cuenta está bloqueada. No puedes realizar reservas.")
+        return redirect("detalle_inmueble", id_inmueble=id_inmueble)
+    
     inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
     perfil = request.user.perfil
 
@@ -143,9 +147,13 @@ def crear_reserva_inmueble(request, id_inmueble):
 @login_required
 def crear_reserva_cochera(request, id_cochera):
     """
-    Permite a los usuarios crear una reserva para una cochera.
-    Valida fechas, mínimo de noches, superposición de reservas y crea la relación con el cliente.
+    Permite a un cliente crear una reserva para una cochera
     """
+    # Verificar que el cliente no esté bloqueado
+    if not request.user.is_active:
+        messages.error(request, "Tu cuenta está bloqueada. No puedes realizar reservas.")
+        return redirect("detalle_cochera", id_cochera=id_cochera)
+    
     cochera = get_object_or_404(Cochera, id_cochera=id_cochera)
     perfil = request.user.perfil
 
@@ -589,7 +597,7 @@ def cancelar_reserva(request, id_reserva):
             mensaje=mensaje
         )
     mensaje = "La reserva fue cancelada correctamente."
-    # Si es una petición AJAX, devolvé JSON
+    # Si es una petición AJAX, devolé JSON
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         return JsonResponse({
             'success': True,

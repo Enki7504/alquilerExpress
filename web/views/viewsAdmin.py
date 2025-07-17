@@ -176,6 +176,7 @@ from django.contrib import messages
 def admin_bloquear_cliente(request):
     query = request.GET.get('q', '').strip()
 
+    # Cambiar el filtro para mostrar clientes por estado is_active
     clientes_activos = User.objects.filter(is_active=True, is_staff=False)
     if query:
         clientes_activos = clientes_activos.filter(
@@ -185,6 +186,12 @@ def admin_bloquear_cliente(request):
         )
 
     clientes_bloqueados = User.objects.filter(is_active=False, is_staff=False)
+    if query:
+        clientes_bloqueados = clientes_bloqueados.filter(
+            Q(first_name__icontains=query) |
+            Q(last_name__icontains=query) |
+            Q(username__icontains=query)
+        )
 
     if request.method == 'POST':
         cliente_id = request.POST.get('cliente_id')
@@ -194,10 +201,10 @@ def admin_bloquear_cliente(request):
 
         if accion == 'bloquear':
             cliente.is_active = False
-            messages.success(request, 'Cliente bloqueado correctamente.')
+            messages.success(request, f'Cliente {cliente.first_name} {cliente.last_name} bloqueado correctamente.')
         elif accion == 'desbloquear':
             cliente.is_active = True
-            messages.success(request, 'Cliente desbloqueado correctamente.')
+            messages.success(request, f'Cliente {cliente.first_name} {cliente.last_name} desbloqueado correctamente.')
 
         cliente.save()
         return redirect('admin_bloquear_cliente')
