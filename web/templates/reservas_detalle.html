@@ -44,8 +44,16 @@
             </span>
           </div>
           <div class="mb-2">
-            <strong>Fechas:</strong>
-            <span class="ms-1">{{ reserva.fecha_inicio|date:"d/m/Y" }} - {{ reserva.fecha_fin|date:"d/m/Y" }}</span>
+            <strong>Fecha de llegada:</strong>
+            <span class="ms-1">
+              {{ reserva.fecha_inicio|date:"d/m/Y" }}{% if reserva.cochera %} - {{ reserva.fecha_inicio|time:"H:i" }} {% endif %}
+            </span>
+          </div>
+          <div class="mb-2">
+            <strong>Fecha de Salida:</strong>
+            <span class="ms-1">
+              {{ reserva.fecha_fin|date:"d/m/Y" }}{% if reserva.cochera %} - {{ reserva.fecha_fin|time:"H:i" }} {% endif %}
+            </span>
           </div>
           <div class="mb-2">
             <strong>Precio total:</strong>
@@ -309,12 +317,6 @@
     {% endif %}
       {% if reserva.cochera %}
         <div class="mb-3">
-          <div class="mt-2">
-            <strong>Horarios:</strong> 
-            <span class="ms-1">
-              {{ reserva.fecha_inicio|time:"H:i" }} - {{ reserva.fecha_fin|time:"H:i" }}
-            </span>
-          </div>
           {% if reserva.patente %}
             <div class="mt-2">
               <strong>Patente registrada:</strong> {{ reserva.patente }}

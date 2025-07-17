@@ -34,8 +34,12 @@
                 -
               {% endif %}
             </td>
-            <td>{{ reserva.fecha_inicio|date:"d/m/Y" }}</td>
-            <td>{{ reserva.fecha_fin|date:"d/m/Y" }}</td>
+            <td>{{ reserva.fecha_inicio|date:"d/m/Y" }}
+                {% if reserva.cochera %} - {{ reserva.fecha_inicio|time:"H:i" }} {% endif %}
+            </td>
+            <td>{{ reserva.fecha_fin|date:"d/m/Y" }}
+                {% if reserva.cochera %} - {{ reserva.fecha_fin|time:"H:i" }} {% endif %}
+            </td>
             <td>
               <span class="badge 
                 {% if reserva.estado.nombre == 'Confirmada' %}bg-success
