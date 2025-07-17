@@ -340,7 +340,7 @@ def admin_inmuebles_reservas(request, id_inmueble):
     reservas = Reserva.objects.filter(
         inmueble=inmueble,
         estado__nombre__in=["Pendiente", "Concurrente", "Aprobada", "Pagada", "Confirmada"]
-    ).order_by('-fecha_inicio')
+    ).order_by('-id_reserva')
     return render(request, 'admin/admin_inmuebles_reservas.html', {
         'inmueble': inmueble, 
         'reservas': reservas
@@ -357,7 +357,7 @@ def admin_inmuebles_historial(request, id_inmueble):
     reservas = Reserva.objects.filter(
         inmueble=inmueble,
         estado__nombre__in=['Cancelada', 'Rechazada', 'Finalizada']
-    ).order_by('-fecha_inicio')
+    ).order_by('-id_reserva')
     return render(request, 'admin/admin_inmuebles_historial.html', {
         'inmueble': inmueble,
         'historial': historial,
@@ -621,7 +621,7 @@ def admin_cocheras_reservas(request, id_cochera):
     reservas = Reserva.objects.filter(
         cochera=cochera,
         estado__nombre__in=["Pendiente", "Concurrente", "Aprobada", "Pagada", "Confirmada"]
-    ).order_by('-fecha_inicio')
+    ).order_by('-id_reserva')
     return render(request, 'admin/admin_cocheras_reservas.html', {'cochera': cochera, 'reservas': reservas})
 
 @login_required
@@ -635,7 +635,7 @@ def admin_cocheras_historial(request, id_cochera):
     reservas = Reserva.objects.filter(
         cochera=cochera,
         estado__nombre__in=['Cancelada', 'Rechazada', 'Finalizada']
-    ).order_by('-fecha_inicio')
+    ).order_by('-id_reserva')
     return render(request, 'admin/admin_cocheras_historial.html', {
         'cochera': cochera,
         'historial': historial,
