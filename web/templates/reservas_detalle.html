@@ -354,10 +354,8 @@
     function actualizarTimerCreacion() {
       const timerElement = document.getElementById('timer-creacion');
       if (!timerElement) return;
-      
       if (tiempoCreacion <= 0) {
         timerElement.innerText = "Tiempo agotado";
-        // Cambiar el alert a rojo cuando expire
         const alertElement = timerElement.closest('.alert');
         if (alertElement) {
           alertElement.className = 'alert alert-danger d-flex align-items-center gap-2 mb-0 mt-1 py-2 px-3';
@@ -368,19 +366,14 @@
         }
         return;
       }
-      
       let horas = Math.floor(tiempoCreacion / 3600);
       let minutos = Math.floor((tiempoCreacion % 3600) / 60);
       let segundos = Math.floor(tiempoCreacion % 60);
-      
-      timerElement.innerText = 
+      timerElement.innerText =
         `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}:${segundos.toString().padStart(2, '0')}`;
-      
       tiempoCreacion--;
       setTimeout(actualizarTimerCreacion, 1000);
     }
-    
-    // Iniciar el timer cuando el DOM esté listo
     document.addEventListener('DOMContentLoaded', function() {
       actualizarTimerCreacion();
     });
