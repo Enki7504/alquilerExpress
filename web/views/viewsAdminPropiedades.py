@@ -336,14 +336,16 @@ def admin_inmuebles_reservas(request, id_inmueble):
     """
     Muestra el estado actual y las reservas de un inmueble específico.
     """
+    today = timezone.now()
     inmueble = get_object_or_404(Inmueble, id_inmueble=id_inmueble)
     reservas = Reserva.objects.filter(
         inmueble=inmueble,
-        estado__nombre__in=["Pendiente", "Concurrente", "Aprobada", "Pagada", "Confirmada"]
-    ).order_by('-id_reserva')
+        estado__nombre__in=["Pendiente", "Aprobada", "Pagada", "Confirmada"]
+    ).order_by('-fecha_inicio')
     return render(request, 'admin/admin_inmuebles_reservas.html', {
         'inmueble': inmueble, 
-        'reservas': reservas
+        'reservas': reservas,
+        'today': today,
     })
 
 @login_required
@@ -617,12 +619,17 @@ def admin_cocheras_reservas(request, id_cochera):
     """
     Muestra el estado actual y las reservas de una cochera específica.
     """
+    today = timezone.now()
     cochera = get_object_or_404(Cochera, id_cochera=id_cochera)
     reservas = Reserva.objects.filter(
         cochera=cochera,
-        estado__nombre__in=["Pendiente", "Concurrente", "Aprobada", "Pagada", "Confirmada"]
-    ).order_by('-id_reserva')
-    return render(request, 'admin/admin_cocheras_reservas.html', {'cochera': cochera, 'reservas': reservas})
+        estado__nombre__in=["Pendiente", "Aprobada", "Pagada", "Confirmada"]
+    ).order_by('-fecha_inicio')
+    return render(request, 'admin/admin_cocheras_reservas.html', {
+        'cochera': cochera, 
+        'reservas': reservas,
+        'today': today, 
+    })
 
 @login_required
 @user_passes_test(is_admin_or_empleado)
