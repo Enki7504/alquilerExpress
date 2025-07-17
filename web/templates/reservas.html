@@ -39,10 +39,10 @@
                 {% elif reserva.estado.nombre == 'Rechazada' %}bg-secondary
                 {% elif reserva.estado.nombre == 'Pagada' %}bg-info
                 {% elif reserva.estado.nombre == 'Aprobada' %}bg-primary
-                {% elif reserva.estado.nombre == 'Pendiente' %}bg-warning
+                {% elif reserva.estado.nombre == 'Pendiente' or reserva.estado.nombre == 'Concurrente' %}bg-warning
                 {% elif reserva.estado.nombre == 'Finalizada' %}bg-dark
                 {% else %}bg-warning{% endif %}">
-                {{ reserva.estado.nombre }}
+                {% if reserva.estado.nombre == 'Concurrente' %}Pendiente{% else %}{{ reserva.estado.nombre }}{% endif %}
               </span>
             </td>
             <td>

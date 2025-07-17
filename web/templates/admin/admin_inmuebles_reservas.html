@@ -44,15 +44,18 @@
                 {% elif reserva.estado.nombre == 'Rechazada' %}bg-secondary
                 {% elif reserva.estado.nombre == 'Pagada' %}bg-info
                 {% elif reserva.estado.nombre == 'Aprobada' %}bg-primary
-                {% elif reserva.estado.nombre == 'Pendiente' %}bg-warning
+                {% elif reserva.estado.nombre == 'Pendiente' or reserva.estado.nombre == 'Concurrente' %}bg-warning
                 {% elif reserva.estado.nombre == 'Finalizada' %}bg-dark
                 {% else %}bg-warning{% endif %}">
-                {{ reserva.estado.nombre }}
+                {% if reserva.estado.nombre == 'Concurrente' %}Pendiente{% else %}{{ reserva.estado.nombre }}{% endif %}
               </span>
             </td>
             <td>
               {% if reserva.estado.nombre == 'Pendiente' %}
                 <button class="btn btn-sm btn-success" onclick="cambiarEstado('{{ reserva.id_reserva }}', 'Aprobada')">Aprobar Solicitud</button>
+                <button class="btn btn-sm btn-danger" onclick="cambiarEstado('{{ reserva.id_reserva }}', 'Rechazada')">Rechazar Solicitud</button>
+              {% elif reserva.estado.nombre == 'Concurrente' %}
+                <button class="btn btn-sm btn-success" onclick="cambiarEstado('{{ reserva.id_reserva }}', 'Concurrente')" disabled >Aprobar Solicitud</button>
                 <button class="btn btn-sm btn-danger" onclick="cambiarEstado('{{ reserva.id_reserva }}', 'Rechazada')">Rechazar Solicitud</button>
               {% elif reserva.estado.nombre == 'Aprobada' %}
                 <button class="btn btn-sm btn-success">Esperando Pago...</button>
@@ -143,12 +146,27 @@ function cambiarEstado(reservaId, nuevoEstado) {
       }
     });
   } else {
+    // ✅ AGREGAR MENSAJE ESPECIAL PARA ESTADO "APROBADA"
+    let mensaje = `¿Estás seguro que desea cambiar el estado de la vivienda "${nombreInmueble}" a "${nuevoEstado}"?`;
+    let htmlContent = '';
+    
+    if (nuevoEstado === 'Aprobada') {
+      htmlContent = `
+        <div class="alert alert-warning mt-3 text-start">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>
+          <strong>Importante:</strong> Las reservas superpuestas con esta aprobación no podrán ser aceptadas hasta que esta reserva se cancele. Si esta reserva se paga, las reservas superpuestas se cancelarán automáticamente.
+        </div>
+      `;
+    }
+
     Swal.fire({
-      title: `¿Estás seguro que desea cambiar el estado de la vivienda "${nombreInmueble}" a "${nuevoEstado}"?`,
+      title: mensaje,
+      html: htmlContent,  // ← AGREGAR CONTENIDO HTML
       icon: 'question',
       showCancelButton: true,
       confirmButtonText: 'Confirmar',
       cancelButtonText: 'Cancelar',
+      width: '500px'  // ← AGREGAR ANCHO PARA QUE SE VEA BIEN EL MENSAJE
     }).then((result) => {
       if (result.isConfirmed) {
         // Mostrar notificación de carga
