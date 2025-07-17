@@ -658,7 +658,8 @@
               title: 'Error',
               text: "Error al generar el pago: " + (data.error || "Error desconocido"),
               timer: 3000,
-              showConfirmButton: false
+              showConfirmButton: false,
+              timerProgressBar: true
             });
           }
         });
@@ -699,7 +700,8 @@
                           title: '¡Guardado!',
                           text: data.message || 'Huéspedes guardados correctamente',
                           timer: 2000,
-                          showConfirmButton: false
+                          showConfirmButton: false,
+                          timerProgressBar: true
                       }).then(() => {
                           // Recargar página para mostrar datos actualizados
                           window.location.reload();
