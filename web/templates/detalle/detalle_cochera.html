@@ -78,6 +78,19 @@
       opacity: 1 !important;
       cursor: not-allowed;
     }
+
+    /* Agregar al CSS en detalle_cochera.html */
+    .hora-btn.pasada {
+      background-color: #e9ecef !important;
+      color: #6c757d !important;
+      cursor: not-allowed !important;
+      opacity: 0.5 !important;
+    }
+
+    .hora-btn.pasada:hover {
+      background-color: #e9ecef !important;
+      border-color: #dee2e6 !important;
+    }
   </style>
 {% endblock %}
 
@@ -240,8 +253,7 @@
 
       if (!fecha) {
         container.querySelectorAll('.hora-btn').forEach(btn => {
-          btn.classList.remove('ocupada', 'propia');
-          // NO remover 'selected' aquí
+          btn.classList.remove('ocupada', 'propia', 'pasada');
         });
         return;
       }
@@ -259,31 +271,48 @@
         }
 
         const horasOcupadas = data.horarios_ocupados || [];
-        const horasPropias = data.horarios_propios || [];
+        const horasPropias = data.horarios_propios || []; // ← CORREGIDO
+        
+        // ✅ Verificar si es el día de hoy
+        const fechaSeleccionada = new Date(fecha + 'T00:00:00'); // Forzar zona horaria local
+        const hoy = new Date();
+        const esHoy = fechaSeleccionada.toDateString() === hoy.toDateString();
+        const horaActual = hoy.getHours();
+        
+        console.log(`Es hoy: ${esHoy}, Hora actual: ${horaActual}`);
 
         container.querySelectorAll('.hora-btn').forEach(btn => {
           const hora = btn.dataset.hora;
+          const horaNumero = parseInt(hora.split(':')[0]);
 
-          // Limpiar clases (menos 'selected')
-          btn.classList.remove('ocupada', 'propia');
+          // Limpiar todas las clases
+          btn.classList.remove('ocupada', 'propia', 'pasada');
 
-          if (horasOcupadas.includes(hora)) {
+          // ✅ CORREGIDO: Bloquear horas pasadas si es hoy
+          const esPasada = esHoy && horaNumero < horaActual; // ← CAMBIADO <= por <
+          
+          console.log(`Hora ${hora}: esPasada=${esPasada}, ocupada=${horasOcupadas.includes(hora)}`);
+
+          if (esPasada) {
+            btn.classList.add('ocupada', 'pasada');
+            console.log(`✓ Bloqueando hora pasada: ${hora}`);
+          } else if (horasOcupadas.includes(hora)) {
             if (horasPropias.includes(hora)) {
               btn.classList.add('ocupada', 'propia');
             } else {
               btn.classList.add('ocupada');
             }
-
-            // Deseleccionar si está ocupada
-            if (btn.classList.contains('selected')) {
-              btn.classList.remove('selected');
-              const input = document.getElementById(containerId.replace('-selector', '_time'));
-              if (input && input.value === hora) {
-                input.value = '';
-              }
-            }
           } else if (horasPropias.includes(hora)) {
             btn.classList.add('propia');
+          }
+
+          // Deseleccionar si está ocupada o es pasada
+          if (btn.classList.contains('ocupada') && btn.classList.contains('selected')) {
+            btn.classList.remove('selected');
+            const input = document.getElementById(containerId.replace('-selector', '_time'));
+            if (input && input.value === hora) {
+              input.value = '';
+            }
           }
         });
 
