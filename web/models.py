@@ -245,3 +245,19 @@ class Tarjeta(models.Model):
 
     def __str__(self):
         return f"**** **** **** {self.numero[-4:]} ({self.nombre})"
+    
+class ExtensionReserva(models.Model):
+    reserva = models.ForeignKey(Reserva, on_delete=models.CASCADE, related_name='extensiones')
+    fecha_fin_original = models.DateField()
+    fecha_fin_nueva = models.DateField()
+    dias_extension = models.IntegerField()
+    precio_extension = models.DecimalField(max_digits=10, decimal_places=2)
+    estado = models.ForeignKey(Estado, on_delete=models.CASCADE)  # Pendiente, Aprobada, Rechazada
+    fecha_solicitud = models.DateTimeField(auto_now_add=True)
+    fecha_respuesta = models.DateTimeField(null=True, blank=True)
+    motivo = models.TextField(blank=True)
+    comentario_admin = models.TextField(blank=True)
+    
+    class Meta:
+        db_table = 'extension_reserva'
+        ordering = ['-fecha_solicitud']

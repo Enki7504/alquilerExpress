@@ -101,7 +101,19 @@
               {% endif %}
             </div>
           {% elif not is_admin_or_empleado %}
-            {% block formulario_reserva %}{% endblock %}
+            {% if not user.is_authenticated %}
+              <div class="alert alert-info">
+                <a href="{% url 'login' %}" class="btn btn-primary">Inicia sesión para reservar</a>
+              </div>
+            {% elif not user.is_active %}
+              <div class="alert alert-warning">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <strong>Cuenta bloqueada</strong>
+                <p class="mb-0">Tu cuenta está temporalmente bloqueada. No puedes realizar reservas, comentarios y reseñas.</p>
+              </div>
+            {% else %}
+              {% block formulario_reserva %}{% endblock %}
+            {% endif %}
           {% endif %}
         </div>
       </div>

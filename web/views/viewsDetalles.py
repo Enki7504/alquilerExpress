@@ -429,3 +429,123 @@ def eliminar_resenia(request, id_resenia):
     resenia.delete()
     messages.success(request, "Reseña eliminada correctamente.")
     return redirect(request.META.get('HTTP_REFERER', 'index'))
+
+@login_required
+def agregar_comentario(request, tipo, id_objeto):
+    """
+    Permite a un cliente agregar un comentario
+    """
+    # Verificar que el cliente no esté bloqueado
+    if not request.user.is_active:
+        messages.error(request, "Tu cuenta está bloqueada. No puedes realizar comentarios.")
+        if tipo == 'inmueble':
+            return redirect('detalle_inmueble', id_inmueble=id_objeto)
+        else:
+            return redirect('detalle_cochera', id_cochera=id_objeto)
+    
+    perfil = getattr(request.user, "perfil", None)
+    objeto = None
+
+    if tipo == 'inmueble':
+        objeto = get_object_or_404(Inmueble, id_inmueble=id_objeto)
+    elif tipo == 'cochera':
+        objeto = get_object_or_404(Cochera, id_cochera=id_objeto)
+    else:
+        messages.error(request, "Tipo de objeto desconocido.")
+        return redirect('index')
+
+    # Procesar el formulario
+    if request.method == 'POST':
+        comentario_form = ComentarioForm(request.POST)
+        if comentario_form.is_valid():
+            comentario = comentario_form.save(commit=False)
+            comentario.usuario = perfil
+            if tipo == 'inmueble':
+                comentario.inmueble = objeto
+            else:
+                comentario.cochera = objeto
+            comentario.save()
+
+            # Notificar al empleado asignado al inmueble/cochera si existe
+            if objeto.empleado:
+                crear_notificacion(
+                    usuario=objeto.empleado,
+                    mensaje=f"Nuevo comentario en '{objeto.nombre}': \"{comentario.descripcion}\""
+                )
+
+            messages.success(request, "Comentario añadido exitosamente.")
+            if tipo == 'inmueble':
+                return redirect('detalle_inmueble', id_inmueble=id_objeto)
+            else:
+                return redirect('detalle_cochera', id_cochera=id_objeto)
+    else:
+        comentario_form = ComentarioForm()
+
+    return render(request, 'detalle/agregar_comentario.html', {
+        'form': comentario_form,
+        'objeto': objeto,
+        'tipo': tipo,
+    })
+
+@login_required
+def agregar_resenia(request, tipo, id_objeto):
+    """
+    Permite a un cliente agregar una reseña
+    """
+    # Verificar que el cliente no esté bloqueado
+    if not request.user.is_active:
+        messages.error(request, "Tu cuenta está bloqueada. No puedes realizar reseñas.")
+        if tipo == 'inmueble':
+            return redirect('detalle_inmueble', id_inmueble=id_objeto)
+        else:
+            return redirect('detalle_cochera', id_cochera=id_objeto)
+    
+    perfil = getattr(request.user, "perfil", None)
+    objeto = None
+
+    if tipo == 'inmueble':
+        objeto = get_object_or_404(Inmueble, id_inmueble=id_objeto)
+    elif tipo == 'cochera':
+        objeto = get_object_or_404(Cochera, id_cochera=id_objeto)
+    else:
+        messages.error(request, "Tipo de objeto desconocido.")
+        return redirect('index')
+
+    # Verificar si el usuario ya dejó una reseña para este objeto
+    if tipo == 'inmueble':
+        reseña_existente = Resenia.objects.filter(inmueble=objeto, usuario=perfil).first()
+    else:
+        reseña_existente = Resenia.objects.filter(cochera=objeto, usuario=perfil).first()
+
+    if reseña_existente:
+        messages.error(request, "Ya has dejado una reseña para este objeto.")
+        if tipo == 'inmueble':
+            return redirect('detalle_inmueble', id_inmueble=id_objeto)
+        else:
+            return redirect('detalle_cochera', id_cochera=id_objeto)
+
+    # Procesar el formulario
+    if request.method == 'POST':
+        resenia_form = ReseniaForm(request.POST)
+        if resenia_form.is_valid():
+            resenia = resenia_form.save(commit=False)
+            resenia.usuario = perfil
+            if tipo == 'inmueble':
+                resenia.inmueble = objeto
+            else:
+                resenia.cochera = objeto
+            resenia.save()
+
+            messages.success(request, "¡Reseña publicada!")
+            if tipo == 'inmueble':
+                return redirect('detalle_inmueble', id_inmueble=id_objeto)
+            else:
+                return redirect('detalle_cochera', id_cochera=id_objeto)
+    else:
+        resenia_form = ReseniaForm()
+
+    return render(request, 'detalle/agregar_resenia.html', {
+        'form': resenia_form,
+        'objeto': objeto,
+        'tipo': tipo,
+    })

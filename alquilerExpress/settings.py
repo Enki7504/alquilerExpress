@@ -159,3 +159,9 @@ CSRF_TRUSTED_ORIGINS = [
 CELERY_BROKER_URL = 'redis://localhost:6379/0'
 CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+
+# En settings.py
+AUTHENTICATION_BACKENDS = [
+    'web.authentication.CustomAuthBackend',  # Tu backend personalizado
+    'django.contrib.auth.backends.ModelBackend',  # Backend por defecto
+]
