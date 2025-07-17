@@ -46,15 +46,18 @@
                 {% elif reserva.estado.nombre == 'Rechazada' %}bg-secondary
                 {% elif reserva.estado.nombre == 'Pagada' %}bg-info
                 {% elif reserva.estado.nombre == 'Aprobada' %}bg-primary
-                {% elif reserva.estado.nombre == 'Pendiente' %}bg-warning
+                {% elif reserva.estado.nombre == 'Pendiente' or reserva.estado.nombre == 'Concurrente' %}bg-warning
                 {% elif reserva.estado.nombre == 'Finalizada' %}bg-dark
                 {% else %}bg-warning{% endif %}">
-                {{ reserva.estado.nombre }}
+                {% if reserva.estado.nombre == 'Concurrente' %}Pendiente{% else %}{{ reserva.estado.nombre }}{% endif %}
               </span>
             </td>
             <td>
               {% if reserva.estado.nombre == 'Pendiente' %}
                 <button class="btn btn-sm btn-success" onclick="cambiarEstado('{{ reserva.id_reserva }}', 'Aprobada')">Aprobar Solicitud</button>
+                <button class="btn btn-sm btn-danger" onclick="cambiarEstado('{{ reserva.id_reserva }}', 'Rechazada')">Rechazar Solicitud</button>
+              {% elif reserva.estado.nombre == 'Concurrente' %}
+                <button class="btn btn-sm btn-success" onclick="cambiarEstado('{{ reserva.id_reserva }}', 'Concurrente')" disabled >Aprobar Solicitud</button>
                 <button class="btn btn-sm btn-danger" onclick="cambiarEstado('{{ reserva.id_reserva }}', 'Rechazada')">Rechazar Solicitud</button>
               {% elif reserva.estado.nombre == 'Aprobada' %}
                 <button class="btn btn-sm btn-success">Esperando Pago...</button>

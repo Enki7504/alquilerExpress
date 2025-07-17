@@ -8,6 +8,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 from datetime import datetime, timedelta
+from django.utils import timezone
+from datetime import datetime, timedelta, time
 
 # Importaciones de modelos locales
 from ..models import (
@@ -280,6 +282,7 @@ def cambiar_estado_reserva(request, id_reserva):
         # Validar transiciones de estado permitidas
         transiciones_permitidas = {
             'Pendiente': ['Aprobada', 'Rechazada'],
+            'Concurrente': ['Aprobada', 'Rechazada'],
             'Aprobada': ['Pagada', 'Cancelada', 'Rechazada'],
             'Pagada': ['Confirmada', 'Cancelada'],
             'Confirmada': ['Finalizada', 'Cancelada']
@@ -292,6 +295,60 @@ def cambiar_estado_reserva(request, id_reserva):
             # Si pasa a Aprobada, setea aprobada_en
             if nuevo_estado == "Aprobada":
                 reserva.aprobada_en = timezone.now()
+                
+                # ✅ Cancelar automáticamente reservas superpuestas
+                estado_cancelada = Estado.objects.get(nombre='Cancelada')
+                
+                # Para inmuebles
+                if reserva.inmueble:
+                    reservas_superpuestas = Reserva.objects.filter(
+                        inmueble=reserva.inmueble,
+                        estado__nombre__in=['Pendiente'],
+                        fecha_inicio__lt=reserva.fecha_fin,
+                        fecha_fin__gt=reserva.fecha_inicio
+                    ).exclude(id_reserva=reserva.id_reserva)
+                    
+                    for r in reservas_superpuestas:
+                        #r.estado = estado_cancelada
+                        #r.save()
+
+                        # Cambia el estado de la reserva a "Concurrente"
+                        r.estado, _ = Estado.objects.get_or_create(nombre='Concurrente')
+                        r.save()
+
+                        
+                        # Notificar al cliente afectado
+                        #cliente_rel = ClienteInmueble.objects.filter(reserva=r).first()
+                        #if cliente_rel:
+                        #    crear_notificacion(
+                        #        usuario=cliente_rel.cliente,
+                        #        mensaje=f"Tu reserva #{r.id_reserva} para '{reserva.inmueble.nombre}' del {r.fecha_inicio} al {r.fecha_fin} fue cancelada automáticamente porque se aprobó otra reserva en fechas superpuestas."
+                        #    )
+                
+                # Para cocheras
+                elif reserva.cochera:
+                    reservas_superpuestas = Reserva.objects.filter(
+                        cochera=reserva.cochera,
+                        estado__nombre__in=['Pendiente'],
+                        fecha_inicio__lt=reserva.fecha_fin,
+                        fecha_fin__gt=reserva.fecha_inicio
+                    ).exclude(id_reserva=reserva.id_reserva)
+                    
+                    for r in reservas_superpuestas:
+                        #r.estado = estado_cancelada
+                        #r.save()
+
+                        r.estado = Estado.objects.get_or_create(nombre='Concurrente')
+                        r.save()
+                        
+                        # Notificar al cliente afectado
+                        #cliente_rel = ClienteInmueble.objects.filter(reserva=r).first()
+                        #if cliente_rel:
+                        #    crear_notificacion(
+                        #        usuario=cliente_rel.cliente,
+                        #        mensaje=f"Tu reserva #{r.id_reserva} para '{reserva.cochera.nombre}' del {r.fecha_inicio} al {r.fecha_fin} fue cancelada automáticamente porque se aprobó otra reserva en horarios superpuestos."
+                        #    )
+
             reserva.estado = estado
             reserva.save()
 
@@ -360,12 +417,13 @@ def cambiar_estado_reserva(request, id_reserva):
                             f"Accedé al apartado 'Mis Reservas' para pagar."
                             + (f" (Comentario: {comentario})" if comentario else "")
                         )
+                        # Agregar que se cancelen todas las reservas que esten dentro del mismo lapso de la reserva que se acepta
+                        
                     else:
                         mensaje_notif = (
                             f"El estado de tu reserva #{reserva.id_reserva} ha cambiado a: {estado.nombre}"
                             + (f" (Comentario: {comentario})" if comentario else "") + "."
                         )
-                        
 
                     crear_notificacion(
                         usuario=cliente_rel.cliente,
