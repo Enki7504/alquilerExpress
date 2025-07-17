@@ -19,7 +19,8 @@ from ..models import (
     ReservaEstado,
     Cochera,
     Huesped,
-    Tarjeta
+    Tarjeta,
+    ExtensionReserva
 )
 
 # Importaciones de utilidades locales
@@ -544,19 +545,62 @@ def ver_detalle_reserva(request, id_reserva):
     # Calcular tiempo restante para pagar (24 horas desde aprobación)
     tiempo_restante = None
     if reserva.estado.nombre == "Aprobada":
-        aprobada_estado = ReservaEstado.objects.filter(
-            reserva=reserva,
-            estado__nombre='Aprobada'
-        ).order_by('-fecha').first()
-        
-        if aprobada_estado:
-            tiempo_limite = aprobada_estado.fecha + timedelta(hours=24)
+        # Asegurar que ambos sean datetime
+        fecha_aprobacion = reserva.aprobada_en  # Debe ser datetime
+        if fecha_aprobacion:
+            tiempo_limite = fecha_aprobacion + timedelta(hours=24)
             ahora = timezone.now()
-            if ahora < tiempo_limite:
-                tiempo_restante = (tiempo_limite - ahora).total_seconds()
-            else:
-                tiempo_restante = 0
-
+            tiempo_restante = max(0, (tiempo_limite - ahora).total_seconds())
+    
+    # Verificar si puede extender y calcular cuándo podrá hacerlo
+    puede_extender = False
+    fecha_disponible_extension = None
+    horas_para_extension = None
+    
+    if reserva.estado.nombre == 'Confirmada' and not is_admin_or_empleado(request.user):
+        # Usar localtime para obtener la fecha/hora actual con la zona horaria correcta
+        ahora = timezone.localtime()
+        
+        # Convertir fecha_fin a datetime con la misma zona horaria
+        fecha_fin_datetime = timezone.localtime(
+            timezone.make_aware(
+                datetime.combine(reserva.fecha_fin, datetime.min.time().replace(hour=23, minute=59, second=59))
+            )
+        )
+        
+        # Calcular horas restantes hasta el final de la reserva
+        horas_restantes = (fecha_fin_datetime - ahora).total_seconds() / 3600
+        
+        # ✅ CORREGIR: Permitir extensión si quedan MÁS de 24 horas
+        puede_extender = horas_restantes > 24
+        
+        # Calcular cuándo ya NO estará disponible la extensión (24 horas antes del final)
+        fecha_limite_extension = fecha_fin_datetime - timedelta(hours=24)
+        
+        # Calcular horas restantes para que se deshabilite la extensión
+        if puede_extender:
+            # Si puede extender, mostrar cuántas horas quedan hasta que se deshabilite
+            diferencia_segundos = (fecha_limite_extension - ahora).total_seconds()
+            horas_para_extension = max(0, diferencia_segundos / 3600)
+            fecha_disponible_extension = fecha_limite_extension
+        else:
+            # Si ya no puede extender, mostrar que ya pasó el límite
+            horas_para_extension = 0
+            fecha_disponible_extension = fecha_limite_extension
+        
+        # Debug: Agregar print para verificar
+        print(f"DEBUG - horas_restantes hasta final: {horas_restantes}")
+        print(f"DEBUG - puede_extender: {puede_extender}")
+        print(f"DEBUG - fecha_limite_extension: {fecha_limite_extension}")
+        print(f"DEBUG - horas_para_extension: {horas_para_extension}")
+            
+        # Verificar que no haya extensiones pendientes
+        if ExtensionReserva.objects.filter(reserva=reserva, estado__nombre='Pendiente').exists():
+            puede_extender = False
+    
+    # Obtener extensiones de la reserva
+    extensiones = ExtensionReserva.objects.filter(reserva=reserva).order_by('-fecha_solicitud')
+    
     context = {
         'reserva': reserva,
         'huespedes': huespedes,
@@ -566,6 +610,10 @@ def ver_detalle_reserva(request, id_reserva):
         'is_admin_or_empleado': is_admin_or_empleado(request.user),
         'tiempo_restante': tiempo_restante,
         'tiempo_restante_creacion': tiempo_restante_creacion,
+        'puede_extender': puede_extender,
+        'fecha_disponible_extension': fecha_disponible_extension,
+        'horas_para_extension': horas_para_extension,
+        'extensiones': extensiones,
     }
     return render(request, 'reservas_detalle.html', context)
 
@@ -684,6 +732,106 @@ def pagar_reserva(request, id_reserva):
         'id_reserva': id_reserva,
         'tarjetas': tarjetas,
     })
+
+# En viewsReservas.py
+@login_required
+def solicitar_extension(request, id_reserva):
+    reserva = get_object_or_404(Reserva, id_reserva=id_reserva)
+    
+    # Verificar que el usuario es el dueño de la reserva
+    if not ClienteInmueble.objects.filter(cliente=request.user.perfil, reserva=reserva).exists():
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'error': 'No tienes permisos para esta reserva.'})
+        messages.error(request, "No tienes permisos para esta reserva.")
+        return redirect('ver_detalle_reserva', id_reserva=id_reserva)
+    
+    # Verificar que la reserva esté confirmada
+    if reserva.estado.nombre != 'Confirmada':
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'error': 'Solo se pueden extender reservas confirmadas.'})
+        messages.error(request, "Solo se pueden extender reservas confirmadas.")
+        return redirect('ver_detalle_reserva', id_reserva=id_reserva)
+    
+    # Verificar que no haya extensiones pendientes
+    if ExtensionReserva.objects.filter(reserva=reserva, estado__nombre='Pendiente').exists():
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'error': 'Ya tienes una solicitud de extensión pendiente.'})
+        messages.error(request, "Ya tienes una solicitud de extensión pendiente.")
+        return redirect('ver_detalle_reserva', id_reserva=id_reserva)
+    
+    if request.method == 'POST':
+        try:
+            dias_extension = int(request.POST.get('dias_extension', 0))
+            motivo = request.POST.get('motivo', '')
+            
+            # Validaciones
+            if dias_extension < 1 or dias_extension > 7:
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'success': False, 'error': 'Los días de extensión deben ser entre 1 y 7.'})
+                messages.error(request, "Los días de extensión deben ser entre 1 y 7.")
+                return redirect('ver_detalle_reserva', id_reserva=id_reserva)
+            
+            # Calcular nueva fecha fin
+            fecha_fin_nueva = reserva.fecha_fin + timedelta(days=dias_extension)
+            
+            # Verificar disponibilidad
+            if reserva.inmueble:
+                conflictos = Reserva.objects.filter(
+                    inmueble=reserva.inmueble,
+                    estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada'],
+                    fecha_inicio__lte=fecha_fin_nueva,
+                    fecha_fin__gte=reserva.fecha_fin
+                ).exclude(id_reserva=reserva.id_reserva)
+            else:
+                conflictos = Reserva.objects.filter(
+                    cochera=reserva.cochera,
+                    estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada'],
+                    fecha_inicio__lte=fecha_fin_nueva,
+                    fecha_fin__gte=reserva.fecha_fin
+                ).exclude(id_reserva=reserva.id_reserva)
+            
+            if conflictos.exists():
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'success': False, 'error': 'No se puede extender. Hay conflictos con otras reservas.'})
+                messages.error(request, "No se puede extender. Hay conflictos con otras reservas.")
+                return redirect('ver_detalle_reserva', id_reserva=id_reserva)
+            
+            # Calcular precio
+            precio_por_dia = reserva.inmueble.precio_por_dia if reserva.inmueble else reserva.cochera.precio_por_dia
+            precio_extension = precio_por_dia * dias_extension
+            
+            # Crear solicitud de extensión
+            ExtensionReserva.objects.create(
+                reserva=reserva,
+                fecha_fin_original=reserva.fecha_fin,
+                fecha_fin_nueva=fecha_fin_nueva,
+                dias_extension=dias_extension,
+                precio_extension=precio_extension,
+                estado=Estado.objects.get(nombre='Pendiente'),
+                motivo=motivo
+            )
+            
+            # Notificar al empleado
+            empleado = reserva.inmueble.empleado if reserva.inmueble else reserva.cochera.empleado
+            if empleado:
+                crear_notificacion(
+                    usuario=empleado,
+                    mensaje=f"Nueva solicitud de extensión para la reserva #{reserva.id_reserva} por {dias_extension} días."
+                )
+            
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': True, 'message': 'Solicitud de extensión enviada correctamente.'})
+            
+            messages.success(request, "Solicitud de extensión enviada. Será revisada por un administrador.")
+            return redirect('ver_detalle_reserva', id_reserva=id_reserva)
+            
+        except ValueError:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': 'Datos inválidos.'})
+            messages.error(request, "Datos inválidos.")
+            return redirect('ver_detalle_reserva', id_reserva=id_reserva)
+    
+    return redirect('ver_detalle_reserva', id_reserva=id_reserva)
 
 ################################################################################################################
 # --- Cancelar reservas vencidas  ---

@@ -3,6 +3,11 @@
 
 {% block title %}Detalle de Reserva #{{ reserva.id_reserva }}{% endblock %}
 
+{% block extra_css %}
+  {{ block.super }}
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+{% endblock %}
+
 {% block content %}
 <style>
   .bg-azul-alquiler {
@@ -166,6 +171,85 @@
               {% endif %}
             {% endif %}
           {% endif %}
+
+          <!-- SECCIÓN DE EXTENSIÓN CORREGIDA -->
+          {% if reserva.estado.nombre == 'Confirmada' and not is_admin_or_empleado %}
+            <div class="card mt-4 shadow-sm border-0" style="border-left: 4px solid #ffc107 !important;">
+              <div class="card-body">
+                {% if puede_extender %}
+                  <!-- Estado: Disponible (más de 24 horas restantes) -->
+                  <div class="alert alert-success border-0 mb-3" style="background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);">
+                    <div class="d-flex align-items-center">
+                      <i class="bi bi-check-circle-fill me-3 fs-4 text-success"></i>
+                      <div>
+                        <h6 class="mb-1 text-success fw-bold">¡Extensión Disponible!</h6>
+                        <p class="mb-0 text-muted">Puedes solicitar una extensión hasta 24 horas antes del final.</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Countdown hasta que se deshabilite -->
+                  {% if horas_para_extension and horas_para_extension > 0 %}
+                    <div class="text-center mb-3">
+                      <div class="d-inline-block p-3 rounded-pill shadow-sm" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+                        <span class="text-white fw-bold" id="countdown-extension">
+                          <i class="bi bi-clock me-2"></i>
+                          {% if horas_para_extension < 1 %}
+                            {{ horas_para_extension|floatformat:0 }} minutos para deshabilitarse
+                          {% elif horas_para_extension < 24 %}
+                            {{ horas_para_extension|floatformat:0 }} horas para deshabilitarse
+                          {% else %}
+                            {{ horas_para_extension|floatformat:0 }} horas para deshabilitarse
+                          {% endif %}
+                        </span>
+                      </div>
+                    </div>
+                  {% endif %}
+                  
+                  <div class="text-center">
+                    <button type="button" class="btn btn-warning btn-lg px-5 py-3 shadow-sm" onclick="solicitarExtension()" style="border-radius: 15px; font-weight: 600;">
+                      <i class="bi bi-calendar-plus me-2"></i>
+                      Solicitar Extensión
+                    </button>
+                  </div>
+                {% else %}
+                  <!-- Estado: No disponible (24 horas o menos) -->
+                  <div class="alert alert-danger border-0 mb-3" style="background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);">
+                    <div class="d-flex align-items-center">
+                      <i class="bi bi-exclamation-triangle-fill me-3 fs-4 text-danger"></i>
+                      <div>
+                        <h6 class="mb-1 text-danger fw-bold">Extensión No Disponible</h6>
+                        <p class="mb-1">Las extensiones solo se pueden solicitar con más de 24 horas de anticipación.</p>
+                        <div class="row mt-2">
+                          <div class="col-md-6">
+                            <small class="text-muted">
+                              <i class="bi bi-calendar-event me-1"></i>
+                              <strong>Finalización:</strong> {{ reserva.fecha_fin|date:"d/m/Y H:i" }}
+                            </small>
+                          </div>
+                          <div class="col-md-6">
+                            <small class="text-muted">
+                              <i class="bi bi-clock me-1"></i>
+                              <strong>Límite era:</strong> {{ fecha_disponible_extension|date:"d/m/Y H:i" }}
+                            </small>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="text-center">
+                    <button type="button" class="btn btn-outline-secondary btn-lg px-5 py-3" disabled style="border-radius: 15px; font-weight: 600;">
+                      <i class="bi bi-calendar-x me-2"></i>
+                      Extensión No Disponible
+                      <br>
+                      <small class="text-muted">Faltan 24 horas o menos</small>
+                    </button>
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+          {% endif %}
         </div>
         <br>
         {% if not is_admin_or_empleado %}
@@ -254,346 +338,398 @@
   </div>
 </div>
 
-  {% if tiempo_restante and tiempo_restante > 0 %}
-    <script>
-      console.log('Tiempo restante:', "{{ tiempo_restante|floatformat:0 }}");
-      let tiempo = Number("{{ tiempo_restante|floatformat:0 }}");
-      function actualizarTimer() {
-        if (tiempo <= 0) {
-          document.getElementById('timer').innerText = "Tiempo agotado";
-          const btn = document.getElementById('pagar-btn');
-          if (btn) {
-            btn.classList.add('disabled');
-            btn.setAttribute('aria-disabled', 'true');
-            btn.onclick = function(e){ e.preventDefault(); };
+
+<!-- ⏱️ TIMER DE PAGO (CONTEO REGRESIVO) -->
+{% if tiempo_restante and tiempo_restante > 0 %}
+<script>
+  let tiempo = Number("{{ tiempo_restante|floatformat:0 }}");
+  function actualizarTimer() {
+    if (tiempo <= 0) {
+      document.getElementById('timer').innerText = "Tiempo agotado";
+      const btn = document.getElementById('pagar-btn');
+      if (btn) {
+        btn.classList.add('disabled');
+        btn.setAttribute('aria-disabled', 'true');
+        btn.onclick = function(e){ e.preventDefault(); };
+      }
+      return;
+    }
+    let horas = Math.floor(tiempo / 3600);
+    let minutos = Math.floor((tiempo % 3600) / 60);
+    let segundos = Math.floor(tiempo % 60);
+    document.getElementById('timer').innerText =
+      `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}:${segundos.toString().padStart(2, '0')}`;
+    tiempo--;
+    setTimeout(actualizarTimer, 1000);
+  }
+  actualizarTimer();
+</script>
+{% endif %}
+
+<!-- ⏳ CUENTA REGRESIVA PARA SOLICITAR EXTENSIÓN -->
+{% if reserva.estado.nombre == 'Confirmada' and not is_admin_or_empleado %}
+<script>
+  function updateExtensionCountdown() {
+    {% if puede_extender and fecha_disponible_extension %}
+      const fechaLimite = new Date('{{ fecha_disponible_extension|date:"c" }}');
+      const ahora = new Date();
+      const diferencia = fechaLimite - ahora;
+
+      const countdownElement = document.getElementById('countdown-extension');
+      if (countdownElement) {
+        if (diferencia > 0) {
+          const horas = Math.floor(diferencia / (1000 * 60 * 60));
+          const minutos = Math.floor((diferencia % (1000 * 60 * 60)) / (1000 * 60));
+          
+          let textoTiempo = '';
+          let iconoTiempo = 'bi-clock';
+          
+          if (horas > 24) {
+            const dias = Math.floor(horas / 24);
+            const horasRestantes = horas % 24;
+            textoTiempo = `${dias}d ${horasRestantes}h para deshabilitarse`;
+            iconoTiempo = 'bi-calendar-check';
+          } else if (horas > 0) {
+            textoTiempo = `${horas}h ${minutos}m para deshabilitarse`;
+            iconoTiempo = 'bi-clock';
+          } else {
+            textoTiempo = `${minutos}m para deshabilitarse`;
+            iconoTiempo = 'bi-hourglass-bottom';
           }
-          return;
+          
+          countdownElement.innerHTML = `<i class="${iconoTiempo} me-2"></i>${textoTiempo}`;
+          
+          // Cambiar color según el tiempo restante
+          const parent = countdownElement.parentElement;
+          if (horas < 1) {
+            parent.style.background = 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)';
+            countdownElement.style.animationDuration = '0.5s';
+          } else if (horas < 6) {
+            parent.style.background = 'linear-gradient(135deg, #ffc107 0%, #e0a800 100%)';
+            countdownElement.style.animationDuration = '1s';
+          } else {
+            parent.style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
+            countdownElement.style.animationDuration = '2s';
+          }
+        } else {
+          // Tiempo agotado - la extensión ya no está disponible
+          countdownElement.innerHTML = `<i class="bi bi-x-circle-fill me-2"></i>Extensión ya no disponible`;
+          countdownElement.parentElement.style.background = 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)';
+          
+          // Recargar después de 3 segundos para mostrar el estado deshabilitado
+          setTimeout(() => {
+            location.reload();
+          }, 3000);
         }
-        let horas = Math.floor(tiempo / 3600);
-        let minutos = Math.floor((tiempo % 3600) / 60);
-        let segundos = Math.floor(tiempo % 60);
-        document.getElementById('timer').innerText =
-          `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}:${segundos.toString().padStart(2, '0')}`;
-        tiempo--;
-        setTimeout(actualizarTimer, 1000);
       }
-      actualizarTimer();
-    </script>
-  {% endif %}
+    {% endif %}
+  }
 
-  <!-- Timer para las 72 horas desde creación -->
-  {% if tiempo_restante_creacion and tiempo_restante_creacion > 0 %}
-    <script>
-      console.log('Tiempo restante desde creación:', "{{ tiempo_restante_creacion|floatformat:0 }}");
-      let tiempoCreacion = Number("{{ tiempo_restante_creacion|floatformat:0 }}");
-      function actualizarTimerCreacion() {
-        if (tiempoCreacion <= 0) {
-          document.getElementById('timer-creacion').innerText = "Tiempo agotado";
-          return;
-        }
-        let horas = Math.floor(tiempoCreacion / 3600);
-        let minutos = Math.floor((tiempoCreacion % 3600) / 60);
-        let segundos = Math.floor(tiempoCreacion % 60);
-        document.getElementById('timer-creacion').innerText =
-          `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}:${segundos.toString().padStart(2, '0')}`;
-        tiempoCreacion--;
-        setTimeout(actualizarTimerCreacion, 1000);
-      }
-      actualizarTimerCreacion();
-    </script>
-  {% endif %}
+  // Ejecutar inmediatamente y cada 30 segundos
+  updateExtensionCountdown();
+  setInterval(updateExtensionCountdown, 30000);
+</script>
+{% endif %}
 
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+{% block extra_js %}
+  {{ block.super }}
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script>
+  // 💡 INICIALIZAR TOOLTIP DE BOOTSTRAP
+  document.addEventListener('DOMContentLoaded', function() {
+      const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+      tooltipTriggerList.map(function (el) {
+          return new bootstrap.Tooltip(el);
+      });
+  });
 
-    console.log('Cargando script de cancelar reserva');
-
-    // Boton para cancelar la reserva
-    document.addEventListener('DOMContentLoaded', function() {
-      console.log('DOM completamente cargado y analizado');
-      const cancelarForm = document.getElementById('cancelarReservaForm');
-      console.log('Formulario de cancelar reserva:', cancelarForm);
-      if (cancelarForm) {
-        console.log('Se hizo submit y se interceptó el evento');
-        cancelarForm.addEventListener('submit', function(e) {
-          e.preventDefault();
-          console.log('Se hizo   submit y se interceptó el evento1');
-          Swal.fire({
-            title: '¿Seguro que deseas cancelar la reserva?',
-            text: "Esta acción no se puede deshacer.",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
-            confirmButtonText: 'Sí, cancelar',
-            cancelButtonText: 'No, volver'
-          }).then((result) => {
-            if (result.isConfirmed) {
-              fetch(this.action, {
-                method: 'POST',
-                headers: {
-                  'X-Requested-With': 'XMLHttpRequest',
-                  'X-CSRFToken': document.querySelector('input[name="csrfmiddlewaretoken"]').value
-                }
-              })
-              .then(res => res.json())
-              .then(data => {
-                if (data.success) {
-                  Swal.fire({
-                    icon: 'success',
-                    title: 'Cancelada',
-                    text: data.mensaje,
-                    timer: 2500,
-                    timerProgressBar: true,
-                    showConfirmButton: false
-                  }).then(() => {
-                    window.location.href = "{% url 'reservas_usuario' %}";
-                  });
-                }
-              });
-            }
-          });
-        });
-      }
-      const cancelarPagadaForm = document.getElementById('cancelarReservaPagadaForm');
-      if (cancelarPagadaForm) {
-        cancelarPagadaForm.addEventListener('submit', function(e) {
-          e.preventDefault();
-          
-          // Obtener la política de cancelación
-          let politicaCancelacion = '';
-          {% if reserva.inmueble %}
-            politicaCancelacion = `{{ reserva.inmueble.politica_cancelacion|escapejs }}`;
-          {% elif reserva.cochera %}
-            politicaCancelacion = `{{ reserva.cochera.politica_cancelacion|escapejs }}`;
-          {% else %}
-            politicaCancelacion = 'No hay política de cancelación disponible.';
-          {% endif %}          
-          
-          // Modal único: Mostrar política y confirmar cancelación
-          Swal.fire({
-            title: 'Política de Cancelación',
-            html: `
-              <div class="text-start mb-3">
-                <p><strong>Antes de cancelar tu reserva, revisa la política de cancelación:</strong></p>
-                <div class="alert alert-info text-start">
-                  ${politicaCancelacion}
-                </div>
-                <p class="text-warning"><strong>Esta acción no se puede deshacer.</strong></p>
-              </div>
-            `,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Sí, cancelar reserva',
-            cancelButtonText: 'No, mantener reserva',
-            width: '600px'
-          }).then((result) => {
-            if (result.isConfirmed) {
-              // Proceder directamente con la cancelación
-              fetch(this.action, {
-                method: 'POST',
-                headers: {
-                  'X-Requested-With': 'XMLHttpRequest',
-                  'X-CSRFToken': document.querySelector('input[name="csrfmiddlewaretoken"]').value
-                }
-              })
-              .then(res => res.json())
-              .then(data => {
-                if (data.success) {
-                  Swal.fire({
-                    icon: 'success',
-                    title: 'Reserva Cancelada',
-                    text: data.mensaje,
-                    timer: 3000,
-                    timerProgressBar: true,
-                    showConfirmButton: false
-                  }).then(() => {
-                    window.location.href = "{% url 'reservas_usuario' %}";
-                  });
-                }
-              });
-            }
-          });
-        });
-      }
-    });
-    // Boton para pagar la reserva
-    document.addEventListener('DOMContentLoaded', function() {
-      const pagarBtn = document.getElementById('pagar-btn');
-      if (pagarBtn) {
-        pagarBtn.addEventListener('click', function() {
-          fetch("{% url 'crear_preferencia_mp' %}", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "X-CSRFToken": "{{ csrf_token }}"
-            },
-            body: JSON.stringify({
-                monto: {{ reserva.precio_total }},
-                descripcion: "Pago de reserva #{{ reserva.id_reserva }}",
-                id_reserva: {{ reserva.id_reserva }}
+  // ❌ CANCELACIÓN DE RESERVA (ANTES DE PAGO)
+  document.addEventListener('DOMContentLoaded', function() {
+    const cancelarForm = document.getElementById('cancelarReservaForm');
+    if (cancelarForm) {
+      cancelarForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        Swal.fire({
+          title: '¿Seguro que deseas cancelar la reserva?',
+          text: "Esta acción no se puede deshacer.",
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#d33',
+          cancelButtonColor: '#3085d6',
+          confirmButtonText: 'Sí, cancelar',
+          cancelButtonText: 'No, volver'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            fetch(this.action, {
+              method: 'POST',
+              headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': document.querySelector('input[name="csrfmiddlewaretoken"]').value
+              }
             })
-          })
-          .then(res => res.json())
-          .then(data => {
-            if (data.init_point) {
-              window.location.href = data.init_point;
-            } else {
+            .then(res => res.json())
+            .then data => {
+              if (data.success) {
                 Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: "Error al generar el pago: " + (data.error || "Error desconocido"),
-                timer: 3000,
-                timerProgressBar: true,
-                showConfirmButton: false
+                  icon: 'success',
+                  title: 'Cancelada',
+                  text: data.mensaje,
+                  timer: 2500,
+                  showConfirmButton: false
+                }).then(() => {
+                  window.location.href = "{% url 'reservas_usuario' %}";
                 });
-            }
-          });
+              }
+            });
+          }
         });
-      }
-    });
+      });
+    }
+  });
 
-    // JS para el formulario de huespedes
-    document.addEventListener('DOMContentLoaded', function() {
-      console.log('Cargando script de formulario de huéspedes');
-      const form_huespedes = document.getElementById('form-huespedes');
-      if (form_huespedes) {
-        form_huespedes.addEventListener('submit', function(e) {
-          e.preventDefault();
-          const formData = new FormData(form_huespedes);
-
-          // Limpiar errores anteriores
-          document.querySelectorAll('.error-message').forEach(el => el.remove());
-
-          fetch(form_huespedes.action, {
-            method: 'POST',
-            headers: {
-              'X-CSRFToken': form_huespedes.querySelector('[name=csrfmiddlewaretoken]').value,
-              'X-Requested-With': 'XMLHttpRequest'
-            },
-            body: formData
-          })
-          .then(res => res.json())
-          .then(data => {
-            if (data.success) {
-              Swal.fire({
-                icon: 'success',
-                title: data.message || 'Huéspedes guardados correctamente.',
-                toast: true,
-                position: 'top-end',
-                timer: 2000,
-                timerProgressBar: true,
-                showConfirmButton: false
-              }).then(() => {
-                window.location.reload();
-              });
-            } else if (data.errores) {
-              Object.entries(data.errores).forEach(([field, error]) => {
-                const input = form_huespedes.querySelector(`[name="${field}"]`);
-                if (input && !input.parentNode.querySelector('.error-message')) {
-                  const div = document.createElement('div');
-                  div.className = 'error-message text-danger mt-1 small';
-                  div.textContent = error;
-                  input.parentNode.appendChild(div);
-                }
-              });
-            }
-          });
+  // ⚠️ CANCELACIÓN DE RESERVA PAGADA (CON POLÍTICA)
+  document.addEventListener('DOMContentLoaded', function() {
+    const cancelarPagadaForm = document.getElementById('cancelarReservaPagadaForm');
+    if (cancelarPagadaForm) {
+      cancelarPagadaForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        let politicaCancelacion = `{% if reserva.inmueble %}{{ reserva.inmueble.politica_cancelacion|escapejs }}{% elif reserva.cochera %}{{ reserva.cochera.politica_cancelacion|escapejs }}{% endif %}`;
+        Swal.fire({
+          title: 'Política de Cancelación',
+          html: `
+            <p><strong>Antes de cancelar:</strong></p>
+            <div class="alert alert-info">${politicaCancelacion}</div>
+            <p class="text-warning"><strong>Esta acción no se puede deshacer.</strong></p>
+          `,
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#d33',
+          cancelButtonColor: '#6c757d',
+          confirmButtonText: 'Sí, cancelar reserva',
+          cancelButtonText: 'No, mantener reserva'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            fetch(this.action, {
+              method: 'POST',
+              headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': document.querySelector('input[name="csrfmiddlewaretoken"]').value
+              }
+            })
+            .then(res => res.json())
+            .then(data => {
+              if (data.success) {
+                Swal.fire({
+                  icon: 'success',
+                  title: 'Reserva Cancelada',
+                  text: data.mensaje,
+                  timer: 3000,
+                  showConfirmButton: false
+                }).then(() => {
+                  window.location.href = "{% url 'reservas_usuario' %}";
+                });
+              }
+            });
+          }
         });
-      }
-    });
-
-    // Fechas Y Calendarios
-    document.addEventListener('DOMContentLoaded', function() {
-      // Calcular la fecha máxima para mayores de 18 años
-      const hoy = new Date();
-      const fechaMax = new Date(hoy.getFullYear() - 18, hoy.getMonth(), hoy.getDate());
-      const fechaMaxStr = fechaMax.toISOString().split('T')[0];
-
-      // Inicializar flatpickr solo en los campos de adultos
-      flatpickr('.fecha-adulto', {
-        dateFormat: "Y-m-d",
-        maxDate: fechaMaxStr,
-        locale: "es"
       });
+    }
+  });
 
-      // Calcular el rango para niños: deben ser menores de 18 años
-      const fechaMaxNino = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate()); // hasta ayer
-      const fechaMinNino = new Date(hoy.getFullYear() - 18, hoy.getMonth(), hoy.getDate() + 1); // desde hace 18 años + 1 día
-
-      const fechaMaxNinoStr = fechaMaxNino.toISOString().split('T')[0];
-      const fechaMinNinoStr = fechaMinNino.toISOString().split('T')[0];
-
-      flatpickr('.fecha-nino', {
-        dateFormat: "Y-m-d",
-        minDate: fechaMinNinoStr,
-        maxDate: fechaMaxNinoStr,
-        locale: "es"
-      });
-    });
-
-    // JS para el formulario de patentes
-    document.addEventListener('DOMContentLoaded', function() {
-      console.log('Cargando script de formulario de patente');
-      const form_patente = document.getElementById('form-patente');
-      if (form_patente) {
-        form_patente.addEventListener('submit', function(e) {
-          e.preventDefault();
-          const formData = new FormData(form_patente);
-          fetch(form_patente.action, {
-            method: 'POST',
-            headers: {
-              'X-CSRFToken': form_patente.querySelector('[name=csrfmiddlewaretoken]').value,
-              'X-Requested-With': 'XMLHttpRequest'
-            },
-            body: formData
+  // 💰 GENERACIÓN DE PAGO CON MERCADOPAGO
+  document.addEventListener('DOMContentLoaded', function() {
+    const pagarBtn = document.getElementById('pagar-btn');
+    if (pagarBtn) {
+      pagarBtn.addEventListener('click', function() {
+        fetch("{% url 'crear_preferencia_mp' %}", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": "{{ csrf_token }}"
+          },
+          body: JSON.stringify({
+            monto: {{ reserva.precio_total }},
+            descripcion: "Pago de reserva #{{ reserva.id_reserva }}",
+            id_reserva: {{ reserva.id_reserva }}
           })
-          .then(res => res.json())
-          .then(data => {
-            if (data.success) {
-              Swal.fire({
-                icon: 'success',
-                title: data.message || 'Patente guardada correctamente.',
-                toast: true,
-                position: 'top-end',
-                timer: 2000,
-                timerProgressBar: true,
-                showConfirmButton: false
-              }).then(() => {
-                window.location.reload();
-              });
-            } else {
-              Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: data.error || 'Ocurrió un error al guardar la patente.',
-                toast: true,
-                position: 'top-end',
-                timer: 4000,
-                timerProgressBar: true,
-                showConfirmButton: false
-              });
-            }
-          })
-          .catch(err => {
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.init_point) {
+            window.location.href = data.init_point;
+          } else {
             Swal.fire({
               icon: 'error',
               title: 'Error',
-              text: 'Ocurrió un error al procesar la solicitud.',
-              toast: true,
-              position: 'top-end',
+              text: "Error al generar el pago: " + (data.error || "Error desconocido"),
               timer: 3000,
-              timerProgressBar: true,
               showConfirmButton: false
             });
-          });
+          }
+        });
+      });
+    }
+  });
+
+  // 🧍‍♂️ FORMULARIO DE HUÉSPEDES (VALIDACIÓN + GUARDADO)
+  document.addEventListener('DOMContentLoaded', function() {
+    const form_huespedes = document.getElementById('form-huespedes');
+    if (form_huespedes) {
+      form_huespedes.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(form_huespedes);
+        document.querySelectorAll('.error-message').forEach(el => el.remove());
+        fetch(form_huespedes.action, {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': form_huespedes.querySelector('[name=csrfmiddlewaretoken]').value,
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            Swal.fire({ icon: 'success', title: data.message || 'Guardado', toast: true, timer: 2000, showConfirmButton: false })
+              .then(() => window.location.reload());
+          } else if (data.errores) {
+            Object.entries(data.errores).forEach(([field, error]) => {
+              const input = form_huespedes.querySelector(`[name="${field}"]`);
+              if (input) {
+                const div = document.createElement('div');
+                div.className = 'error-message text-danger mt-1 small';
+                div.textContent = error;
+                input.parentNode.appendChild(div);
+              }
+            });
+          }
+        });
+      });
+    }
+  });
+
+  // 📅 CONFIGURACIÓN DE FLATPICKR PARA FECHAS DE NACIMIENTO
+  document.addEventListener('DOMContentLoaded', function() {
+    const hoy = new Date();
+    const fechaMax = new Date(hoy.getFullYear() - 18, hoy.getMonth(), hoy.getDate());
+    const fechaMaxStr = fechaMax.toISOString().split('T')[0];
+
+    flatpickr('.fecha-adulto', {
+      dateFormat: "Y-m-d",
+      maxDate: fechaMaxStr,
+      locale: "es"
+    });
+
+    const fechaMaxNino = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+    const fechaMinNino = new Date(hoy.getFullYear() - 18, hoy.getMonth(), hoy.getDate() + 1);
+    const fechaMaxNinoStr = fechaMaxNino.toISOString().split('T')[0];
+    const fechaMinNinoStr = fechaMinNino.toISOString().split('T')[0];
+
+    flatpickr('.fecha-nino', {
+      dateFormat: "Y-m-d",
+      minDate: fechaMinNinoStr,
+      maxDate: fechaMaxNinoStr,
+      locale: "es"
+    });
+  });
+
+  // 🚗 FORMULARIO PARA GUARDAR PATENTE DE VEHÍCULO
+  document.addEventListener('DOMContentLoaded', function() {
+    const form_patente = document.getElementById('form-patente');
+    if (form_patente) {
+      form_patente.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(form_patente);
+        fetch(form_patente.action, {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': form_patente.querySelector('[name=csrfmiddlewaretoken]').value,
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            Swal.fire({ icon: 'success', title: data.message || 'Patente guardada', toast: true, timer: 2000, showConfirmButton: false })
+              .then(() => window.location.reload());
+          } else {
+            Swal.fire({ icon: 'error', title: 'Error', text: data.error || 'Error al guardar', toast: true, timer: 4000 });
+          }
+        })
+        .catch(() => {
+          Swal.fire({ icon: 'error', title: 'Error', text: 'Error en la solicitud', toast: true, timer: 3000 });
+        });
+      });
+    }
+  });
+
+  // ➕ FUNCIONALIDAD PARA SOLICITAR EXTENSIÓN DE RESERVA
+  function solicitarExtension() {
+    Swal.fire({
+      title: 'Solicitar Extensión de Reserva',
+      html: `
+        <div class="text-start">
+          <div class="mb-3">
+            <label class="form-label">Fecha actual de finalización</label>
+            <input type="text" class="form-control" value="{{ reserva.fecha_fin|date:'d/m/Y' }}" readonly>
+          </div>
+          <div class="mb-3">
+            <label for="swal-dias" class="form-label">Días adicionales</label>
+            <input type="number" id="swal-dias" class="form-control" min="1" max="7" value="1" required>
+            <small class="text-muted">Máximo 7 días</small>
+          </div>
+          <div class="mb-3">
+            <label for="swal-motivo" class="form-label">Motivo de la extensión</label>
+            <textarea id="swal-motivo" class="form-control" rows="3" placeholder="Explique por qué necesita extender la reserva"></textarea>
+          </div>
+          <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>
+            El costo será calculado automáticamente según los días adicionales.
+          </div>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: 'Solicitar Extensión',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#0d6efd',
+      cancelButtonColor: '#6c757d',
+      width: '500px',
+      focusConfirm: false,
+      preConfirm: () => {
+        const dias = document.getElementById('swal-dias').value;
+        const motivo = document.getElementById('swal-motivo').value;
+        if (!dias || dias < 1 || dias > 7) {
+          Swal.showValidationMessage('Los días deben estar entre 1 y 7');
+          return false;
+        }
+        return { dias_extension: dias, motivo: motivo };
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        Swal.fire({ title: 'Procesando...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
+        fetch("{% url 'solicitar_extension' reserva.id_reserva %}", {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          body: new URLSearchParams(result.value)
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            Swal.fire({ icon: 'success', title: 'Solicitud enviada', text: 'Será revisada', timer: 3000 })
+              .then(() => window.location.reload());
+          } else {
+            Swal.fire({ icon: 'error', title: 'Error', text: data.error || 'Error desconocido' });
+          }
         });
       }
     });
+  }
   </script>
-  
+{% endblock %} 
 {% endblock %}
