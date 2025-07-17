@@ -81,9 +81,11 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 function cambiarEstado(reservaId, nuevoEstado) {
+  const nombreInmueble = "{{ inmueble.nombre }}";
+  
   if (nuevoEstado === 'Cancelada') {
     Swal.fire({
-      title: '¿Estás seguro de cancelar la reserva?',
+      title: `¿Estás seguro de cancelar la reserva de la vivienda "${nombreInmueble}"?`,
       input: 'text',
       inputLabel: 'Motivo de la cancelación',
       inputPlaceholder: 'Ingrese el motivo (obligatorio)',
@@ -142,7 +144,7 @@ function cambiarEstado(reservaId, nuevoEstado) {
     });
   } else {
     Swal.fire({
-      title: `¿Estás seguro de cambiar el estado a "${nuevoEstado}"?`,
+      title: `¿Estás seguro que desea cambiar el estado de la vivienda "${nombreInmueble}" a "${nuevoEstado}"?`,
       icon: 'question',
       showCancelButton: true,
       confirmButtonText: 'Confirmar',
