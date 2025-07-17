@@ -490,7 +490,7 @@
       });
   });
 
-  // ❌ CANCELACIÓN DE RESERVA (ANTES DE PAGO)
+  // ❌ CANCELACIÓN DE RESERVA (ANTES DE PAGO) - CORREGIDO
   document.addEventListener('DOMContentLoaded', function() {
     const cancelarForm = document.getElementById('cancelarReservaForm');
     if (cancelarForm) {
@@ -514,17 +514,15 @@
                 'X-CSRFToken': document.querySelector('input[name="csrfmiddlewaretoken"]').value
               }
             })
-          })
-          .then(res => res.json())
-          .then data => {
-            if (data.init_point) {
-              window.location.href = data.init_point;
-            } else {
+            .then(res => res.json())  // ← FALTABA ESTE .then
+            .then(data => {           // ← FALTABA ESTE .then
+              if (data.success) {
                 Swal.fire({
                   icon: 'success',
                   title: 'Cancelada',
                   text: data.mensaje,
                   timer: 2500,
+                  timerProgressBar: true,
                   showConfirmButton: false
                 }).then(() => {
                   window.location.href = "{% url 'reservas_usuario' %}";
@@ -537,28 +535,45 @@
     }
   });
 
-  // ⚠️ CANCELACIÓN DE RESERVA PAGADA (CON POLÍTICA)
+  // ⚠️ CANCELACIÓN DE RESERVA PAGADA (CON POLÍTICA) - CORREGIDO
   document.addEventListener('DOMContentLoaded', function() {
     const cancelarPagadaForm = document.getElementById('cancelarReservaPagadaForm');
     if (cancelarPagadaForm) {
       cancelarPagadaForm.addEventListener('submit', function(e) {
         e.preventDefault();
-        let politicaCancelacion = `{% if reserva.inmueble %}{{ reserva.inmueble.politica_cancelacion|escapejs }}{% elif reserva.cochera %}{{ reserva.cochera.politica_cancelacion|escapejs }}{% endif %}`;
+        
+        // Obtener la política de cancelación
+        let politicaCancelacion = '';
+        {% if reserva.inmueble %}
+          politicaCancelacion = `{{ reserva.inmueble.politica_cancelacion|escapejs }}`;
+        {% elif reserva.cochera %}
+          politicaCancelacion = `{{ reserva.cochera.politica_cancelacion|escapejs }}`;
+        {% else %}
+          politicaCancelacion = 'No hay política de cancelación disponible.';
+        {% endif %}
+        
+        // Modal con política de cancelación
         Swal.fire({
           title: 'Política de Cancelación',
           html: `
-            <p><strong>Antes de cancelar:</strong></p>
-            <div class="alert alert-info">${politicaCancelacion}</div>
-            <p class="text-warning"><strong>Esta acción no se puede deshacer.</strong></p>
+            <div class="text-start mb-3">
+              <p><strong>Antes de cancelar tu reserva, revisa nuestra política:</strong></p>
+              <div class="alert alert-info text-start">
+                ${politicaCancelacion}
+              </div>
+              <p class="text-warning"><strong>Esta acción no se puede deshacer.</strong></p>
+            </div>
           `,
           icon: 'warning',
           showCancelButton: true,
           confirmButtonColor: '#d33',
           cancelButtonColor: '#6c757d',
           confirmButtonText: 'Sí, cancelar reserva',
-          cancelButtonText: 'No, mantener reserva'
+          cancelButtonText: 'No, mantener reserva',
+          width: '600px'
         }).then((result) => {
           if (result.isConfirmed) {
+            // Proceder con la cancelación
             fetch(this.action, {
               method: 'POST',
               headers: {
@@ -574,11 +589,31 @@
                   title: 'Reserva Cancelada',
                   text: data.mensaje,
                   timer: 3000,
+                  timerProgressBar: true,
                   showConfirmButton: false
                 }).then(() => {
                   window.location.href = "{% url 'reservas_usuario' %}";
                 });
+              } else {
+                Swal.fire({
+                  icon: 'error',
+                  title: 'Error',
+                  text: data.error || 'Ocurrió un error al cancelar la reserva.',
+                  timer: 3000,
+                  timerProgressBar: true,
+                  showConfirmButton: false
+                });
               }
+            })
+            .catch(err => {
+              Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Ocurrió un error al procesar la solicitud.',
+                timer: 3000,
+                timerProgressBar: true,
+                showConfirmButton: false
+              });
             });
           }
         });
