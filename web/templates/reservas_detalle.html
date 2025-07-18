@@ -825,36 +825,65 @@
     .then(res => res.json())
     .then(disponibilidad => {
       
-      Swal.fire({
-        title: 'Solicitar Extensión de Reserva',
-        html: `
-          <div class="text-start">
-            <div class="mb-3">
-              <label class="form-label">Fecha actual de finalización</label>
-              <input type="text" class="form-control" value="{{ reserva.fecha_fin|date:'d/m/Y' }}" readonly>
-            </div>
-            <div class="mb-3">
-              <label for="swal-nueva-fecha" class="form-label">Nueva fecha de finalización <span class="text-danger">*</span></label>
-              <input type="text" id="swal-nueva-fecha" class="form-control" placeholder="Seleccione la nueva fecha" required readonly>
-              <small class="text-muted">Máximo 7 días adicionales</small>
-            </div>
-            <div class="mb-3">
-              <label for="swal-motivo" class="form-label">Motivo de la extensión <span class="text-danger">*</span></label>
-              <textarea id="swal-motivo" class="form-control" rows="3" placeholder="Explique por qué necesita extender la reserva (mínimo 10 caracteres)" required minlength="10"></textarea>
-              <small class="text-muted">Campo obligatorio - Mínimo 10 caracteres</small>
-            </div>
-            <div class="alert alert-info">
-              <i class="bi bi-info-circle me-2"></i>
-              El costo será calculado automáticamente según los días adicionales.
-            </div>
-            ${disponibilidad.fechas_bloqueadas && disponibilidad.fechas_bloqueadas.length > 0 ? 
-              `<div class="alert alert-warning">
-                <i class="bi bi-exclamation-triangle me-2"></i>
-                <strong>Fechas no disponibles:</strong> Hay reservas confirmadas que limitan la extensión.
-              </div>` : ''
-            }
+      // ✅ GUARDAR DISPONIBILIDAD GLOBALMENTE PARA USO EN cargarHorariosOcupados
+      window.disponibilidadExtension = disponibilidad;
+      
+      // ✅ DETECTAR SI ES COCHERA O INMUEBLE
+      const esCochera = {% if reserva.cochera %}true{% else %}false{% endif %};
+      
+      let htmlFormulario = `
+        <div class="text-start">
+          <div class="mb-3">
+            <label class="form-label">Fecha actual de finalización</label>
+            <input type="text" class="form-control" value="{{ reserva.fecha_fin|date:'d/m/Y' }}${esCochera ? ' - {{ reserva.fecha_fin|time:"H:i" }}' : ''}" readonly>
           </div>
-        `,
+          <div class="mb-3">
+            <label for="swal-nueva-fecha" class="form-label">Nueva fecha de finalización <span class="text-danger">*</span></label>
+            <input type="text" id="swal-nueva-fecha" class="form-control" placeholder="Seleccione la nueva fecha" required readonly>
+            <small class="text-muted">Máximo 7 días adicionales</small>
+          </div>`;
+      
+      // ✅ AGREGAR CAMPOS DE HORA SOLO PARA COCHERAS
+      if (esCochera) {
+        htmlFormulario += `
+          <div class="mb-3">
+            <label for="swal-nueva-hora" class="form-label">Nueva hora de finalización <span class="text-danger">*</span></label>
+            <select id="swal-nueva-hora" class="form-control" required>
+              <option value="">Seleccione una hora</option>`;
+        
+        // Generar opciones de horas (de 00:00 a 23:00)
+        for (let hora = 0; hora < 24; hora++) {
+          const horaFormateada = hora.toString().padStart(2, '0') + ':00';
+          htmlFormulario += `<option value="${horaFormateada}">${horaFormateada}</option>`;
+        }
+        
+        htmlFormulario += `
+            </select>
+            <small class="text-muted">Horario de finalización (24 horas)</small>
+          </div>`;
+      }
+      
+      htmlFormulario += `
+          <div class="mb-3">
+            <label for="swal-motivo" class="form-label">Motivo de la extensión <span class="text-danger">*</span></label>
+            <textarea id="swal-motivo" class="form-control" rows="3" placeholder="Explique por qué necesita extender la reserva (mínimo 10 caracteres)" required minlength="10"></textarea>
+            <small class="text-muted">Campo obligatorio - Mínimo 10 caracteres</small>
+          </div>-
+          <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>
+            El costo será calculado automáticamente según los días${esCochera ? ' y horas' : ''} adicionales.
+          </div>
+          ${disponibilidad.fechas_bloqueadas && disponibilidad.fechas_bloqueadas.length > 0 ? 
+            `<div class="alert alert-warning">
+              <i class="bi bi-exclamation-triangle me-2"></i>
+              <strong>Fechas no disponibles:</strong> Hay reservas confirmadas que limitan la extensión.
+            </div>` : ''
+          }
+        </div>`;
+      
+      Swal.fire({
+        title: `Solicitar Extensión de ${esCochera ? 'Cochera' : 'Inmueble'}`,
+        html: htmlFormulario,
         showCancelButton: true,
         confirmButtonText: 'Solicitar Extensión',
         cancelButtonText: 'Cancelar',
@@ -865,10 +894,10 @@
         didOpen: () => {
           const fechaFinActual = new Date('{{ reserva.fecha_fin|date:"Y-m-d" }}');
           const fechaMinima = new Date(fechaFinActual);
-          fechaMinima.setDate(fechaMinima.getDate() + 2);
+          fechaMinima.setDate(fechaMinima.getDate() + 1);
           
           let fechaMaxima = new Date(fechaFinActual);
-          fechaMaxima.setDate(fechaMaxima.getDate() + 8);
+          fechaMaxima.setDate(fechaMaxima.getDate() + 7);
           
           if (disponibilidad.fecha_limite) {
             const fechaLimite = new Date(disponibilidad.fecha_limite);
@@ -885,18 +914,91 @@
             allowInput: false,
             clickOpens: true,
             defaultDate: null,
-            disable: disponibilidad.fechas_bloqueadas || [],
+            // ✅ CAMBIO: Para cocheras NO deshabilitar fechas, solo para inmuebles
+            disable: esCochera ? [] : (disponibilidad.fechas_bloqueadas || []),
             onChange: function(selectedDates, dateStr, instance) {
+              if (esCochera) {
+                // Para cocheras, cargar horarios ocupados cuando se selecciona una fecha
+                cargarHorariosOcupados(selectedDates[0]);
+              }
               validarFormulario();
             }
           });
           
+          // ✅ FUNCIÓN PARA CARGAR HORARIOS OCUPADOS (SOLO COCHERAS)
+          function cargarHorariosOcupados(fechaSeleccionada) {
+            if (!fechaSeleccionada) return;
+            
+            const fechaFormateada = fechaSeleccionada.toISOString().split('T')[0];
+            
+            {% if reserva.cochera %}
+            // Primero obtener horarios ocupados por reservas normales
+            fetch(`/cocheras/{{ reserva.cochera.id_cochera }}/horarios-ocupados/?fecha=${fechaFormateada}`)
+              .then(res => res.json())
+              .then(data => {
+                const selectHora = document.getElementById('swal-nueva-hora');
+                const horariosOcupados = data.horarios_ocupados || [];
+                
+                // Obtener también horarios bloqueados por extensiones conflictivas
+                const disponibilidad = window.disponibilidadExtension || {};
+                const horariosBloqueadosExtension = disponibilidad.horarios_bloqueados?.[fechaFormateada] || [];
+                
+                // Combinar ambos tipos de bloqueos
+                const todosLosHorariosBloqueados = [...new Set([...horariosOcupados, ...horariosBloqueadosExtension])];
+                
+                console.log(`Fecha ${fechaFormateada}:`);
+                console.log(`- Horarios ocupados por reservas: ${horariosOcupados}`);
+                console.log(`- Horarios bloqueados por extensión: ${horariosBloqueadosExtension}`);
+                console.log(`- Total bloqueados: ${todosLosHorariosBloqueados}`);
+                
+                // Rehabilitar todas las opciones primero
+                Array.from(selectHora.options).forEach(option => {
+                  if (option.value) {
+                    option.disabled = false;
+                    option.style.color = '';
+                    option.textContent = option.value; // Resetear texto
+                  }
+                });
+                
+                // Deshabilitar horarios ocupados/bloqueados
+                todosLosHorariosBloqueados.forEach(horario => {
+                  const option = selectHora.querySelector(`option[value="${horario}"]`);
+                  if (option) {
+                    option.disabled = true;
+                    option.style.color = '#dc3545';
+                    
+                    // Diferenciar el tipo de bloqueo en el texto
+                    if (horariosOcupados.includes(horario) && horariosBloqueadosExtension.includes(horario)) {
+                      option.textContent = `${horario} (Ocupado + Conflicto)`;
+                    } else if (horariosOcupados.includes(horario)) {
+                      option.textContent = `${horario} (Ocupado)`;
+                    } else {
+                      option.textContent = `${horario} (Conflicto extensión)`;
+                    }
+                  }
+                });
+              })
+              .catch(err => {
+                console.error('Error cargando horarios:', err);
+              });
+            {% endif %}
+          }
+          
+          // ✅ FUNCIÓN DE VALIDACIÓN MEJORADA
           function validarFormulario() {
             const nuevaFecha = document.getElementById('swal-nueva-fecha').value;
             const motivo = document.getElementById('swal-motivo').value.trim();
             const confirmButton = document.querySelector('.swal2-confirm');
             
-            if (nuevaFecha && motivo.length >= 10) {
+            let formularioValido = nuevaFecha && motivo.length >= 10;
+            
+            // Para cocheras, también validar la hora
+            if (esCochera) {
+              const nuevaHora = document.getElementById('swal-nueva-hora').value;
+              formularioValido = formularioValido && nuevaHora;
+            }
+            
+            if (formularioValido) {
               confirmButton.disabled = false;
               confirmButton.style.opacity = '1';
               confirmButton.style.cursor = 'pointer';
@@ -909,6 +1011,12 @@
           
           const motivoTextarea = document.getElementById('swal-motivo');
           motivoTextarea.addEventListener('input', validarFormulario);
+          
+          // Para cocheras, también escuchar cambios en la hora
+          if (esCochera) {
+            const selectHora = document.getElementById('swal-nueva-hora');
+            selectHora.addEventListener('change', validarFormulario);
+          }
           
           const confirmButton = document.querySelector('.swal2-confirm');
           confirmButton.disabled = true;
@@ -934,20 +1042,56 @@
             return false;
           }
           
-          const fechaFinActual = new Date('{{ reserva.fecha_fin|date:"Y-m-d" }}');
-          const fechaSeleccionada = new Date(nuevaFecha.split('/').reverse().join('-'));
-          const diasDiferencia = Math.ceil((fechaSeleccionada - fechaFinActual) / (1000 * 60 * 60 * 24));
-          
-          if (diasDiferencia < 1 || diasDiferencia > 7) {
-            Swal.showValidationMessage('La extensión debe ser entre 1 y 7 días');
-            return false;
-          }
-          
-          return { 
-            dias_extension: diasDiferencia, 
-            nueva_fecha_fin: fechaSeleccionada.toISOString().split('T')[0],
+          let datosFormulario = {
             motivo: motivo.trim()
           };
+          
+          if (esCochera) {
+            // Para cocheras: incluir hora
+            const nuevaHora = document.getElementById('swal-nueva-hora').value;
+            
+            if (!nuevaHora) {
+              Swal.showValidationMessage('Debe seleccionar una nueva hora de finalización');
+              return false;
+            }
+            
+            // Combinar fecha y hora
+            const fechaHoraString = nuevaFecha.split('/').reverse().join('-') + ' ' + nuevaHora;
+            const nuevaFechaHora = new Date(fechaHoraString);
+            const fechaFinActual = new Date('{{ reserva.fecha_fin|date:"c" }}');
+            
+            const diferenciaMs = nuevaFechaHora - fechaFinActual;
+            const horasExtension = Math.ceil(diferenciaMs / (1000 * 60 * 60));
+            
+            if (horasExtension < 1) {
+              Swal.showValidationMessage('La nueva fecha y hora debe ser posterior a la actual');
+              return false;
+            }
+            
+            if (horasExtension > (7 * 24)) {
+              Swal.showValidationMessage('La extensión no puede ser mayor a 7 días (168 horas)');
+              return false;
+            }
+            
+            datosFormulario.horas_extension = horasExtension;
+            datosFormulario.nueva_fecha_fin = nuevaFechaHora.toISOString();
+            
+          } else {
+            // Para inmuebles: solo días
+            const fechaFinActual = new Date('{{ reserva.fecha_fin|date:"Y-m-d" }}');
+            const fechaSeleccionada = new Date(nuevaFecha.split('/').reverse().join('-'));
+            const diasDiferencia = Math.ceil((fechaSeleccionada - fechaFinActual) / (1000 * 60 * 60 * 24));
+            
+            if (diasDiferencia < 1 || diasDiferencia > 7) {
+              Swal.showValidationMessage('La extensión debe ser entre 1 y 7 días');
+              return false;
+            }
+            
+            datosFormulario.dias_extension = diasDiferencia;
+            datosFormulario.nueva_fecha_fin = fechaSeleccionada.toISOString().split('T')[0];
+          }
+          
+          return datosFormulario;
         }
       }).then((result) => {
         if (result.isConfirmed) {
@@ -982,7 +1126,7 @@
             }
           });
         }
-      }); // ← CERRAR EL .then(result) del SweetAlert
+      });
     }) // ← CERRAR EL .then(disponibilidad) del fetch inicial
     .catch(error => {
       Swal.fire({
