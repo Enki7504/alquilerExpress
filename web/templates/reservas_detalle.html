@@ -98,7 +98,7 @@
 
         </div>
       </div>
-      {% if reserva.inmueble and reserva.estado.nombre == "Pagada" and not is_admin_or_empleado %}
+      {% if reserva.inmueble and reserva.estado.nombre in "Aprobada,Pagada,Confirmada,Finalizada" and not is_admin_or_empleado %}
         <div class="mb-3">
           <strong>Huéspedes:</strong>
           <ul class="list-group mt-2">
@@ -279,7 +279,7 @@
           {% endif %}
         </div>
         <br>
-        {% if not is_admin_or_empleado and reserva.inmueble and reserva.estado.nombre == "Pagada" %}
+        {% if not is_admin_or_empleado and reserva.inmueble and reserva.estado.nombre == "Aprobada" %}
           {% with total_huespedes=huespedes|length %}
             {% if total_huespedes < reserva.cantidad_adultos|add:reserva.cantidad_ninos %}
               <form id="form-huespedes" method="post" action="{% url 'completar_huespedes' reserva.id_reserva %}">
@@ -357,6 +357,12 @@
               </div>
             {% endif %}
           {% endif %}
+        </div>
+      {% endif %}
+      {% if is_admin_or_empleado and reserva.estado.nombre == "Confirmada"  %}
+        <div class="alert alert-success mt-3">
+          <i class="bi bi-check-circle-fill me-2"></i>
+          se soliciito una extension 
         </div>
       {% endif %}
     </div>
@@ -667,88 +673,158 @@
     }
   });
 
-  // Buscar y reemplazar la sección del formulario de huéspedes:
+  // 🔧 FORMULARIO PARA HUÉSPEDES - SOLUCIÓN DEFINITIVA
   document.addEventListener('DOMContentLoaded', function() {
-      const formHuespedes = document.getElementById('form-huespedes');
-      
-      if (formHuespedes) {
-          formHuespedes.addEventListener('submit', function(e) {
-              console.log('Interceptando submit de huéspedes'); // <-- Agrega esto
-              e.preventDefault(); // ← Esto evita el envío tradicional
-              const formData = new FormData(formHuespedes);
-              const submitBtn = formHuespedes.querySelector('button[type="submit"]');
-              const originalText = submitBtn.textContent;
-              submitBtn.textContent = 'Guardando...';
-              submitBtn.disabled = true;
-              document.querySelectorAll('.error-message').forEach(el => el.remove());
-              document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
-              fetch(formHuespedes.action, {
-                  method: 'POST',
-                  body: formData,
-                  headers: {
-                      'X-Requested-With': 'XMLHttpRequest' // ← Importante para Django
-                  }
-              })
-              .then(response => response.json())
-              .then(data => {
-                  submitBtn.textContent = originalText;
-                  submitBtn.disabled = false;
-                  if (data.success) {
-                      // ✅ ÉXITO
-                      Swal.fire({
-                          icon: 'success',
-                          title: '¡Guardado!',
-                          text: data.message || 'Huéspedes guardados correctamente',
-                          timer: 2000,
-                          showConfirmButton: false,
-                          timerProgressBar: true
-                      }).then(() => {
-                          // Recargar página para mostrar datos actualizados
-                          window.location.reload();
-                      });
-                      
-                  } else if (data.errores) {
-                      // ❌ ERRORES DE VALIDACIÓN
-                      Object.entries(data.errores).forEach(([field, error]) => {
-                          const input = formHuespedes.querySelector(`[name="${field}"]`);
-                          if (input) {
-                              // Agregar clase de error
-                              input.classList.add('is-invalid');
-                              
-                              // Agregar mensaje de error
-                              const errorDiv = document.createElement('div');
-                              errorDiv.className = 'error-message text-danger mt-1 small';
-                              errorDiv.textContent = error;
-                              input.parentNode.appendChild(errorDiv);
-                          }
-                      });
-                      
-                      Swal.fire({
-                          icon: 'error',
-                          title: 'Errores en el formulario',
-                          text: 'Por favor, corrige los errores marcados en rojo'
-                      });
-                      
-                  } else {
-                      // ❌ ERROR GENÉRICO
-                      Swal.fire({
-                          icon: 'error',
-                          title: 'Error',
-                          text: data.error || 'Error al guardar los huéspedes'
-                      });
-                  }
-              })
-              .catch(error => {
-                  submitBtn.textContent = originalText;
-                  submitBtn.disabled = false;
-                  Swal.fire({
-                      icon: 'error',
-                      title: 'Error de conexión',
-                      text: 'No se pudo procesar la solicitud. Inténtalo de nuevo.'
-                  });
-              });
-          });
-      }
+    const formHuespedes = document.getElementById('form-huespedes');
+    
+    if (formHuespedes) {
+        // ✅ ELIMINAR TODOS LOS EVENT LISTENERS PREVIOS
+        const nuevoForm = formHuespedes.cloneNode(true);
+        formHuespedes.parentNode.replaceChild(nuevoForm, formHuespedes);
+        
+        // ✅ VARIABLE DE CONTROL PARA EVITAR ENVÍO DOBLE
+        let enviando = false;
+        
+        // ✅ AGREGAR UN SOLO EVENT LISTENER AL FORMULARIO CLONADO
+        nuevoForm.addEventListener('submit', function(e) {
+            console.log('🔧 Interceptando submit de huéspedes');
+            e.preventDefault(); // ← Prevenir envío tradicional
+            e.stopPropagation(); // ← Detener propagación del evento
+            
+            // ✅ VERIFICAR SI YA SE ESTÁ ENVIANDO
+            if (enviando) {
+                console.log('⏸️ Ya se está enviando, ignorando...');
+                return false;
+            }
+            
+            enviando = true; // ✅ MARCAR COMO ENVIANDO
+            console.log('🚀 Iniciando envío de huéspedes...');
+            
+            const formData = new FormData(nuevoForm);
+            const submitBtn = nuevoForm.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            
+            // ✅ DESHABILITAR BOTÓN INMEDIATAMENTE
+            submitBtn.textContent = 'Guardando...';
+            submitBtn.disabled = true;
+            submitBtn.style.pointerEvents = 'none'; // ✅ EXTRA: Evitar clics
+            
+            // Limpiar errores previos
+            document.querySelectorAll('.error-message').forEach(el => el.remove());
+            document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+            
+            // ✅ AGREGAR TIMEOUT COMO RESPALDO
+            const timeoutId = setTimeout(() => {
+                console.log('⏰ Timeout: Restableciendo estado por seguridad');
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+                submitBtn.style.pointerEvents = 'auto';
+                enviando = false;
+            }, 10000); // 10 segundos
+            
+            fetch(nuevoForm.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => {
+                console.log('📨 Respuesta recibida:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('📄 Datos recibidos:', data);
+                
+                // ✅ LIMPIAR TIMEOUT
+                clearTimeout(timeoutId);
+                
+                // ✅ RESTABLECER ESTADO DEL BOTÓN
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+                submitBtn.style.pointerEvents = 'auto';
+                enviando = false; // ✅ PERMITIR NUEVOS ENVÍOS
+                
+                if (data.success) {
+                    // ✅ ÉXITO
+                    console.log('✅ Huéspedes guardados exitosamente');
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Guardado!',
+                        text: data.message || 'Huéspedes guardados correctamente',
+                        timer: 2000,
+                        showConfirmButton: false,
+                        timerProgressBar: true
+                    }).then(() => {
+                        // Recargar página para mostrar datos actualizados
+                        window.location.reload();
+                    });
+                    
+                } else if (data.errores) {
+                    // ❌ ERRORES DE VALIDACIÓN
+                    console.log('❌ Errores de validación:', data.errores);
+                    Object.entries(data.errores).forEach(([field, error]) => {
+                        const input = nuevoForm.querySelector(`[name="${field}"]`);
+                        if (input) {
+                            // Agregar clase de error
+                            input.classList.add('is-invalid');
+                            
+                            // Agregar mensaje de error
+                            const errorDiv = document.createElement('div');
+                            errorDiv.className = 'error-message text-danger mt-1 small';
+                            errorDiv.textContent = error;
+                            input.parentNode.appendChild(errorDiv);
+                        }
+                    });
+                    
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Errores en el formulario',
+                        text: 'Por favor, corrige los errores marcados en rojo'
+                    });
+                    
+                } else {
+                    // ❌ ERROR GENÉRICO
+                    console.log('❌ Error genérico:', data.error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: data.error || 'Error al guardar los huéspedes'
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('💥 Error en la petición:', error);
+                
+                // ✅ LIMPIAR TIMEOUT
+                clearTimeout(timeoutId);
+                
+                // ✅ RESTABLECER ESTADO DEL BOTÓN EN CASO DE ERROR
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+                submitBtn.style.pointerEvents = 'auto';
+                enviando = false; // ✅ PERMITIR NUEVOS ENVÍOS
+                
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error de conexión',
+                    text: 'No se pudo procesar la solicitud. Inténtalo de nuevo.'
+                });
+            });
+            
+            return false; // ✅ EXTRA: Asegurar que no se envíe
+        });
+        
+        // ✅ PREVENIR ENVÍO CON ENTER
+        nuevoForm.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && e.target.type !== 'submit') {
+                e.preventDefault();
+                return false;
+            }
+        });
+        
+        console.log('✅ Event listener de huéspedes configurado correctamente');
+    }
   });
 
   // 📅 CONFIGURACIÓN DE FLATPICKR PARA FECHAS DE NACIMIENTO
