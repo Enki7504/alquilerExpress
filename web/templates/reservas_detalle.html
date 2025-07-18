@@ -98,7 +98,7 @@
 
         </div>
       </div>
-      {% if reserva.inmueble %}
+      {% if reserva.inmueble and reserva.estado.nombre == "Pagada" and not is_admin_or_empleado %}
         <div class="mb-3">
           <strong>Huéspedes:</strong>
           <ul class="list-group mt-2">
@@ -279,13 +279,12 @@
           {% endif %}
         </div>
         <br>
-        {% if not is_admin_or_empleado %}
-        {% if reserva.inmueble %}
+        {% if not is_admin_or_empleado and reserva.inmueble and reserva.estado.nombre == "Pagada" %}
           {% with total_huespedes=huespedes|length %}
             {% if total_huespedes < reserva.cantidad_adultos|add:reserva.cantidad_ninos %}
               <form id="form-huespedes" method="post" action="{% url 'completar_huespedes' reserva.id_reserva %}">
                 {% csrf_token %}
-                <h5>Completa los datos de los huéspedes antes de pagar</h5>
+                <h5>Completa los datos de los huéspedes</h5>
                 {% if reserva.cantidad_adultos > 1 %}
                 <h6> Adultos </h6>
                 {% for i in rango_adultos %}
@@ -332,9 +331,8 @@
             {% endif %}
           {% endwith %}
         {% endif %}
-      {% endif %}
     {% endif %}
-      {% if reserva.cochera %}
+      {% if reserva.cochera and reserva.estado.nombre == "Pagada" and not is_admin_or_empleado %}
         <div class="mb-3">
           {% if reserva.patente %}
             <div class="mt-2">
