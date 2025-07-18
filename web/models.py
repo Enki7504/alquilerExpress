@@ -247,20 +247,20 @@ class Tarjeta(models.Model):
         return f"**** **** **** {self.numero[-4:]} ({self.nombre})"
     
 class ExtensionReserva(models.Model):
-    reserva = models.ForeignKey(Reserva, on_delete=models.CASCADE, related_name='extensiones')
-    fecha_fin_original = models.DateField()
-    fecha_fin_nueva = models.DateField()
-    dias_extension = models.IntegerField()
+    reserva = models.ForeignKey(Reserva, on_delete=models.CASCADE)
+    fecha_fin_original = models.DateTimeField()
+    fecha_fin_nueva = models.DateTimeField()
+    dias_extension = models.IntegerField(null=True, blank=True)  # Para inmuebles
+    horas_extension = models.IntegerField(null=True, blank=True)  # ✅ NUEVO: Para cocheras
     precio_extension = models.DecimalField(max_digits=10, decimal_places=2)
-    estado = models.ForeignKey(Estado, on_delete=models.CASCADE)  # Pendiente, Aprobada, Rechazada
+    estado = models.ForeignKey(Estado, on_delete=models.CASCADE)
+    motivo = models.TextField()
     fecha_solicitud = models.DateTimeField(auto_now_add=True)
     fecha_respuesta = models.DateTimeField(null=True, blank=True)
-    motivo = models.TextField(blank=True)
     comentario_admin = models.TextField(blank=True)
     
-    class Meta:
-        db_table = 'extension_reserva'
-        ordering = ['-fecha_solicitud']
-
     def __str__(self):
-        return f"Extensión de Reserva #{self.reserva.id_reserva} ({self.estado.nombre})"
+        if self.dias_extension:
+            return f"Extensión {self.dias_extension} días - Reserva #{self.reserva.id_reserva}"
+        else:
+            return f"Extensión {self.horas_extension} horas - Reserva #{self.reserva.id_reserva}"
