@@ -453,12 +453,13 @@ def admin_cocheras_alta(request):
     Maneja la creación de la cochera y la carga de su imagen principal.
     """
     if request.method == 'POST':
+        # ✅ NO PASAR PARÁMETROS EXTRA AL CREAR EL FORMULARIO
         form = CocheraForm(request.POST, request.FILES)
         if form.is_valid():
             cochera = form.save(commit=False)
             cochera.fecha_publicacion = timezone.now().date()
-            cochera.save() # Guardar el cochera completamente
-            form.save_m2m() # Guardar relaciones many-to-many si las hay
+            cochera.save()
+            form.save_m2m()
 
             # Guardar todas las imágenes
             for img in request.FILES.getlist('imagenes'):
@@ -472,6 +473,7 @@ def admin_cocheras_alta(request):
         else:
             messages.error(request, 'Por favor, corrige los errores en el formulario.')
     else:
+        # ✅ CREAR FORMULARIO SIN PARÁMETROS EXTRA
         form = CocheraForm()
     
     return render(request, 'admin/admin_cocheras_alta.html', {'form': form})
@@ -479,51 +481,68 @@ def admin_cocheras_alta(request):
 @login_required
 @user_passes_test(is_admin)
 def admin_cocheras_editar(request, id_cochera):
+    """
+    Permite a los administradores editar cocheras existentes.
+    """
     cochera = get_object_or_404(Cochera, id_cochera=id_cochera)
-
+    
+    # ✅ AGREGAR LA MISMA LÓGICA QUE INMUEBLES
     empleados = Perfil.objects.filter(usuario__groups__name="empleado").distinct()
     admins = Perfil.objects.filter(usuario__is_staff=True).distinct()
-    perfiles_posibles = empleados | admins  # Asegurate de usar `.distinct()` en ambos
+    perfiles_posibles = empleados | admins
 
     # Asegurar que el empleado actual esté en el queryset
     if cochera.empleado and cochera.empleado.pk not in perfiles_posibles.values_list('pk', flat=True):
         perfiles_posibles = perfiles_posibles | Perfil.objects.filter(pk=cochera.empleado.pk)
-
-
-    if request.method == "POST":
-        form = CocheraForm(request.POST, request.FILES, instance=cochera)
-        form.fields['empleado'].queryset = perfiles_posibles.distinct()
-
+    
+    if request.method == 'POST':
+        # ✅ PASAR perfiles_empleados AL FORMULARIO
+        form = CocheraForm(
+            request.POST, 
+            request.FILES, 
+            instance=cochera,
+            perfiles_empleados=perfiles_posibles  # ← AGREGAR ESTO
+        )
+        form.fields['empleado'].queryset = perfiles_posibles.distinct()  # ← AGREGAR ESTO
+        
         if form.is_valid():
-            form.instance.nombre = cochera.nombre
-            cochera = form.save()
-
-            imagenes = request.FILES.getlist('imagenes')
-            for img in imagenes:
-                CocheraImagen.objects.create(cochera=cochera, imagen=img)
-
+            form.save()
+            
+            # Guardar nuevas imágenes
+            for img in request.FILES.getlist('imagenes'):
+                CocheraImagen.objects.create(
+                    cochera=cochera,
+                    imagen=img,
+                    descripcion="Imagen de la cochera"
+                )
+            
+            # ✅ AGREGAR SOPORTE PARA AJAX (como inmuebles)
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({'success': True, 'message': 'Cochera actualizada correctamente.'})
-                
-            messages.success(request, "Cochera actualizada correctamente.")
-            return redirect('admin_cocheras_editar', id_cochera=cochera.id_cochera)
+            
+            messages.success(request, 'Cochera actualizada exitosamente.')
+            return redirect('admin_cocheras_editar', id_cochera=cochera.id_cochera)  # ← CAMBIAR REDIRECT
         else:
+            # ✅ AGREGAR SOPORTE PARA ERRORES AJAX (como inmuebles)
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({
                     'success': False,
                     'message': 'Corrige los errores en el formulario.',
                     'errors': form.errors.get_json_data()
                 }, status=400)
-            messages.error(request, "Corrige los errores en el formulario.")
+            messages.error(request, 'Por favor, corrige los errores en el formulario.')
     else:
-        form = CocheraForm(instance=cochera)
+        # ✅ PASAR perfiles_empleados Y CONFIGURAR QUERYSET
+        form = CocheraForm(instance=cochera, perfiles_empleados=perfiles_posibles)
         form.fields['empleado'].queryset = perfiles_posibles
-
+    
+    # ✅ AGREGAR imagenes AL CONTEXTO (como inmuebles)
     imagenes = cochera.imagenes.all()
+    
     return render(request, 'admin/admin_cocheras_editar.html', {
         'form': form,
         'cochera': cochera,
-        'imagenes': imagenes,
+        'imagenes': imagenes,  # ← AGREGAR ESTO
         'empleados': empleados,
         'admins': admins,
     })
