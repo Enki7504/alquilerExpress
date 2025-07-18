@@ -231,19 +231,25 @@ class CocheraForm(forms.ModelForm):
         label="Empleado asignado",
         widget=forms.Select(attrs={'class': 'form-select'})
     )
-    minimo_dias_alquiler = forms.IntegerField(
-        min_value=1,
-        label="Mínimo de días de alquiler",
-        widget=forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
-        initial=1
-    )
+
+    class Meta:
+        model = Cochera
+        fields = ['nombre', 'provincia', 'ciudad', 'direccion', 'precio_por_dia', 
+                 'minimo_dias_alquiler', 'descripcion', 'alto', 'ancho', 'largo', 
+                 'cantidad_vehiculos', 'politica_cancelacion', 'con_techo', 
+                 'estado', 'empleado']
+        widgets = {
+            'descripcion': forms.Textarea(attrs={'rows': 3}),
+            'politica_cancelacion': forms.Textarea(attrs={'rows': 3}),
+            'precio_por_dia': forms.NumberInput(attrs={'step': '0.01'}),
+        }
 
     def __init__(self, *args, **kwargs):
-
         perfiles_empleados = kwargs.pop('perfiles_empleados', None)
+        
         super().__init__(*args, **kwargs)
-
-        # ciudades
+        
+        # ✅ CONFIGURAR CIUDADES
         if 'provincia' in self.data:
             try:
                 provincia_id = int(self.data.get('provincia'))
@@ -254,38 +260,20 @@ class CocheraForm(forms.ModelForm):
             self.fields['ciudad'].queryset = Ciudad.objects.filter(provincia=self.instance.provincia).order_by('nombre')
         else:
             self.fields['ciudad'].queryset = Ciudad.objects.none()
-
-        # cocheras
-        if self.instance.pk and self.instance.cochera:
-            cocheras = Cochera.objects.filter(Q(estado__nombre="Disponible") | Q(pk=self.instance.cochera.pk))
-        else:
-            cocheras = Cochera.objects.filter(estado__nombre="Disponible")
-        self.fields['cochera'].queryset = cocheras
-
-        # empleados
+        
+        # ✅ CONFIGURAR EMPLEADOS (CORREGIDO)
         if perfiles_empleados is not None:
             self.fields['empleado'].queryset = perfiles_empleados
-
-    class Meta:
-        model = Cochera
-        fields = [
-            'nombre', 'direccion', 'descripcion', 'alto', 'ancho', 'largo',
-            'cantidad_vehiculos', 'con_techo', 'precio_por_dia', 'politica_cancelacion',
-            'provincia', 'ciudad', 'estado', 'empleado', 'minimo_dias_alquiler'  # <-- AGREGADO AQUÍ
-        ]
-        widgets = {
-            'nombre': forms.TextInput(attrs={'class': 'form-control'}),
-            'direccion': forms.TextInput(attrs={'class': 'form-control'}),
-            'descripcion': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
-            'alto': forms.NumberInput(attrs={'class': 'form-control', 'min': 0, 'step': '0.01'}),
-            'ancho': forms.NumberInput(attrs={'class': 'form-control', 'min': 0, 'step': '0.01'}),
-            'largo': forms.NumberInput(attrs={'class': 'form-control', 'min': 0, 'step': '0.01'}),
-            'cantidad_vehiculos': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
-            'con_techo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'precio_por_dia': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
-            'politica_cancelacion': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
-            'estado': forms.Select(attrs={'class': 'form-select'}),
-        }     
+        else:
+            # Usar un solo queryset con filtros Q para evitar el error de combinación
+            from django.db.models import Q
+            self.fields['empleado'].queryset = Perfil.objects.filter(
+                Q(usuario__groups__name="empleado") | Q(usuario__is_staff=True)
+            ).distinct()
+        
+        # Configurar otros campos
+        self.fields['empleado'].required = False
+        self.fields['empleado'].empty_label = "Sin asignar"
     
     def clean_nombre(self):
         nombre = self.cleaned_data['nombre']
