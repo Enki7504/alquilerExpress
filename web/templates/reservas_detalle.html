@@ -180,7 +180,8 @@
             {% endif %}
           {% endif %}
 
-          <!-- SECCIÓN DE EXTENSIÓN CORREGIDA -->
+          <!-- SECCIÓN DE EXTENSIÓN COMENTADA -->
+          {% comment %}
           {% if reserva.estado.nombre == 'Confirmada' and not is_admin_or_empleado %}
             <div class="card mt-4 shadow-sm border-0" style="border-left: 4px solid #ffc107 !important;">
               <div class="card-body">
@@ -580,7 +581,8 @@
   </script>
   {% endif %}
 
-  <!-- ⏳ CUENTA REGRESIVA PARA SOLICITAR EXTENSIÓN -->
+  <!-- ⏳ CUENTA REGRESIVA PARA SOLICITAR EXTENSIÓN COMENTADA -->
+  {% comment %}
   {% if reserva.estado.nombre == 'Confirmada' and not is_admin_or_empleado %}
   <script>
     function updateExtensionCountdown() {
@@ -644,6 +646,7 @@
     setInterval(updateExtensionCountdown, 30000);
   </script>
   {% endif %}
+  {% endcomment %}
 
   <script>
   // 💡 INICIALIZAR TOOLTIP DE BOOTSTRAP
@@ -1037,7 +1040,8 @@
     }
   });
 
-  // ➕ FUNCIONALIDAD PARA SOLICITAR EXTENSIÓN DE RESERVA
+  // ➕ FUNCIONALIDAD PARA SOLICITAR EXTENSIÓN DE RESERVA COMENTADA
+  /*
   function solicitarExtension() {
     // ✅ OBTENER FECHAS BLOQUEADAS VÍA AJAX
     fetch(`/reservas/verificar-disponibilidad/{{ reserva.id_reserva }}/`, {
@@ -1361,7 +1365,8 @@
     }); // ← CERRAR EL .catch del fetch inicial
   } // ← CERRAR LA FUNCIÓN solicitarExtension
 
-  // 🔧 PROCESAR EXTENSIÓN (APROBAR/RECHAZAR)
+  // 🔧 PROCESAR EXTENSIÓN (APROBAR/RECHAZAR) COMENTADO
+  /*
   function procesarExtension(idExtension, accion) {
     const tituloAccion = accion === 'aprobar' ? 'Aprobar' : 'Rechazar';
     const colorBoton = accion === 'aprobar' ? '#28a745' : '#dc3545';
@@ -1551,7 +1556,8 @@
     }
   }
 
-  // 💳 FUNCIÓN PARA PAGAR EXTENSIÓN - SIN SWAL, DIRECTO A MERCADOPAGO
+  // 💳 FUNCIÓN PARA PAGAR EXTENSIÓN COMENTADA
+  /*
   function pagarExtension(idExtension) {
     console.log('🚀 Iniciando pago de extensión:', idExtension);
     
@@ -1600,6 +1606,7 @@
       alert('Error de conexión. Intenta nuevamente.');
     });
   }
+  */
 
 </script>
 {% endblock %} 
