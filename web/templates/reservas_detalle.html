@@ -179,9 +179,8 @@
               {% endif %}
             {% endif %}
           {% endif %}
-
-          <!-- SECCIÓN DE EXTENSIÓN COMENTADA -->
           {% comment %}
+          <!-- SECCIÓN DE EXTENSIÓN CORREGIDA -->
           {% if reserva.estado.nombre == 'Confirmada' and not is_admin_or_empleado %}
             <div class="card mt-4 shadow-sm border-0" style="border-left: 4px solid #ffc107 !important;">
               <div class="card-body">
@@ -344,6 +343,7 @@
               </div>
             </div>
           {% endif %}
+          {% endcomment %}
         </div>
         <br>
         {% if not is_admin_or_empleado and reserva.inmueble and reserva.estado.nombre == "Aprobada" %}
@@ -426,6 +426,7 @@
           {% endif %}
         </div>
       {% endif %}
+      {% comment %}
       {% if is_admin_or_empleado and reserva.estado.nombre == "Confirmada" and extension_pendiente %}
         <div class="card mt-4 shadow-sm border-0" style="border-left: 4px solid #17a2b8 !important;">
           <div class="card-header bg-info text-white">
@@ -514,6 +515,7 @@
           </div>
         </div>
       {% endif %}
+      {% endcomment %}
     </div>
   </div>
 </div>
@@ -581,8 +583,7 @@
   </script>
   {% endif %}
 
-  <!-- ⏳ CUENTA REGRESIVA PARA SOLICITAR EXTENSIÓN COMENTADA -->
-  {% comment %}
+  <!-- ⏳ CUENTA REGRESIVA PARA SOLICITAR EXTENSIÓN -->
   {% if reserva.estado.nombre == 'Confirmada' and not is_admin_or_empleado %}
   <script>
     function updateExtensionCountdown() {
@@ -646,7 +647,6 @@
     setInterval(updateExtensionCountdown, 30000);
   </script>
   {% endif %}
-  {% endcomment %}
 
   <script>
   // 💡 INICIALIZAR TOOLTIP DE BOOTSTRAP
@@ -1040,8 +1040,7 @@
     }
   });
 
-  // ➕ FUNCIONALIDAD PARA SOLICITAR EXTENSIÓN DE RESERVA COMENTADA
-  /*
+  // ➕ FUNCIONALIDAD PARA SOLICITAR EXTENSIÓN DE RESERVA
   function solicitarExtension() {
     // ✅ OBTENER FECHAS BLOQUEADAS VÍA AJAX
     fetch(`/reservas/verificar-disponibilidad/{{ reserva.id_reserva }}/`, {
@@ -1365,8 +1364,7 @@
     }); // ← CERRAR EL .catch del fetch inicial
   } // ← CERRAR LA FUNCIÓN solicitarExtension
 
-  // 🔧 PROCESAR EXTENSIÓN (APROBAR/RECHAZAR) COMENTADO
-  /*
+  // 🔧 PROCESAR EXTENSIÓN (APROBAR/RECHAZAR)
   function procesarExtension(idExtension, accion) {
     const tituloAccion = accion === 'aprobar' ? 'Aprobar' : 'Rechazar';
     const colorBoton = accion === 'aprobar' ? '#28a745' : '#dc3545';
@@ -1556,8 +1554,7 @@
     }
   }
 
-  // 💳 FUNCIÓN PARA PAGAR EXTENSIÓN COMENTADA
-  /*
+  // 💳 FUNCIÓN PARA PAGAR EXTENSIÓN - SIN SWAL, DIRECTO A MERCADOPAGO
   function pagarExtension(idExtension) {
     console.log('🚀 Iniciando pago de extensión:', idExtension);
     
@@ -1606,7 +1603,6 @@
       alert('Error de conexión. Intenta nuevamente.');
     });
   }
-  */
 
 </script>
 {% endblock %} 
