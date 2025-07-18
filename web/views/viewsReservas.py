@@ -639,7 +639,7 @@ def ver_detalle_reserva(request, id_reserva):
     # Calcular tiempo restante desde la creación (72 horas)
     tiempo_restante_creacion = None
     if reserva.estado.nombre == "Pendiente":
-        tiempo_limite_creacion = reserva.creada_en + timedelta(hours=72)  # Cambio aquí
+        tiempo_limite_creacion = reserva.creada_en + timedelta(hours=72)
         ahora = timezone.now()
         if ahora < tiempo_limite_creacion:
             tiempo_restante_creacion = (tiempo_limite_creacion - ahora).total_seconds()
@@ -649,8 +649,7 @@ def ver_detalle_reserva(request, id_reserva):
     # Calcular tiempo restante para pagar (24 horas desde aprobación)
     tiempo_restante = None
     if reserva.estado.nombre == "Aprobada":
-        # Asegurar que ambos sean datetime
-        fecha_aprobacion = reserva.aprobada_en  # Debe ser datetime
+        fecha_aprobacion = reserva.aprobada_en
         if fecha_aprobacion:
             tiempo_limite = fecha_aprobacion + timedelta(hours=24)
             ahora = timezone.now()
@@ -660,8 +659,30 @@ def ver_detalle_reserva(request, id_reserva):
     puede_extender = False
     fecha_disponible_extension = None
     horas_para_extension = None
-    extension_pendiente = False  # ← AGREGAR NUEVA VARIABLE
-
+    extension_pendiente = False
+    
+    # ✅ CORREGIR: Verificar extensión pendiente Y aceptada SIEMPRE (para admin y cliente)
+    extension_pendiente_obj = None
+    extension_aceptada_obj = None
+    if reserva.estado.nombre == 'Confirmada':
+        extension_pendiente_obj = ExtensionReserva.objects.filter(
+            reserva=reserva,
+            estado__nombre='Pendiente'
+        ).first()
+        extension_pendiente = extension_pendiente_obj is not None
+        
+        # ✅ NUEVO: Verificar si hay extensión aceptada pendiente de pago
+        extension_aceptada_obj = ExtensionReserva.objects.filter(
+            reserva=reserva,
+            estado__nombre='Aprobada'  # ✅ CAMBIO: Buscar estado "Aprobada" en lugar de "Aceptada"
+        ).first()
+        
+        print(f"🔍 DEBUG extension_pendiente: {extension_pendiente}")
+        print(f"🔍 DEBUG extension_aceptada: {extension_aceptada_obj is not None}")
+        print(f"🔍 DEBUG reserva estado: {reserva.estado.nombre}")
+        print(f"🔍 DEBUG is_admin: {is_admin_or_empleado(request.user)}")
+    
+    # ✅ LÓGICA PARA EXTENSIONES (SOLO PARA CLIENTES)
     if reserva.estado.nombre == 'Confirmada' and not is_admin_or_empleado(request.user):
         # Usar localtime para obtener la fecha/hora actual con la zona horaria correcta
         ahora = timezone.localtime()
@@ -676,11 +697,8 @@ def ver_detalle_reserva(request, id_reserva):
         # Calcular horas restantes hasta el final de la reserva
         horas_restantes = (fecha_fin_datetime - ahora).total_seconds() / 3600
         
-        # ✅ CORREGIR: Verificar si hay extensiones pendientes PRIMERO
-        extension_pendiente = ExtensionReserva.objects.filter(reserva=reserva, estado__nombre='Pendiente').exists()
-        
-        if extension_pendiente:
-            # Si hay extensión pendiente, no permitir nueva solicitud pero mostrar mensaje específico
+        if extension_pendiente or extension_aceptada_obj:  # ✅ AGREGAR: Si hay extensión aceptada, no permitir nueva
+            # Si hay extensión pendiente O aceptada, no permitir nueva solicitud
             puede_extender = False
         else:
             # ✅ CORREGIR: Permitir extensión si quedan MÁS de 24 horas
@@ -715,11 +733,12 @@ def ver_detalle_reserva(request, id_reserva):
         'puede_extender': puede_extender,
         'fecha_disponible_extension': fecha_disponible_extension,
         'horas_para_extension': horas_para_extension,
-        'extension_pendiente': extension_pendiente,  # ← AGREGAR AL CONTEXT
+        'extension_pendiente': extension_pendiente,
+        'extension_pendiente_obj': extension_pendiente_obj,
+        'extension_aceptada_obj': extension_aceptada_obj,  # ✅ NUEVO: Ahora busca estado "Aprobada"
         'extensiones': extensiones,
     }
     return render(request, 'reservas_detalle.html', context)
-
 @require_POST
 @login_required
 def cancelar_reserva(request, id_reserva):
@@ -1469,3 +1488,192 @@ def verificar_disponibilidad_extension(request, id_reserva):
         import traceback
         traceback.print_exc()
         return JsonResponse({'error': f'Error interno: {str(e)}'}, status=500)
+
+@login_required
+@user_passes_test(is_admin_or_empleado)
+def procesar_extension(request, id_extension):
+    """
+    Permite a admin/empleado aprobar o rechazar solicitudes de extensión
+    """
+    extension = get_object_or_404(ExtensionReserva, id=id_extension)
+    
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            accion = data.get('accion')  # 'aprobar' o 'rechazar'
+            comentario = data.get('comentario', '').strip()
+            
+            if accion not in ['aprobar', 'rechazar']:
+                return JsonResponse({'success': False, 'error': 'Acción inválida'}, status=400)
+            
+            # ✅ AGREGAR: Verificar que la extensión esté pendiente
+            if extension.estado.nombre != 'Pendiente':
+                return JsonResponse({'success': False, 'error': 'Esta extensión ya fue procesada'}, status=400)
+            
+            if accion == 'aprobar':
+                # ✅ APROBAR LA EXTENSIÓN - CAMBIAR ESTADO A "ACEPTADA"
+                
+                # Verificar disponibilidad nuevamente antes de aprobar
+                reserva = extension.reserva
+                
+                if reserva.inmueble:
+                    # Para inmuebles: verificar conflictos de fechas
+                    conflictos = Reserva.objects.filter(
+                        inmueble=reserva.inmueble,
+                        estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada'],
+                        fecha_inicio__lt=extension.fecha_fin_nueva,
+                        fecha_fin__gt=reserva.fecha_fin
+                    ).exclude(id_reserva=reserva.id_reserva)
+                    
+                elif reserva.cochera:
+                    # Para cocheras: verificar conflictos de horarios
+                    conflictos = Reserva.objects.filter(
+                        cochera=reserva.cochera,
+                        estado__nombre__in=['Confirmada', 'Pagada', 'Aprobada'],
+                        fecha_inicio__lt=extension.fecha_fin_nueva,
+                        fecha_fin__gt=reserva.fecha_fin
+                    ).exclude(id_reserva=reserva.id_reserva)
+                else:
+                    conflictos = Reserva.objects.none()
+                
+                if conflictos.exists():
+                    return JsonResponse({
+                        'success': False, 
+                        'error': 'Ya no es posible aprobar esta extensión debido a conflictos con otras reservas'
+                    }, status=400)
+                
+                # ✅ CAMBIO: Marcar extensión como ACEPTADA (no aprobada aún)
+                estado_aceptada = Estado.objects.get(nombre='Aprobada')
+                extension.estado = estado_aceptada
+                extension.fecha_respuesta = timezone.now()
+                extension.comentario_admin = comentario if comentario else 'Extensión aceptada. Pendiente de pago.'
+                extension.save()
+                
+                # Notificar al cliente
+                cliente = reserva.cliente()
+                if cliente:
+                    tipo_propiedad = reserva.inmueble.nombre if reserva.inmueble else reserva.cochera.nombre
+                    periodo_extension = f"{extension.dias_extension} días" if extension.dias_extension else f"{extension.horas_extension} horas"
+                    
+                    crear_notificacion(
+                        usuario=cliente,
+                        mensaje=f"¡Tu solicitud de extensión para la reserva #{reserva.id_reserva} fue ACEPTADA! "
+                               f"La extensión de '{tipo_propiedad}' por {periodo_extension} "
+                               f"está pendiente de pago por ${extension.precio_extension}. "
+                               f"Nueva fecha de finalización será: {extension.fecha_fin_nueva.strftime('%d/%m/%Y')}. "
+                               f"Debes pagar la extensión para confirmarla."
+                               + (f" Comentario: {comentario}" if comentario else "")
+                    )
+                
+                return JsonResponse({
+                    'success': True, 
+                    'message': 'Extensión aceptada. El cliente debe proceder con el pago para confirmarla.',
+                    'nueva_fecha_fin': extension.fecha_fin_nueva.strftime('%d/%m/%Y %H:%M'),
+                    'precio_adicional': float(extension.precio_extension)
+                })
+                
+            else:  # rechazar
+                # ✅ VALIDAR QUE EL MOTIVO SEA OBLIGATORIO SOLO PARA RECHAZOS
+                if not comentario:
+                    return JsonResponse({
+                        'success': False, 
+                        'error': 'El motivo del rechazo es obligatorio'
+                    }, status=400)
+                
+                if len(comentario) < 10:
+                    return JsonResponse({
+                        'success': False, 
+                        'error': 'El motivo del rechazo debe tener al menos 10 caracteres'
+                    }, status=400)
+                
+                # ✅ RECHAZAR LA EXTENSIÓN
+                estado_rechazada = Estado.objects.get(nombre='Rechazada')
+                extension.estado = estado_rechazada
+                extension.fecha_respuesta = timezone.now()
+                extension.comentario_admin = comentario
+                extension.save()
+                
+                # Notificar al cliente
+                cliente = extension.reserva.cliente()
+                if cliente:
+                    tipo_propiedad = extension.reserva.inmueble.nombre if extension.reserva.inmueble else extension.reserva.cochera.nombre
+                    
+                    crear_notificacion(
+                        usuario=cliente,
+                        mensaje=f"Tu solicitud de extensión para la reserva #{extension.reserva.id_reserva} fue RECHAZADA. "
+                               f"La reserva de '{tipo_propiedad}' mantendrá su fecha original de finalización: "
+                               f"{extension.fecha_fin_original.strftime('%d/%m/%Y %H:%M')}. "
+                               f"Motivo: {comentario}"
+                    )
+                
+                return JsonResponse({
+                    'success': True, 
+                    'message': 'Extensión rechazada correctamente'
+                })
+                
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'error': 'Formato JSON inválido'}, status=400)
+        except Estado.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Estado no encontrado'}, status=500)
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': f'Error interno: {str(e)}'}, status=500)
+    
+    return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
+
+@login_required
+def pagar_extension(request, id_extension):
+    """
+    Permite al cliente pagar una extensión aceptada
+    """
+    extension = get_object_or_404(ExtensionReserva, id=id_extension)
+    
+    # Verificar que el usuario es el dueño de la reserva
+    if not ClienteInmueble.objects.filter(cliente=request.user.perfil, reserva=extension.reserva).exists():
+        return JsonResponse({'success': False, 'error': 'No tienes permisos para esta extensión.'}, status=403)
+    
+    # ✅ CAMBIO: Verificar que la extensión esté aprobada (no aceptada)
+    if extension.estado.nombre != 'Aprobada':
+        return JsonResponse({'success': False, 'error': 'Esta extensión no está disponible para pago.'}, status=400)
+    
+    if request.method == 'POST':
+        try:
+            # ✅ AQUÍ IRÍA LA INTEGRACIÓN CON MERCADOPAGO PARA LA EXTENSIÓN
+            # Por ahora, simularemos que el pago fue exitoso
+            
+            # Marcar extensión como pagada/confirmada
+            estado_pagada = Estado.objects.get(nombre='Pagada')  # o 'Confirmada'
+            extension.estado = estado_pagada
+            extension.fecha_pago = timezone.now()
+            extension.save()
+            
+            # ✅ AHORA SÍ MODIFICAR LA RESERVA ORIGINAL
+            reserva = extension.reserva
+            reserva.fecha_fin = extension.fecha_fin_nueva
+            reserva.precio_total += extension.precio_extension
+            reserva.save()
+            
+            # Notificar al cliente
+            cliente = reserva.cliente()
+            if cliente:
+                tipo_propiedad = reserva.inmueble.nombre if reserva.inmueble else reserva.cochera.nombre
+                periodo_extension = f"{extension.dias_extension} días" if extension.dias_extension else f"{extension.horas_extension} horas"
+                
+                crear_notificacion(
+                    usuario=cliente,
+                    mensaje=f"¡Pago confirmado! Tu extensión de {periodo_extension} para la reserva #{reserva.id_reserva} "
+                           f"de '{tipo_propiedad}' ha sido confirmada. "
+                           f"Nueva fecha de finalización: {extension.fecha_fin_nueva.strftime('%d/%m/%Y %H:%M')}."
+                )
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Pago procesado exitosamente. La extensión ha sido confirmada.',
+                'nueva_fecha_fin': extension.fecha_fin_nueva.strftime('%d/%m/%Y %H:%M')
+            })
+            
+        except Estado.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Estado no encontrado'}, status=500)
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': f'Error interno: {str(e)}'}, status=500)
+    
+    return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)

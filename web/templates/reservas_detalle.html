@@ -184,7 +184,73 @@
           {% if reserva.estado.nombre == 'Confirmada' and not is_admin_or_empleado %}
             <div class="card mt-4 shadow-sm border-0" style="border-left: 4px solid #ffc107 !important;">
               <div class="card-body">
-                {% if extension_pendiente %}
+                {% if extension_aceptada_obj %}
+                  <!-- Estado: Extensión aceptada - Pendiente de pago -->
+                  <div class="alert alert-success border-0 mb-3" style="background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);">
+                    <div class="d-flex align-items-center">
+                      <i class="bi bi-check-circle-fill me-3 fs-4 text-success"></i>
+                      <div>
+                        <h6 class="mb-1 text-success fw-bold">¡Extensión Aprobada!</h6>
+                        <p class="mb-0 text-muted">Tu solicitud fue aprobada. Ahora debes proceder con el pago para confirmarla.</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Detalles de la extensión aprobada -->
+                  <div class="row mb-3">
+                    <div class="col-md-6">
+                      <div class="p-3 bg-light rounded">
+                        <h6 class="text-primary mb-2">
+                          <i class="bi bi-info-circle me-1"></i>
+                          Detalles de la Extensión
+                        </h6>
+                        <div class="row">
+                          <div class="col-12 mb-2">
+                            <small class="text-muted">Extensión:</small>
+                            <div class="fw-bold">
+                              {% if extension_aceptada_obj.dias_extension %}
+                                {{ extension_aceptada_obj.dias_extension }} día{{ extension_aceptada_obj.dias_extension|pluralize }}
+                              {% else %}
+                                {{ extension_aceptada_obj.horas_extension }} hora{{ extension_aceptada_obj.horas_extension|pluralize }}
+                              {% endif %}
+                            </div>
+                          </div>
+                          <div class="col-12 mb-2">
+                            <small class="text-muted">Nueva fecha de finalización:</small>
+                            <div class="fw-bold text-success">
+                              {{ extension_aceptada_obj.fecha_fin_nueva|date:"d/m/Y" }}{% if reserva.cochera %} - {{ extension_aceptada_obj.fecha_fin_nueva|time:"H:i" }}{% endif %}
+                            </div>
+                          </div>
+                          <div class="col-12">
+                            <small class="text-muted">Costo adicional:</small>
+                            <div class="fw-bold text-primary fs-4">${{ extension_aceptada_obj.precio_extension }}</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <div class="p-3 bg-warning bg-opacity-10 rounded border border-warning">
+                        <h6 class="text-warning mb-2">
+                          <i class="bi bi-exclamation-triangle me-1"></i>
+                          Importante
+                        </h6>
+                        <ul class="mb-0 small text-muted">
+                          <li>Debes pagar la extensión para confirmarla</li>
+                          <li>La reserva original se mantendrá hasta que pagues</li>
+                          <li>Una vez pagada, la nueva fecha será efectiva</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="text-center">
+                    <button type="button" class="btn btn-success btn-lg px-5 py-3 shadow-sm" onclick="pagarExtension({{ extension_aceptada_obj.id }})" style="border-radius: 15px; font-weight: 600;">
+                      <i class="bi bi-credit-card me-2"></i>
+                      Pagar Extensión - ${{ extension_aceptada_obj.precio_extension }}
+                    </button>
+                  </div>
+                  
+                {% elif extension_pendiente %}
                   <!-- Estado: Extensión pendiente de aprobación -->
                   <div class="alert alert-info border-0 mb-3" style="background: linear-gradient(135deg, #cce7ff 0%, #b3d9ff 100%);">
                     <div class="d-flex align-items-center">
@@ -359,10 +425,92 @@
           {% endif %}
         </div>
       {% endif %}
-      {% if is_admin_or_empleado and reserva.estado.nombre == "Confirmada"  %}
-        <div class="alert alert-success mt-3">
-          <i class="bi bi-check-circle-fill me-2"></i>
-          se soliciito una extension 
+      {% if is_admin_or_empleado and reserva.estado.nombre == "Confirmada" and extension_pendiente %}
+        <div class="card mt-4 shadow-sm border-0" style="border-left: 4px solid #17a2b8 !important;">
+          <div class="card-header bg-info text-white">
+            <h5 class="mb-0">
+              <i class="bi bi-calendar-plus me-2"></i>
+              Solicitud de Extensión Pendiente
+            </h5>
+          </div>
+          <div class="card-body">
+            {% with ext=extension_pendiente_obj %}
+              <div class="row">
+                <!-- Información de la extensión -->
+                <div class="col-md-8">
+                  <div class="mb-3">
+                    <h6 class="text-primary mb-2">
+                      <i class="bi bi-info-circle me-1"></i>
+                      Detalles de la Solicitud
+                    </h6>
+                    <div class="row">
+                      <div class="col-md-6">
+                        <small class="text-muted">Fecha actual de finalización:</small>
+                        <div class="fw-bold">{{ ext.fecha_fin_original|date:"d/m/Y" }}{% if reserva.cochera %} - {{ ext.fecha_fin_original|time:"H:i" }}{% endif %}</div>
+                      </div>
+                      <div class="col-md-6">
+                        <small class="text-muted">Nueva fecha solicitada:</small>
+                        <div class="fw-bold text-success">{{ ext.fecha_fin_nueva|date:"d/m/Y" }}{% if reserva.cochera %} - {{ ext.fecha_fin_nueva|time:"H:i" }}{% endif %}</div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="mb-3">
+                    <div class="row">
+                      <div class="col-md-6">
+                        <small class="text-muted">Extensión solicitada:</small>
+                        <div class="fw-bold">
+                          {% if ext.dias_extension %}
+                            {{ ext.dias_extension }} día{{ ext.dias_extension|pluralize }}
+                          {% else %}
+                            {{ ext.horas_extension }} hora{{ ext.horas_extension|pluralize }}
+                          {% endif %}
+                        </div>
+                      </div>
+                      <div class="col-md-6">
+                        <small class="text-muted">Costo adicional:</small>
+                        <div class="fw-bold text-primary fs-5">${{ ext.precio_extension }}</div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="mb-3">
+                    <small class="text-muted">Motivo del cliente:</small>
+                    <div class="p-2 bg-light rounded border-start border-4 border-warning">
+                      <em>"{{ ext.motivo }}"</em>
+                    </div>
+                  </div>
+                  
+                  <div class="mb-3">
+                    <small class="text-muted">Fecha de solicitud:</small>
+                    <div>{{ ext.fecha_solicitud|date:"d/m/Y H:i" }}</div>
+                  </div>
+                </div>
+                
+                <!-- Acciones -->
+                <div class="col-md-4">
+                  <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-success btn-lg" onclick="procesarExtension({{ ext.id }}, 'aprobar')">
+                      <i class="bi bi-check-circle-fill me-2"></i>
+                      Aprobar Extensión
+                    </button>
+                    
+                    <button type="button" class="btn btn-danger" onclick="procesarExtension({{ ext.id }}, 'rechazar')">
+                      <i class="bi bi-x-circle-fill me-2"></i>
+                      Rechazar Solicitud
+                    </button>
+                    
+                    <div class="mt-3">
+                      <small class="text-muted">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        Esta acción no se puede deshacer
+                      </small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            {% endwith %}
+          </div>
         </div>
       {% endif %}
     </div>
@@ -970,10 +1118,10 @@
         didOpen: () => {
           const fechaFinActual = new Date('{{ reserva.fecha_fin|date:"Y-m-d" }}');
           const fechaMinima = new Date(fechaFinActual);
-          fechaMinima.setDate(fechaMinima.getDate() + 1);
+          fechaMinima.setDate(fechaMinima.getDate() + 2);
           
           let fechaMaxima = new Date(fechaFinActual);
-          fechaMaxima.setDate(fechaMaxima.getDate() + 7);
+          fechaMaxima.setDate(fechaMaxima.getDate() + 8);
           
           if (disponibilidad.fecha_limite) {
             const fechaLimite = new Date(disponibilidad.fecha_limite);
@@ -1212,6 +1360,247 @@
       });
     }); // ← CERRAR EL .catch del fetch inicial
   } // ← CERRAR LA FUNCIÓN solicitarExtension
-  </script>
+
+  // 🔧 PROCESAR EXTENSIÓN (APROBAR/RECHAZAR)
+  function procesarExtension(idExtension, accion) {
+    const tituloAccion = accion === 'aprobar' ? 'Aprobar' : 'Rechazar';
+    const colorBoton = accion === 'aprobar' ? '#28a745' : '#dc3545';
+    const iconoAccion = accion === 'aprobar' ? 'check-circle-fill' : 'x-circle-fill';
+    
+    if (accion === 'aprobar') {
+      // ✅ APROBAR DIRECTAMENTE SIN SWAL
+      // Mostrar loading inmediatamente
+      Swal.fire({
+        title: 'Procesando...',
+        text: 'Aprobando la extensión...',
+        didOpen: () => Swal.showLoading(),
+        allowOutsideClick: false
+      });
+      
+      // Enviar solicitud de aprobación sin comentario
+      fetch(`/extensiones/${idExtension}/procesar/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+          accion: 'aprobar',
+          comentario: ''
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          let mensaje = data.message;
+          if (data.nueva_fecha_fin && data.precio_adicional) {
+            mensaje += `\n\nNueva fecha de finalización: ${data.nueva_fecha_fin}\nCosto adicional: $${data.precio_adicional}`;
+          }
+          
+          Swal.fire({
+            icon: 'success',
+            title: 'Extensión Aceptada',
+            text: 'La extensión fue aceptada. El cliente deberá proceder con el pago para confirmarla.',
+            timer: 4000,
+            timerProgressBar: true,
+            showConfirmButton: false
+          }).then(() => {
+            // Recargar página para mostrar cambios
+            window.location.reload();
+          });
+        } else {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: data.error || 'Error al procesar la extensión'
+          });
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error de conexión',
+          text: 'No se pudo procesar la solicitud. Intenta nuevamente.'
+        });
+      });
+      
+    } else {
+      // ✅ RECHAZAR CON SWAL DE CONFIRMACIÓN Y MOTIVO OBLIGATORIO
+      Swal.fire({
+        title: `${tituloAccion} Extensión`,
+        html: `
+          <div class="text-start">
+            <p>¿Estás seguro que deseas <strong>rechazar</strong> esta solicitud de extensión?</p>
+            <div class="mb-3">
+              <label for="comentario-admin" class="form-label">Motivo del rechazo <span class="text-danger">*</span>:</label>
+              <textarea id="comentario-admin" class="form-control" rows="3" 
+                        placeholder="Explicar al cliente por qué se rechaza la extensión..." required></textarea>
+              <small class="text-muted">Campo obligatorio - El cliente verá este mensaje</small>
+            </div>
+            <div class="alert alert-warning">
+              <i class="bi bi-exclamation-triangle me-2"></i>
+              El cliente será notificado del rechazo con el motivo especificado.
+            </div>
+          </div>
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: colorBoton,
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: `<i class="bi bi-${iconoAccion} me-1"></i>${tituloAccion}`,
+        cancelButtonText: 'Cancelar',
+        width: '500px',
+        focusConfirm: false,
+        didOpen: () => {
+          // ✅ VALIDACIÓN EN TIEMPO REAL DEL MOTIVO
+          const comentarioTextarea = document.getElementById('comentario-admin');
+          const confirmButton = document.querySelector('.swal2-confirm');
+          
+          function validarMotivo() {
+            const motivo = comentarioTextarea.value.trim();
+            if (motivo.length < 10) {
+              confirmButton.disabled = true;
+              confirmButton.style.opacity = '0.6';
+              confirmButton.style.cursor = 'not-allowed';
+            } else {
+              confirmButton.disabled = false;
+              confirmButton.style.opacity = '1';
+              confirmButton.style.cursor = 'pointer';
+            }
+          }
+          
+          // Inicializar como deshabilitado
+          validarMotivo();
+          
+          // Escuchar cambios en el textarea
+          comentarioTextarea.addEventListener('input', validarMotivo);
+          comentarioTextarea.addEventListener('keyup', validarMotivo);
+        },
+        preConfirm: () => {
+          const comentario = document.getElementById('comentario-admin').value.trim();
+          
+          if (!comentario) {
+            Swal.showValidationMessage('Debe especificar un motivo para el rechazo');
+            return false;
+          }
+          
+          if (comentario.length < 10) {
+            Swal.showValidationMessage('El motivo debe tener al menos 10 caracteres');
+            return false;
+          }
+          
+          return { comentario };
+        }
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // Mostrar loading
+          Swal.fire({
+            title: 'Procesando...',
+            text: 'Rechazando la extensión...',
+            didOpen: () => Swal.showLoading(),
+            allowOutsideClick: false
+          });
+          
+          // Enviar solicitud de rechazo
+          fetch(`/extensiones/${idExtension}/procesar/`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+              'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+              accion: 'rechazar',
+              comentario: result.value.comentario
+            })
+          })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              Swal.fire({
+                icon: 'success',
+                title: 'Extensión Rechazada',
+                text: data.message,
+                timer: 4000,
+                timerProgressBar: true,
+                showConfirmButton: false
+              }).then(() => {
+                // Recargar página para mostrar cambios
+                window.location.reload();
+              });
+            } else {
+              Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: data.error || 'Error al procesar la extensión'
+              });
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            Swal.fire({
+              icon: 'error',
+              title: 'Error de conexión',
+              text: 'No se pudo procesar la solicitud. Intenta nuevamente.'
+            });
+          });
+        }
+      });
+    }
+  }
+
+  // 💳 FUNCIÓN PARA PAGAR EXTENSIÓN - SIN SWAL, DIRECTO A MERCADOPAGO
+  function pagarExtension(idExtension) {
+    console.log('🚀 Iniciando pago de extensión:', idExtension);
+    
+    // Mostrar loading simple
+    const botonPagar = document.querySelector(`button[onclick="pagarExtension(${idExtension})"]`);
+    const textoOriginal = botonPagar.innerHTML;
+    botonPagar.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Procesando...';
+    botonPagar.disabled = true;
+    
+    // Enviar solicitud para crear preferencia de MercadoPago
+    fetch(`/extensiones/${idExtension}/crear-preferencia-mp/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success && data.preference_id) {
+        console.log('✅ Preferencia creada:', data.preference_id);
+        
+        // Redirigir a MercadoPago
+        window.location.href = data.init_point || `https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=${data.preference_id}`;
+        
+      } else {
+        console.error('❌ Error creando preferencia:', data.error);
+        
+        // Restaurar botón
+        botonPagar.innerHTML = textoOriginal;
+        botonPagar.disabled = false;
+        
+        // Mostrar error simple
+        alert('Error al procesar el pago: ' + (data.error || 'Error desconocido'));
+      }
+    })
+    .catch(error => {
+      console.error('💥 Error en la petición:', error);
+      
+      // Restaurar botón
+      botonPagar.innerHTML = textoOriginal;
+      botonPagar.disabled = false;
+      
+      // Mostrar error simple
+      alert('Error de conexión. Intenta nuevamente.');
+    });
+  }
+
+</script>
 {% endblock %} 
 {% endblock %}
