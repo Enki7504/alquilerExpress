@@ -60,13 +60,17 @@
               {% elif reserva.estado.nombre == 'Aprobada' %}
                 <button class="btn btn-sm btn-success">Esperando Pago...</button>
               {% elif reserva.estado.nombre == 'Pagada' %}
-                <button class="btn btn-sm btn-success" onclick="cambiarEstado('{{ reserva.id_reserva }}', 'Confirmada')">Llaves Entregadas</button>
+                {% if reserva.fecha_inicio <= today %}
+                  <button class="btn btn-sm btn-success" onclick="cambiarEstado('{{ reserva.id_reserva }}', 'Confirmada')">Llaves Entregadas</button>
+                {% else %}
+                  <button class="btn btn-sm btn-success" disabled title="Las llaves se pueden entregar a partir del {{ reserva.fecha_inicio|date:'d/m/Y' }}">Llaves Entregadas</button>
+                {% endif %}
                 <button class="btn btn-sm btn-danger" onclick="cambiarEstado('{{ reserva.id_reserva }}', 'Cancelada')">Cancelar Alquiler</button>
               {% elif reserva.estado.nombre == 'Confirmada' %}
-                {% if reserva.fecha_fin < today %}
+                {% if reserva.fecha_fin <= today %}
                   <button class="btn btn-sm btn-success" onclick="cambiarEstado('{{ reserva.id_reserva }}', 'Finalizada')">Terminar Alquiler</button>
                 {% else %}
-                  <button class="btn btn-sm btn-success" disabled title="Solo disponible cuando finalice el alquiler">Terminar Alquiler</button>
+                  <button class="btn btn-sm btn-success" disabled title="Solo disponible cuando finalice el alquiler el {{ reserva.fecha_fin|date:'d/m/Y' }}">Terminar Alquiler</button>
                 {% endif %}
                 <button class="btn btn-sm btn-danger" onclick="cambiarEstado('{{ reserva.id_reserva }}', 'Cancelada')">Cancelar Alquiler</button>
               {% endif %}

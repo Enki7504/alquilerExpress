@@ -119,6 +119,17 @@ def crear_reserva_inmueble(request, id_inmueble):
             messages.error(request, "El inmueble no está disponible en esas fechas.")
             return redirect("detalle_inmueble", id_inmueble=id_inmueble)
 
+        # Validar que el cliente no tenga reservas superpuestas en otros inmuebles
+        reserva_superpuesta_otro_inmueble = Reserva.objects.filter(
+            clienteinmueble__cliente=perfil,
+            estado__nombre__in=['Pendiente', 'Confirmada', 'Pagada', 'Aprobada'],
+            fecha_inicio__lte=fecha_fin,
+            fecha_fin__gte=fecha_inicio
+        ).exclude(inmueble=inmueble).exists()
+        if reserva_superpuesta_otro_inmueble:
+            messages.error(request, "Ya tienes una reserva activa en otro inmueble para esas fechas.")
+            return redirect("detalle_inmueble", id_inmueble=id_inmueble)
+
         # Crear la reserva
         reserva = Reserva.objects.create(
             inmueble=inmueble,
@@ -225,6 +236,18 @@ def crear_reserva_cochera(request, id_cochera):
         ).exists()
         if reserva_superpuesta_cochera:
             messages.error(request, "La cochera no está disponible en esas fechas y horarios.")
+            return redirect('detalle_cochera', id_cochera=id_cochera)
+
+        # Validar que el cliente no tenga reservas superpuestas en otras cocheras
+        reserva_superpuesta_otras_cocheras = Reserva.objects.filter(
+            clienteinmueble__cliente=perfil,
+            cochera__isnull=False,
+            estado__nombre__in=['Pendiente', 'Confirmada', 'Pagada', 'Aprobada'],
+            fecha_inicio__lt=fecha_fin,
+            fecha_fin__gt=fecha_inicio
+        ).exclude(cochera=cochera).exists()
+        if reserva_superpuesta_otras_cocheras:
+            messages.error(request, "Ya tenés una reserva activa en otra cochera para esas fechas y horarios.")
             return redirect('detalle_cochera', id_cochera=id_cochera)
 
         # Calcular precio total
@@ -547,13 +570,41 @@ def cambiar_estado_reserva(request, id_reserva):
 
 @login_required
 def reservas_usuario(request):
-    """
-    Muestra todas las reservas del usuario autenticado.
-    """
-    reservas = Reserva.objects.filter(clienteinmueble__cliente=request.user.perfil).distinct().order_by('-id_reserva')
+    """Vista para mostrar las reservas del usuario con filtro"""
+    perfil = request.user.perfil
+    
+    # Obtener todas las reservas del usuario
+    reservas = Reserva.objects.filter(
+        clienteinmueble__cliente=perfil
+    ).order_by('-fecha_inicio')
+    
+    # Aplicar filtro si se selecciona una propiedad
+    filtro_propiedad = request.GET.get('propiedad')
+    if filtro_propiedad:
+        try:
+            tipo, id_propiedad = filtro_propiedad.split('_', 1)
+            if tipo == 'inmueble':
+                reservas = reservas.filter(inmueble__id_inmueble=id_propiedad)  # ← USAR id_inmueble
+            elif tipo == 'cochera':
+                reservas = reservas.filter(cochera__id_cochera=id_propiedad)    # ← USAR id_cochera
+        except (ValueError, IndexError):
+            pass
+    
+    # Obtener inmuebles y cocheras por separado
+    inmuebles_disponibles = Inmueble.objects.filter(
+        reserva__clienteinmueble__cliente=perfil
+    ).distinct().order_by('nombre')
+    
+    cocheras_disponibles = Cochera.objects.filter(
+        reserva__clienteinmueble__cliente=perfil
+    ).distinct().order_by('nombre')
+    
     return render(request, 'reservas.html', {
-        'reservas': reservas
+        'reservas': reservas,
+        'inmuebles_disponibles': inmuebles_disponibles,
+        'cocheras_disponibles': cocheras_disponibles
     })
+
 
 @login_required
 def ver_detalle_reserva(request, id_reserva):
